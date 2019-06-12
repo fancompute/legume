@@ -1,3 +1,5 @@
+import numpy as np
+
 ''' 
 Function to compute the guided modes of a multi-layer structure
 Input
