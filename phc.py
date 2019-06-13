@@ -1,5 +1,6 @@
 import numpy as np
 from utils import *
+from shapes import *
 
 # Class for a photonic crystal which can contain a number of layers
 class PhotCryst(object):
@@ -54,7 +55,7 @@ class PhotCryst(object):
 		eps_r = np.zeros(a_shape)
 
 		eps_r[zmesh < self.layers[0].z_min] = self.eps_l
-		eps_r[zmesh > self.layers[-1].z_max] = self.eps_u
+		eps_r[zmesh >= self.layers[-1].z_max] = self.eps_u
 		a1 = self.lattice['a1']
 		a2 = self.lattice['a2']
 
@@ -114,13 +115,18 @@ class PhotCryst(object):
 		fig, ax = plt.subplots(1, 2, constrained_layout=True)
 		plot_xz(self, ax=ax[0], dx=res[0], dz=res[2],
 					clim=[eps_min, eps_max], cbar=False)
-		ax[0].set_title("xz-view")
+		ax[0].set_title("xz at y = 0")
 		plot_yz(self, ax=ax[1], dy=res[1], dz=res[2],
 					clim=[eps_min, eps_max], cbar=True)
-		ax[1].set_title("yz-view")
+		ax[1].set_title("yz at x = 0")
 
 		N_layers = len(self.layers)
 		fig, ax = plt.subplots(1, N_layers, constrained_layout=True)
+
+		# Hacky way to make sure that the loop below works for N_layers = 1
+		if N_layers == 1:
+			ax = [ax]
+
 		for indl in range(N_layers):
 			zpos = (self.layers[indl].z_max + self.layers[indl].z_min)/2
 			plot_xy(self, z=zpos, ax=ax[indl], dx=res[0], dy=res[1],
@@ -152,31 +158,16 @@ class Layer(object):
 		if sh_type == 'circle':
 			shape = Circle(params['eps'], params['x'], 
 							params['y'], params['r'])
+		elif sh_type == 'square':
+			shape = Square(params['eps'], params['x_cent'], 
+							params['y_cent'], params['a'])
+		elif sh_type == 'poly':
+			shape = Poly(params['eps'], params['x_edges'], 
+							params['y_edges'])
 		else:
-			raise(NotImplementedError("Shape must be one of {'circle',}"))
+			raise(NotImplementedError("Shape must be one of \
+						{'circle', 'square', 'poly'}"))
 
 		self.shapes.append(shape)
 		self.eps_avg = (self.eps_avg*(self.lattice['ec_area'] - shape.area) + 
 						shape.eps*shape.area)/self.lattice['ec_area']
-
-	# NB: to implement method to compute FT of permittivity 
-
-
-class Circle(object):
-	'''
-	Define class for a circular shape
-	Other types of shape classes should also be added; they need to compute and 
-	store the area of the shape and to have a method to compute the in-plane FT 
-	'''
-	def __init__(self, eps=1, x=0, y=0, r=0):
-		self.eps=eps
-		self.x = x
-		self.y = y
-		self.r = r
-		self.area = np.pi*r**2
-
-	def compute_ft(self, gvec):
-		pass
-
-	def is_inside(self, x, y):
-		return np.square(x - self.x) + np.square(y - self.y) < np.square(self.r)
