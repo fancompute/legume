@@ -86,3 +86,11 @@ def plot_yz(phc, x=0, dy=2e-2, dz=2e-2, ax=None, clim=None, cbar=False):
 	extent = [ymin, ymax, zmin, zmax]
 
 	plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar)
+
+
+def plot_reciprocal(gme):
+	'''
+	Plot the reciprocal lattice of a GME object
+	'''
+	plt.plot(gme.gvec[0, :], gme.gvec[1, :], 'bx')
+	plt.show()

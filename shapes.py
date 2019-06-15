@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.special import jv as besselj 
 import matplotlib.path as mpltPath
 
 class Shape(object):
@@ -23,7 +24,22 @@ class Circle(Shape):
 		self.area=np.pi*r**2
 
 	def compute_ft(self, gvec):
-		pass
+		'''
+		FT of a 2D function equal to 1 inside the circle and 0 outside
+		Input: 
+			- gvec: [2 x Ng] numpy array
+		'''
+		print(gvec, gvec.shape)
+		gx = np.array(gvec[0, :])
+		gy = np.array(gvec[1, :])
+		gabs = np.sqrt(np.abs(np.square(gx)) + np.abs(np.square(gy)))
+		gind = gabs > 1e-10
+		ft = np.pi*self.r**2*np.ones(gabs.shape, dtype=np.complex128)
+
+		ft[gind] = np.exp(1j*gx[gind]*self.x + 1j*gy[gind]*self.y)*2* \
+						np.pi/gabs[gind]*besselj(1, gabs[gind]*self.r)
+
+		return ft
 
 	def is_inside(self, x, y):
 		return (np.square(x - self.x) + np.square(y - self.y)
@@ -45,7 +61,17 @@ class Poly(Shape):
 		self.area = 1 # FIX THIS
 
 	def compute_ft(self, gvec):
-		pass
+		'''
+		Computing polygonal shape FT as per Lee, IEEE TAP (1984)
+		NB: the vertices of the polygonal should be defined in a 
+		counter-clockwise manner!
+		Input: 
+			- gvec: [Ng x 2] numpy array
+		'''
+		gx = gvec[:, 0]
+		gy = gvec[:, 1]
+		# To be done...
+
 
 	def is_inside(self, x, y):
 		vert = np.vstack((np.array(self.x_edges), np.array(self.y_edges)))

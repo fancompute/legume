@@ -190,7 +190,7 @@ class Lattice(object):
 		defining the elementary vectors of the lattice
 		'''
 
-		(a1, a2) = self.parse_input(*args)
+		(a1, a2) = self._parse_input(*args)
 		self.a1 = a1
 		self.a2 = a2
 
@@ -209,7 +209,7 @@ class Lattice(object):
 		self.ec_area = ec_area	# Elementary cell area
 		self.bz_area = bz_area	# Brillouin zone area
 
-	def parse_input(self, *args):
+	def _parse_input(self, *args):
 		if len(args) == 1:
 			if args[0] == 'square':
 				a1 = np.array([1, 0])
