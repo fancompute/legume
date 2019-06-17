@@ -20,6 +20,32 @@ class PhotCryst(object):
 		# Initialize an empty list of layers
 		self.layers = []
 
+	def xy_grid(self, dx=2e-2, dy=2e-2):
+		''' 
+		Define an xy-grid for visualization purposes based on the lattice
+		vectors of the PhC (not sure if it works for very weird lattices)
+		'''
+		ymax = np.abs(max([self.lattice.a1[1], self.lattice.a2[1]]))
+		ymin = -ymax
+
+		xmax = np.abs(max([self.lattice.a1[0], self.lattice.a2[0]]))
+		xmin = -xmax
+
+		nx = np.int_((xmax - xmin)//dx)
+		ny = np.int_((ymax - ymin)//dy)
+
+		return (xmin + np.arange(nx)*dx, ymin + np.arange(ny)*dy)
+
+	def z_grid(self, dz=2e-2):
+		''' 
+		Define a z-grid for visualization purposes once some layers have been 
+		added
+		'''
+		zmin = self.layers[0].z_min - 1
+		zmax = self.layers[-1].z_max + 1
+		nz = np.int_((zmax - zmin)//dz)
+		return (zmin + np.arange(nz)*dz)
+
 	def add_layer(self, d, eps_b=1):
 		'''
 		Add a layer with thickness d and background permittivity eps_b
@@ -66,7 +92,7 @@ class PhotCryst(object):
 			# Slightly hacky way to include the periodicity
 			a_p = min([np.linalg.norm(a1), 
 					   np.linalg.norm(a2)])
-			nmax = int(np.sqrt(np.square(np.max(abs(xmesh))) + 
+			nmax = np.int_(np.sqrt(np.square(np.max(abs(xmesh))) + 
 							np.square(np.max(abs(ymesh))))/a_p) + 1
 
 			for shape in layer.shapes:
@@ -132,6 +158,7 @@ class PhotCryst(object):
 			plot_xy(self, z=zpos, ax=ax[indl], dx=res[0], dy=res[1],
 					clim=[eps_min, eps_max], cbar=indl==N_layers-1)
 			ax[indl].set_title("xy in layer %d" % indl)
+		plt.show()
 
 
 class Layer(object):
@@ -212,9 +239,11 @@ class Lattice(object):
 	def _parse_input(self, *args):
 		if len(args) == 1:
 			if args[0] == 'square':
+				self.type = 'square'
 				a1 = np.array([1, 0])
 				a2 = np.array([0, 1])
 			elif args[0] == 'hexagonal':
+				self.type = 'hexagonal'
 				a1 = np.array([0.5, np.sqrt(3)/2])
 				a2 = np.array([0.5, -np.sqrt(3)/2])
 			else:
@@ -222,6 +251,7 @@ class Lattice(object):
 					or defined through two primitive vectors.")
 
 		elif len(args) == 2:
+			self.type = 'custom'
 			a1 = args[0]
 			a2 = args[1]
 

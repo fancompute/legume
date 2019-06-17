@@ -29,7 +29,6 @@ class Circle(Shape):
 		Input: 
 			- gvec: [2 x Ng] numpy array
 		'''
-		print(gvec, gvec.shape)
 		gx = np.array(gvec[0, :])
 		gy = np.array(gvec[1, :])
 		gabs = np.sqrt(np.abs(np.square(gx)) + np.abs(np.square(gy)))
