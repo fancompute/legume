@@ -63,9 +63,20 @@ class GME(object):
 		for layer in self.phc.layers:
 			T1 = np.zeros(self.gvec.shape[1])
 			T2 = np.zeros(self.gvec.shape[1])
+			sh_area = 0
 			for shape in layer.shapes:
-				T1 = T1 + shape.compute_ft(G1)
-				T2 = T2 + shape.compute_ft(G2)
+				# Note: compute_ft() returns the FT of a function that is one 
+				# inside the shape and zero outside
+				T1 = T1 + (shape.eps - layer.eps_b)*shape.compute_ft(G1)
+				T2 = T2 + (shape.eps - layer.eps_b)*shape.compute_ft(G2)
+				sh_area += shape.area
+
+			# Apply some final coefficients
+			T1 = T1 / layer.lattice.ec_area
+			T1[0] = layer.eps_b + sh_area / layer.lattice.ec_area
+			T2 = T2 / layer.lattice.ec_area
+			T2[0] = layer.eps_b + sh_area / layer.lattice.ec_area
+
 			# Store T1 and T2
 			layer.T1 = T1
 			layer.T2 = T2
@@ -98,7 +109,7 @@ class GME(object):
 		eps_ft = np.zeros((nxtot, nytot), dtype=np.complex128)
 
 		N_layers = len(self.phc.layers)
-		fig, ax = plt.subplots(N_layers)
+		fig, ax = plt.subplots(1, N_layers, constrained_layout=True)
 		# Hacky way to make sure that the loop below works for N_layers = 1
 		if N_layers == 1:
 			ax = [ax]
@@ -115,7 +126,7 @@ class GME(object):
 
 			im = ax[indl].imshow(np.abs(np.fft.fft2(eps_ft)))
 			ax[indl].set_title("xy in layer %d" % indl)
-			plt.colorbar(im)
+			plt.colorbar(im, ax=ax[indl])
 		plt.show()
 
 	def run(self):
