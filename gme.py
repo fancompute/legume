@@ -20,7 +20,8 @@ class GuidedModeExp(object):
 		# Eigenvalues closes in magnitude to the target will be computed
 		self.om_target = om_target
 
-		# Initialize the reciprocal lattice vectors
+		# Initialize the reciprocal lattice vectors and compute the FT of all
+		# the layers of the PhC
 		self._init_reciprocal()
 		self._init_ft()
 
@@ -36,14 +37,18 @@ class GuidedModeExp(object):
 		# code. However, one caveat is that the hexagonal lattice symmetry is 
 		# not preserved. For that, the option to construct a hexagonal mesh in 
 		# reciprocal space could is needed.
-		inds1 = np.tile(np.arange(-n1max, n1max + 1), 2*n2max + 1)
-		inds2 = np.tile(np.arange(-n2max, n2max + 1), (2*n1max + 1, 1))  \
-						 .reshape((2*n1max + 1)*(2*n2max + 1), order='F')
+		inds1 = np.tile(np.arange(-n1max, n1max + 1), (2*n2max + 1, 1))  \
+						 .reshape((2*n2max + 1)*(2*n1max + 1), order='F')
+		inds2 = np.tile(np.arange(-n2max, n2max + 1), 2*n1max + 1)
 
 		gvec = self.phc.lattice.b1[:, np.newaxis].dot(inds1[np.newaxis, :]) + \
 				self.phc.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
 
+		# Save the reciprocal lattice vectors
 		self.gvec = gvec
+
+		# Save the number of vectors along the b1 and the b2 directions 
+		# Note: gvec.shape[1] = n1g*n2g
 		self.n1g = 2*n1max + 1
 		self.n2g = 2*n2max + 1
 
@@ -55,8 +60,9 @@ class GuidedModeExp(object):
 		(n1max, n2max) = (self.n1g, self.n2g)
 		G1 = self.gvec - self.gvec[:, [0]]
 		G2 = np.zeros((2, n1max*n2max))
+
 		for ind1 in range(n1max):
-			G2[:, ind1*n1max:(ind1+1)*n2max] = self.gvec[:, [ind1*n2max]] - \
+			G2[:, ind1*n2max:(ind1+1)*n2max] = self.gvec[:, [ind1*n2max]] - \
 							self.gvec[:, range(n2max)]
 
 		# print(self.gvec,'\n', G1/2/np.pi,'\n', G2/2/np.pi,'\n')
@@ -64,13 +70,11 @@ class GuidedModeExp(object):
 		for layer in self.phc.layers:
 			T1 = np.zeros(self.gvec.shape[1])
 			T2 = np.zeros(self.gvec.shape[1])
-			sh_area = 0
 			for shape in layer.shapes:
 				# Note: compute_ft() returns the FT of a function that is one 
 				# inside the shape and zero outside
 				T1 = T1 + (shape.eps - layer.eps_b)*shape.compute_ft(G1)
 				T2 = T2 + (shape.eps - layer.eps_b)*shape.compute_ft(G2)
-				sh_area += shape.area
 
 			# Apply some final coefficients
 			T1 = T1 / layer.lattice.ec_area

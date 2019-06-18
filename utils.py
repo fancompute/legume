@@ -109,9 +109,6 @@ def ft2square(lattice, ft_coeff, gvec):
 	for jG in range(gvec.shape[1]):
 		nG = np.int_(gvec[:, jG]/[dgx, dgy])
 		eps_ft[nx + nG1[0], ny + nG1[1]] = ft_coeff[jG]
-		# eps_ft[nx + nG2[0], ny + nG2[1]] = layer.T2[jG]
-		# eps_ft[nx - nG1[0], ny - nG1[1]] = np.conj(layer.T1[jG])
-		# eps_ft[nx - nG2[0], ny - nG2[1]] = np.conj(layer.T2[jG])
 
 	return (eps_ft, gx_grid, gy_grid)
 
