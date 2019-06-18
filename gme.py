@@ -1,7 +1,7 @@
 import numpy as np
 from utils import *
 
-class GME(object):
+class GuidedModeExp(object):
 	'''
 	Main simulation class of the guided-mode expansion
 	'''
@@ -22,6 +22,7 @@ class GME(object):
 
 		# Initialize the reciprocal lattice vectors
 		self._init_reciprocal()
+		self._init_ft()
 
 	def _init_reciprocal(self):
 		'''
@@ -46,7 +47,7 @@ class GME(object):
 		self.n1g = 2*n1max + 1
 		self.n2g = 2*n2max + 1
 
-	def get_ft(self):
+	def _init_ft(self):
 		'''
 		Compute the unique FT coefficients of the permittivity, eps(g-g') for
 		every layer in the PhC.
@@ -73,9 +74,9 @@ class GME(object):
 
 			# Apply some final coefficients
 			T1 = T1 / layer.lattice.ec_area
-			T1[0] = layer.eps_b + sh_area / layer.lattice.ec_area
+			T1[0] = layer.eps_avg
 			T2 = T2 / layer.lattice.ec_area
-			T2[0] = layer.eps_b + sh_area / layer.lattice.ec_area
+			T2[0] = layer.eps_avg
 
 			# Store T1 and T2
 			layer.T1 = T1
@@ -85,28 +86,12 @@ class GME(object):
 		self.G1 = G1
 		self.G2 = G2
 
-	def plot_eps(self, dx=1e-2, dy=1e-2):
+	def plot_overview_ft(self, dx=1e-2, dy=1e-2):
 		'''
 		Plot the permittivity of the PhC cross-sections as computed from an 
-		inverse Fourier transform with the GME reciprocal lattice vectors
-		Implemented for 'square' or 'hexagonal' lattice only
+		inverse Fourier transform with the GME reciprocal lattice vectors.
 		'''
-		if self.phc.lattice.type not in ['hexagonal', 'square']:
-			raise(NotImplementedError, "gme.plot_eps() is only implemented \
-				for a lattice initialized as 'square' or 'hexagonal'")
-
-		if not hasattr(self, 'T1'):
-			self.get_ft()
-
 		(xgrid, ygrid) = self.phc.xy_grid(dx=dx, dy=dy)
-
-		dgx = np.abs(self.phc.lattice.b1[0])
-		dgy = np.abs(self.phc.lattice.b2[1])
-		nx = np.int_(2*np.max(self.gvec[0, :]/dgx))
-		ny = np.int_(2*np.max(self.gvec[1, :]/dgy))
-		nxtot = 2*nx + 1
-		nytot = 2*ny + 1
-		eps_ft = np.zeros((nxtot, nytot), dtype=np.complex128)
 
 		N_layers = len(self.phc.layers)
 		fig, ax = plt.subplots(1, N_layers, constrained_layout=True)
@@ -115,18 +100,17 @@ class GME(object):
 			ax = [ax]
 
 		for (indl, layer) in enumerate(self.phc.layers):
-			for jG in range(self.gvec.shape[1]):
-				nG1 = np.int_(self.G1[:, jG]/dgx)
-				nG2 = np.int_(self.G2[:, jG]/dgy)
-	
-				eps_ft[nx + nG1[0], ny + nG1[1]] = layer.T1[jG];
-				eps_ft[nx + nG2[0], ny + nG2[1]] = layer.T1[jG];
-				eps_ft[nx - nG1[0], ny - nG1[1]] = np.conj(layer.T1[jG]);
-				eps_ft[nx - nG2[0], ny - nG2[1]] = np.conj(layer.T1[jG]);
+			ft_coeffs = np.hstack((layer.T1, layer.T2, 
+								np.conj(layer.T1), np.conj(layer.T2)))
+			gvec = np.hstack((self.G1, self.G2, 
+								-self.G1, -self.G2))
 
-			im = ax[indl].imshow(np.abs(np.fft.fft2(eps_ft)))
+			eps_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
+			extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
+
+			plot_eps(np.real(eps_r), ax=ax[indl], extent=extent, cbar=True)
 			ax[indl].set_title("xy in layer %d" % indl)
-			plt.colorbar(im, ax=ax[indl])
+
 		plt.show()
 
 	def run(self):

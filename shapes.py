@@ -35,8 +35,8 @@ class Circle(Shape):
 		gind = gabs > 1e-10
 		ft = np.pi*self.r**2*np.ones(gabs.shape, dtype=np.complex128)
 
-		ft[gind] = np.exp(1j*gx[gind]*self.x + 1j*gy[gind]*self.y)*2* \
-						np.pi/gabs[gind]*besselj(1, gabs[gind]*self.r)
+		ft[gind] = np.exp(1j*gx[gind]*self.x + 1j*gy[gind]*self.y)*self.r* \
+							2*np.pi/gabs[gind]*besselj(1, gabs[gind]*self.r)
 
 		return ft
 
