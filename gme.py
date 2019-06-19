@@ -1,5 +1,6 @@
 import numpy as np
-from utils import *
+import matplotlib.pyplot as plt
+import utils
 
 class GuidedModeExp(object):
 	'''
@@ -23,7 +24,7 @@ class GuidedModeExp(object):
 		# Initialize the reciprocal lattice vectors and compute the FT of all
 		# the layers of the PhC
 		self._init_reciprocal()
-		self._init_ft()
+		self.get_ft()
 
 	def _init_reciprocal(self):
 		'''
@@ -52,7 +53,7 @@ class GuidedModeExp(object):
 		self.n1g = 2*n1max + 1
 		self.n2g = 2*n2max + 1
 
-	def _init_ft(self):
+	def get_ft(self):
 		'''
 		Compute the unique FT coefficients of the permittivity, eps(g-g') for
 		every layer in the PhC.
@@ -109,10 +110,11 @@ class GuidedModeExp(object):
 			gvec = np.hstack((self.G1, self.G2, 
 								-self.G1, -self.G2))
 
-			eps_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
+			eps_r = utils.ftinv(ft_coeffs, gvec, xgrid, ygrid)
 			extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
 
-			plot_eps(np.real(eps_r), ax=ax[indl], extent=extent, cbar=True)
+			utils.plot_eps(np.real(eps_r), ax=ax[indl], extent=extent, 
+							cbar=True)
 			ax[indl].set_title("xy in layer %d" % indl)
 
 		plt.show()

@@ -1,6 +1,7 @@
 import numpy as np
-from utils import *
-from shapes import *
+import utils
+import matplotlib.pyplot as plt
+from shapes import Circle, Poly, Square
 
 # Class for a photonic crystal which can contain a number of layers
 class PhotCryst(object):
@@ -124,11 +125,11 @@ class PhotCryst(object):
 		Plot a cross-section of the PhC at position pos along the third axis
 		'''
 		if cross_section == 'xy':
-			plot_xy(self, z=pos, dx=res[0], dy=res[1])
+			utils.plot_xy(self, z=pos, dx=res[0], dy=res[1])
 		elif cross_section == 'xz':
-			plot_xz(self, y=pos, dx=res[0], dz=res[1])
+			utils.plot_xz(self, y=pos, dx=res[0], dz=res[1])
 		elif cross_section == 'yz':
-			plot_yz(self, x=pos, dy=res[0], dz=res[1])
+			utils.plot_yz(self, x=pos, dy=res[0], dz=res[1])
 		else:
 			raise(ValueError("Cross-section must be in {'xy', 'yz', 'xz'}"))
 
@@ -139,10 +140,10 @@ class PhotCryst(object):
 
 		(eps_min, eps_max) = self.get_eps_bounds()
 		fig, ax = plt.subplots(1, 2, constrained_layout=True)
-		plot_xz(self, ax=ax[0], dx=res[0], dz=res[2],
+		utils.plot_xz(self, ax=ax[0], dx=res[0], dz=res[2],
 					clim=[eps_min, eps_max], cbar=False)
 		ax[0].set_title("xz at y = 0")
-		plot_yz(self, ax=ax[1], dy=res[1], dz=res[2],
+		utils.plot_yz(self, ax=ax[1], dy=res[1], dz=res[2],
 					clim=[eps_min, eps_max], cbar=True)
 		ax[1].set_title("yz at x = 0")
 
@@ -155,7 +156,7 @@ class PhotCryst(object):
 
 		for indl in range(N_layers):
 			zpos = (self.layers[indl].z_max + self.layers[indl].z_min)/2
-			plot_xy(self, z=zpos, ax=ax[indl], dx=res[0], dy=res[1],
+			utils.plot_xy(self, z=zpos, ax=ax[indl], dx=res[0], dy=res[1],
 					clim=[eps_min, eps_max], cbar=indl==N_layers-1)
 			ax[indl].set_title("xy in layer %d" % indl)
 		plt.show()
