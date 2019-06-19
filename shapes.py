@@ -145,6 +145,23 @@ class Poly(Shape):
 		test = path.contains_points(points.T)
 		return test.reshape((x.shape))
 
+	def rotate(self, angle):
+		'''
+		Rotate a polygon around its center of mass by angle radians
+		'''
+
+		rotmat = np.array([[np.cos(angle), -np.sin(angle)], \
+							[np.sin(angle), np.cos(angle)]])
+		(xj, yj) = (np.array(self.x_edges), np.array(self.y_edges))
+		com_x = np.sum((xj + np.roll(xj, -1)) * (xj * np.roll(yj, -1) - \
+					np.roll(xj, -1) * yj))/6/self.area
+		com_y = np.sum((yj + np.roll(yj, -1)) * (xj * np.roll(yj, -1) - \
+					np.roll(xj, -1) * yj))/6/self.area
+		new_coords = rotmat.dot(np.vstack((xj-com_x, yj-com_y)))
+
+		self.x_edges = new_coords[0, :] + com_x
+		self.y_edges = new_coords[1, :] + com_y
+
 class Square(Poly):
 	'''
 	Define class for a square shape

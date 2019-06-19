@@ -59,14 +59,14 @@ class PhotCryst(object):
 		layer = Layer(self.lattice, z_min, z_min + d, eps_b=eps_b)
 		self.layers.append(layer)
 
-	def add_shape(self, sh_type, params, layer_ind=0):
+	def add_shape(self, *args, layer_ind=-1):
 		'''
 		Add a shape to layer number layer_ind
 		'''
 		if layer_ind >= len(self.layers):
 			raise(ValueError("Layer index larger than total number of layers"))
 		else:
-			self.layers[layer_ind].add_shape(sh_type, params)
+			self.layers[layer_ind].add_shape(*args)
 
 	def get_eps(self, points):
 		'''
@@ -120,7 +120,7 @@ class PhotCryst(object):
 
 		return (eps_min, eps_max)
 
-	def plot_cross(self, cross_section='xy', pos=0, res=[2e-2, 2e-2]):
+	def plot_cross(self, cross_section='xy', pos=0, res=[1e-2, 1e-2]):
 		'''
 		Plot a cross-section of the PhC at position pos along the third axis
 		'''
@@ -183,20 +183,31 @@ class Layer(object):
 		# Initialize an empty list of shapes
 		self.shapes = []
 
-	def add_shape(self, sh_type, params):
-		# Add a shape with permittivity eps to the layer
-		if sh_type == 'circle':
-			shape = Circle(params['eps'], params['x'], 
-							params['y'], params['r'])
-		elif sh_type == 'square':
-			shape = Square(params['eps'], params['x_cent'], 
-							params['y_cent'], params['a'])
-		elif sh_type == 'poly':
-			shape = Poly(params['eps'], params['x_edges'], 
-							params['y_edges'])
+	def add_shape(self, *args):
+		'''
+		Add a shape to the layer
+		'''
+
+		if len(args) == 1:
+			shape = args[0]
+		elif len(args) == 2:
+			(sh_type, params) = args
+
+			if sh_type == 'circle':
+				shape = Circle(params['eps'], params['x'], 
+								params['y'], params['r'])
+			elif sh_type == 'square':
+				shape = Square(params['eps'], params['x_cent'], 
+								params['y_cent'], params['a'])
+			elif sh_type == 'poly':
+				shape = Poly(params['eps'], params['x_edges'], 
+								params['y_edges'])
+			else:
+				raise(NotImplementedError("Shape must be one of \
+							{'circle', 'square', 'poly'}"))
 		else:
-			raise(NotImplementedError("Shape must be one of \
-						{'circle', 'square', 'poly'}"))
+			raise(ValueError, "Arguments to add_shape() must be either a Shape \
+				instance or a tuple of (shape_type, parameters)")
 
 		self.shapes.append(shape)
 		self.eps_avg = (self.eps_avg*(self.lattice.ec_area - shape.area) + 
