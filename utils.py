@@ -78,11 +78,19 @@ def ftinv(ft_coeff, gvec, xgrid, ygrid):
 	ftinv = np.zeros(xmesh.shape, dtype=np.complex128)
 
 	# Take only the unique components
-	(_, ind_unique) = np.unique(gvec, return_index=True, axis=1)
+	(g_unique, ind_unique) = np.unique(gvec, return_index=True, axis=1)
 
 	for indg in ind_unique:
 		ftinv += ft_coeff[indg]*np.exp(-1j*gvec[0, indg]*xmesh - \
 							1j*gvec[1, indg]*ymesh)
+
+	# # Can also be defined through a DFT matrix but it doesn't seem faster and 
+	# # it's *very* memory intensive.
+	# exp_matrix = xmesh.reshape((-1, 1)).dot(g_unique[[0], :]) + \
+	# 				ymesh.reshape((-1, 1)).dot(g_unique[[1], :])
+
+	# dft_matrix = np.exp(1j*exp_matrix)
+	# ftinv = dft_matrix.dot(ft_coeff[ind_unique]).reshape(xmesh.shape)
 
 	return ftinv
 
