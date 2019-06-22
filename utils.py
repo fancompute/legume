@@ -128,8 +128,7 @@ def toeplitz_block(n, T1, T2):
 	'''
 	ntot = T1.shape[0]
 	p = int(ntot/n) # Linear size of each block
-	print(p)
-	Tmat = np.zeros((ntot, ntot), dtype=np.complex128)
+	Tmat = np.zeros((ntot, ntot), dtype=T1.dtype)
 	for ind1 in range(n):
 	    for ind2 in range(ind1, n):
 	        toep1=T1[(ind2-ind1)*p:(ind2-ind1+1)*p]

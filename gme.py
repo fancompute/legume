@@ -24,7 +24,7 @@ class GuidedModeExp(object):
 		# Initialize the reciprocal lattice vectors and compute the FT of all
 		# the layers of the PhC
 		self._init_reciprocal()
-		self.get_ft()
+		self.compute_ft()
 
 	def _init_reciprocal(self):
 		'''
@@ -53,7 +53,7 @@ class GuidedModeExp(object):
 		self.n1g = 2*n1max + 1
 		self.n2g = 2*n2max + 1
 
-	def get_ft(self):
+	def compute_ft(self):
 		'''
 		Compute the unique FT coefficients of the permittivity, eps(g-g') for
 		every layer in the PhC.
@@ -133,4 +133,17 @@ class GuidedModeExp(object):
 			- compute imaginary part of eigenvalues perturbatively
 		'''
 
+		self.compute_ft()
+		self.compute_eps_inv()
+
+
+	def compute_eps_inv(self):
+		'''
+		Construct the inverse FT matrices for the permittivity in each layer
+		'''
+		for layer in self.phc.layers:
+			# For now we just use the numpy inversion. Later on we could 
+			# implement the Toeplitz-Block-Toeplitz inversion (faster)
+			eps_mat = utils.toeplitz_block(self.n2g, layer.T1, layer.T2)
+			layer.eps_inv_mat = np.linalg.inv(eps_mat)
 		
