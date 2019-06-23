@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import utils
+import utils.utils as utils
 
 class GuidedModeExp(object):
 	'''

@@ -1,3 +1,8 @@
+'''
+Various utilities used in the main code.
+NOTE: there should be no autograd functions here, only plain numpy.
+'''
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.linalg import toeplitz

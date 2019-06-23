@@ -8,9 +8,10 @@ A backend can be set with the 'set_backend'
 	core.set_backend("autograd")
 '''
 
-# Numpy Backend
-import numpy  
+# Numpy must be present
+import numpy
 
+# Import autograd if available
 try:
 	import autograd as ag
 	AG_AVAILABLE = True
