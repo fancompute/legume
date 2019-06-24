@@ -96,7 +96,7 @@ class GuidedModeExp(object):
 		Plot the permittivity of the PhC cross-sections as computed from an 
 		inverse Fourier transform with the GME reciprocal lattice vectors.
 		'''
-		(xgrid, ygrid) = self.phc.xy_grid(dx=dx, dy=dy)
+		(xgrid, ygrid) = self.phc.lattice.xy_grid(dx=dx, dy=dy)
 
 		N_layers = len(self.phc.layers)
 		fig, ax = plt.subplots(1, N_layers, constrained_layout=True)

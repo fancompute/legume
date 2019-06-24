@@ -23,7 +23,7 @@ def plot_xz(phc, y=0, dx=2e-2, dz=2e-2, ax=None, clim=None, cbar=False):
 	'''
 	Plot an xz-cross section showing all the layers and shapes
 	'''
-	(xgrid, zgrid) = (phc.xy_grid(dx=dx)[0], phc.z_grid(dz=dz))
+	(xgrid, zgrid) = (phc.lattice.xy_grid(dx=dx)[0], phc.z_grid(dz=dz))
 
 	[xmesh, zmesh] = np.meshgrid(xgrid, zgrid)
 	ymesh = y*np.ones(xmesh.shape)
@@ -38,7 +38,7 @@ def plot_xy(phc, z=0, dx=2e-2, dy=2e-2, ax=None, clim=None, cbar=False):
 	'''
 	Plot an xy-cross section showing all the layers and shapes
 	'''
-	(xgrid, ygrid) = phc.xy_grid(dx=dx, dy=dy)
+	(xgrid, ygrid) = phc.lattice.xy_grid(dx=dx, dy=dy)
 	[xmesh, ymesh] = np.meshgrid(xgrid, ygrid)
 	zmesh = z*np.ones(xmesh.shape)
 
@@ -52,7 +52,7 @@ def plot_yz(phc, x=0, dy=2e-2, dz=2e-2, ax=None, clim=None, cbar=False):
 	'''
 	Plot a yz-cross section showing all the layers and shapes
 	'''
-	(ygrid, zgrid) = (phc.xy_grid(dy=dy)[1], phc.z_grid(dz=dz))
+	(ygrid, zgrid) = (phc.lattice.xy_grid(dy=dy)[1], phc.z_grid(dz=dz))
 	[ymesh, zmesh] = np.meshgrid(ygrid, zgrid)
 	xmesh = x*np.ones(ymesh.shape)
 
@@ -106,8 +106,8 @@ def ft2square(lattice, ft_coeff, gvec):
 	NB: function hasn't really been tested, just storing some code.
 	'''
 	if lattice.type not in ['hexagonal', 'square']:
-		raise(NotImplementedError, "ft2square probably only works for \
-				 a lattice initialized as 'square' or 'hexagonal'")
+		raise NotImplementedError("ft2square probably only works for" \
+				 "a lattice initialized as 'square' or 'hexagonal'")
 
 	dgx = np.abs(lattice.b1[0])
 	dgy = np.abs(lattice.b2[1])

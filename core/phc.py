@@ -1,10 +1,15 @@
+# This file defines the PhotCryst, Layer, and Lattice classes
+
 import numpy as np
 import utils.utils as utils
 import matplotlib.pyplot as plt
 from .shapes import Circle, Poly, Square
 
-# Class for a photonic crystal which can contain a number of layers
+
 class PhotCryst(object):
+	'''
+	Class for a photonic crystal which can contain a number of layers
+	'''
 	def __init__(self, lattice, eps_l=1, eps_u=1):
 		# Define permittivity of lower and upper cladding
 		self.eps_l = eps_l
@@ -20,19 +25,6 @@ class PhotCryst(object):
 
 		# Initialize an empty list of layers
 		self.layers = []
-
-	def xy_grid(self, dx=2e-2, dy=2e-2):
-		''' 
-		Define an xy-grid for visualization purposes based on the lattice
-		vectors of the PhC (not sure if it works for very weird lattices)
-		'''
-		ymax = np.abs(max([self.lattice.a1[1], self.lattice.a2[1]]))
-		ymin = -ymax
-
-		xmax = np.abs(max([self.lattice.a1[0], self.lattice.a2[0]]))
-		xmin = -xmax
-
-		return (np.arange(xmin, xmax, dx),np.arange(ymin, ymax, dy))
 
 	def z_grid(self, dz=2e-2):
 		''' 
@@ -60,7 +52,7 @@ class PhotCryst(object):
 		Add a shape to layer number layer_ind
 		'''
 		if layer_ind >= len(self.layers):
-			raise(ValueError("Layer index larger than total number of layers"))
+			raise ValueError("Layer index larger than total number of layers")
 		else:
 			self.layers[layer_ind].add_shape(*args)
 
@@ -72,8 +64,8 @@ class PhotCryst(object):
 		(xmesh, ymesh, zmesh) = points
 		a_shape = xmesh.shape
 		if (ymesh.shape != a_shape) or (ymesh.shape != a_shape):
-			raise (ValueError(
-					"xmesh, ymesh and zmesh must have the same shape"))
+			raise ValueError(
+					"xmesh, ymesh and zmesh must have the same shape")
 
 		eps_r = np.zeros(a_shape)
 
@@ -127,7 +119,7 @@ class PhotCryst(object):
 		elif cross_section == 'yz':
 			utils.plot_yz(self, x=pos, dy=res[0], dz=res[1])
 		else:
-			raise(ValueError("Cross-section must be in {'xy', 'yz', 'xz'}"))
+			raise ValueError("Cross-section must be in {'xy', 'yz', 'xz'}")
 
 	def plot_overview(self, res=[1e-2, 1e-2, 2e-2]):
 		'''
@@ -162,7 +154,7 @@ class Layer(object):
 	'''
 	Class for a single layer in the potentially multi-layer PhC
 	'''
-	def __init__(self, lattice, z_min, z_max, eps_b=1):
+	def __init__(self, lattice, z_min=0, z_max=0, eps_b=1):
 		# Define beginning and end in z-direction
 		self.z_min = z_min
 		self.z_max = z_max
@@ -199,11 +191,11 @@ class Layer(object):
 				shape = Poly(params['eps'], params['x_edges'], 
 								params['y_edges'])
 			else:
-				raise(NotImplementedError("Shape must be one of \
-							{'circle', 'square', 'poly'}"))
+				raise NotImplementedError("Shape must be one of" \
+							"{'circle', 'square', 'poly'}")
 		else:
-			raise(ValueError, "Arguments to add_shape() must be either a Shape \
-				instance or a tuple of (shape_type, parameters)")
+			raise ValueError("Arguments to add_shape() must be either a " \
+				"Shape instance or a tuple of (shape_type, parameters)")
 
 		self.shapes.append(shape)
 		self.eps_avg = (self.eps_avg*(self.lattice.ec_area - shape.area) + 
@@ -255,12 +247,102 @@ class Lattice(object):
 				a1 = np.array([0.5, np.sqrt(3)/2])
 				a2 = np.array([0.5, -np.sqrt(3)/2])
 			else:
-				raise(ValueError, "Lattice can be 'square' or 'hexagonal, \
-					or defined through two primitive vectors.")
+				raise ValueError("Lattice can be 'square' or 'hexagonal," \
+					"or defined through two primitive vectors.")
 
 		elif len(args) == 2:
 			self.type = 'custom'
-			a1 = args[0]
-			a2 = args[1]
+			a1 = np.array(args[0])
+			a2 = np.array(args[1])
 
 		return (a1, a2)
+
+	def xy_grid(self, dx=2e-2, dy=2e-2):
+		''' 
+		Define an xy-grid for visualization purposes based on the lattice
+		vectors of the PhC (not sure if it works for very weird lattices)
+		'''
+		ymax = np.abs(max([self.a1[1], self.a2[1]]))
+		ymin = -ymax
+
+		xmax = np.abs(max([self.a1[0], self.a2[0]]))
+		xmin = -xmax
+
+		return (np.arange(xmin, xmax, dx),np.arange(ymin, ymax, dy))
+
+	def bz_path(self, pts, ns):
+		'''
+		Make a path in the Brillouin zone 
+			- pts is a list of points 
+			- ns is a list of length either 1 or len(pts) - 1, specifying 
+				how many points are to be added between each two pts
+		'''
+
+		npts = len(pts)
+		if npts < 2:
+			raise ValueError("At least two points must be given")
+
+		if len(ns) == 1:
+			ns = ns[0]*np.ones(npts-1, dtype=np.int_)
+		elif len(ns) == npts - 1:
+			ns = np.array(ns)
+		else:
+			raise ValueError("Length of ns must be either 1 or len(pts) - 1")
+
+		kpoints = np.zeros((2, np.sum(ns) + 1))
+		inds = [0]
+		count = 0
+
+		for ip in range(npts - 1):
+			p1 = self._parse_point(pts[ip])
+			p2 = self._parse_point(pts[ip + 1])
+			kpoints[:, count:count+ns[ip]] = p1[:, np.newaxis] + np.outer(\
+						(p2 - p1), np.linspace(0, 1, ns[ip], endpoint=False))
+			count = count+ns[ip]
+			inds.append(count)
+		kpoints[:, -1] = p2
+
+		path = type('', (), {})() # Create an "empty" object
+		path.kpoints = kpoints
+		path.pt_labels = [str(pt) for pt in pts]
+		path.pt_inds = inds
+
+		return path
+
+	def _parse_point(self, pt):
+		'''
+		Returns a numpy array corresponding to a BZ point pt
+		'''
+		if type(pt) == np.ndarray:
+			return pt
+		elif type(pt) == str:
+			if pt.lower() == 'g' or pt.lower() == 'gamma':
+				return np.array([0, 0])
+
+			if pt.lower() == 'x':
+				if self.type == 'square':
+					return np.array([np.pi, 0])
+				else:
+					raise ValueError("'X'-point is only defined for lattice"\
+						"initialized as 'square'.")
+
+			if pt.lower() == 'm':
+				if self.type == 'square':
+					return np.array([np.pi, np.pi])
+				elif self.type == 'hexagonal':
+					return np.array([np.pi, np.pi/np.sqrt(3)])
+				else:
+					raise ValueError("'М'-point is only defined for lattice" \
+						"initialized as 'square' or 'hexagonal'.")
+
+			if pt.lower() == 'k':
+				if self.type == 'hexagonal':
+					return np.array([4/3*np.pi, 0])
+				else:
+					raise ValueError("'K'-point is only defined for lattice" \
+						"initialized as 'hexagonal'.")
+					
+		raise ValueError("Something was wrong with BZ point definition")
+
+
+
