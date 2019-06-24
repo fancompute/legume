@@ -1,3 +1,8 @@
+'''
+Various utilities used in the main code.
+NOTE: there should be no autograd functions here, only plain numpy.
+'''
+
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.linalg import toeplitz
@@ -78,11 +83,19 @@ def ftinv(ft_coeff, gvec, xgrid, ygrid):
 	ftinv = np.zeros(xmesh.shape, dtype=np.complex128)
 
 	# Take only the unique components
-	(_, ind_unique) = np.unique(gvec, return_index=True, axis=1)
+	(g_unique, ind_unique) = np.unique(gvec, return_index=True, axis=1)
 
 	for indg in ind_unique:
 		ftinv += ft_coeff[indg]*np.exp(-1j*gvec[0, indg]*xmesh - \
 							1j*gvec[1, indg]*ymesh)
+
+	# # Can also be defined through a DFT matrix but it doesn't seem faster and 
+	# # it's *very* memory intensive.
+	# exp_matrix = xmesh.reshape((-1, 1)).dot(g_unique[[0], :]) + \
+	# 				ymesh.reshape((-1, 1)).dot(g_unique[[1], :])
+
+	# dft_matrix = np.exp(1j*exp_matrix)
+	# ftinv = dft_matrix.dot(ft_coeff[ind_unique]).reshape(xmesh.shape)
 
 	return ftinv
 
@@ -120,8 +133,7 @@ def toeplitz_block(n, T1, T2):
 	'''
 	ntot = T1.shape[0]
 	p = int(ntot/n) # Linear size of each block
-	print(p)
-	Tmat = np.zeros((ntot, ntot), dtype=np.complex128)
+	Tmat = np.zeros((ntot, ntot), dtype=T1.dtype)
 	for ind1 in range(n):
 	    for ind2 in range(ind1, n):
 	        toep1=T1[(ind2-ind1)*p:(ind2-ind1+1)*p]

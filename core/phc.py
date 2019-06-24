@@ -1,7 +1,7 @@
 import numpy as np
-import utils
+import utils.utils as utils
 import matplotlib.pyplot as plt
-from shapes import Circle, Poly, Square
+from .shapes import Circle, Poly, Square
 
 # Class for a photonic crystal which can contain a number of layers
 class PhotCryst(object):
@@ -32,7 +32,11 @@ class PhotCryst(object):
 		xmax = np.abs(max([self.lattice.a1[0], self.lattice.a2[0]]))
 		xmin = -xmax
 
+<<<<<<< HEAD:phc.py
 		return (np.arange(xmin,xmax,dx),np.arange(ymin,ymax,dy))
+=======
+		return (np.arange(xmin, xmax, dx),np.arange(ymin, ymax, dy))
+>>>>>>> 0468681d5598f399901f19da79643a8a3f2247dd:core/phc.py
 
 	def z_grid(self, dz=2e-2):
 		''' 
@@ -41,7 +45,11 @@ class PhotCryst(object):
 		'''
 		zmin = self.layers[0].z_min - 1
 		zmax = self.layers[-1].z_max + 1
+<<<<<<< HEAD:phc.py
 		return np.arange(zmin,zmax,dz)
+=======
+		return np.arange(zmin, zmax, dz)
+>>>>>>> 0468681d5598f399901f19da79643a8a3f2247dd:core/phc.py
 
 	def add_layer(self, d, eps_b=1):
 		'''
