@@ -7,5 +7,5 @@ package at github.com/flaport/fdtd
 from .phc import PhotCryst, Layer, Lattice
 from .gme import GuidedModeExp
 from .shapes import Circle, Poly, Square
-from .backend import backend
-from .backend import set_backend
+# from .backend import backend
+# from .backend import set_backend
