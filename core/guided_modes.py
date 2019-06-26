@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import fsolve, bisect
-from utils import sorted_intersection
+from Utils.utils import RedhefferStar
 ''' 
 Function to compute the guided modes of a multi-layer structure
 Input
@@ -37,8 +37,8 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1, omega_lb=None, omega_u
 		omega_ub = g/max(eps_array[0],eps_array[-1])
 	# print('omega bounds',omega_lb,omega_ub)
 	if mode=='TE':
-		D22real = lambda x,*args: D22_TE(x,*args).real
-		D22imag = lambda x,*args: D22_TE(x,*args).imag
+		D22real = lambda x,*args: D22_TE2(x,*args).real
+		D22imag = lambda x,*args: D22_TE2(x,*args).imag
 		# D22abs = lambda x,*args: abs(D22_TE(x,*args))
 	elif mode=='TM':
 		D22real = lambda x,*args: D22_TM(x,*args).real
@@ -135,7 +135,7 @@ def S_T_matrices_TE(omega, g_array, eps_array, d_array):
 	assert len(g_array)==len(eps_array), 'g_array and eps_array should both have length = num_layers+2'
 	assert len(d_array)==len(eps_array)-2, 'd_array should have length = num_layers'
 	chi_array = chi(omega, g_array, eps_array)
-	print('chi array',chi_array)
+	# print('chi array',chi_array)
 	S11 = chi_array[:-1] + chi_array[1:]
 	S12 = chi_array[:-1] - chi_array[1:]
 	S22 = S11
@@ -160,8 +160,8 @@ def D22_TE(omega, g_array, eps_array, d_array):
 	(num_layers = M-1)
 	'''
 	S_matrices, T_matrices = S_T_matrices_TE(omega, g_array, eps_array, d_array)
-	print('S matrices', S_matrices)
-	print('T matrices', T_matrices)
+	# print('S matrices', S_matrices)
+	# print('T matrices', T_matrices)
 	D = S_matrices[0,:,:]
 	# print('S0',D)
 	for i,S in enumerate(S_matrices[1:]):
@@ -171,6 +171,34 @@ def D22_TE(omega, g_array, eps_array, d_array):
 		# print('T',T)
 	# print('D',D)
 	return D[1,1]
+
+def TMtoSM(TM):
+	'''
+	Function to convert 2*2 transfer matrix to corresponding scattering matrix
+	'''
+	SM = np.array([[-TM[1,0]/TM[1,1],				1.0/TM[1,1]],
+				   [TM[0,0]-TM[0,1]*TM[1,0]/TM[1,1],	TM[0,1]/TM[1,1]]])
+	return SM
+
+def D22_TE2(omega, g_array, eps_array, d_array):
+	'''
+	Scattering matrix formalism for D22_TE. Hopefully can be numerically more stable.
+	'''
+	S_matrices, T_matrices = S_T_matrices_TE(omega, g_array, eps_array, d_array)
+	D = TMtoSM(S_matrices[0,:,:])
+	for i,S in enumerate(S_matrices[1:]):
+		T = T_matrices[i]
+		# D = RedhefferStar(TMtoSM(S), RedhefferStar(TMtoSM(T),D))
+		print('T\n',T,TMtoSM(T))
+		print('S\n',S,TMtoSM(S))
+		print('red\n',RedhefferStar(TMtoSM(S),TMtoSM(T)))
+		print('D\n',D)
+		ST = TMtoSM(S.dot(T))
+		print('ST\n',ST)
+		# D = RedhefferStar(ST, D)
+		# D = RedhefferStar(RedhefferStar(TMtoSM(S),TMtoSM(T)),D)
+		D = RedhefferStar(TMtoSM(S),RedhefferStar(TMtoSM(T),D))
+	return 1.0/D[0,1]
 
 def AB_matrices(omega, g_array, eps_array, d_array, chi_array = None, mode = 'TE'):
 	'''

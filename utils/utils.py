@@ -135,10 +135,30 @@ def toeplitz_block(n, T1, T2):
 	p = int(ntot/n) # Linear size of each block
 	Tmat = np.zeros((ntot, ntot), dtype=T1.dtype)
 	for ind1 in range(n):
-	    for ind2 in range(ind1, n):
-	        toep1=T1[(ind2-ind1)*p:(ind2-ind1+1)*p]
-	        toep2=T2[(ind2-ind1)*p:(ind2-ind1+1)*p]
-	        Tmat[ind1*p:(ind1+1)*p, ind2*p:(ind2+1)*p] = \
-	        		toeplitz(toep2, toep1)
+		for ind2 in range(ind1, n):
+			toep1=T1[(ind2-ind1)*p:(ind2-ind1+1)*p]
+			toep2=T2[(ind2-ind1)*p:(ind2-ind1+1)*p]
+			Tmat[ind1*p:(ind1+1)*p, ind2*p:(ind2+1)*p] = \
+					toeplitz(toep2, toep1)
 
 	return np.triu(Tmat) + np.conj(np.transpose(np.triu(Tmat,1)))
+
+def RedhefferStar(SA,SB): #SA and SB are both 2x2 matrices;
+	assert type(SA) == np.ndarray, 'not np.matrix'
+	assert type(SB) == np.ndarray, 'not np.matrix'
+
+	I = 1;
+	# once we break every thing like this, we should still have matrices
+	SA_11 = SA[0, 0]; SA_12 = SA[0, 1]; SA_21 = SA[1, 0]; SA_22 = SA[1, 1];
+	SB_11 = SB[0, 0]; SB_12 = SB[0, 1]; SB_21 = SB[1, 0]; SB_22 = SB[1, 1];
+
+	D = 1.0/(I-SB_11*SA_22);
+	F = 1.0/(I-SA_22*SB_11);
+
+	SAB_11 = SA_11 + SA_12*D*SB_11*SA_21;
+	SAB_12 = SA_12*D*SB_12;
+	SAB_21 = SB_21*F*SA_21;
+	SAB_22 = SB_22 + SB_21*F*SA_22*SB_12;
+
+	SAB = np.array([[SAB_11, SAB_12],[SAB_21, SAB_22]])
+	return SAB;
