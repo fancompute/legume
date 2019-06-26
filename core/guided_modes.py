@@ -188,6 +188,7 @@ def D22_TE2(omega, g_array, eps_array, d_array):
 	D = TMtoSM(S_matrices[0,:,:])
 	for i,S in enumerate(S_matrices[1:]):
 		T = T_matrices[i]
+		# print(np.linalg.cond(T)) ### roughly 1e30 at max
 		# D = RedhefferStar(TMtoSM(S), RedhefferStar(TMtoSM(T),D))
 		print('T\n',T,TMtoSM(T))
 		print('S\n',S,TMtoSM(S))
@@ -199,6 +200,25 @@ def D22_TE2(omega, g_array, eps_array, d_array):
 		# D = RedhefferStar(RedhefferStar(TMtoSM(S),TMtoSM(T)),D)
 		D = RedhefferStar(TMtoSM(S),RedhefferStar(TMtoSM(T),D))
 	return 1.0/D[0,1]
+
+def D22_TE3(omega, g_array, eps_array, d_array):
+	'''
+	Discard small part for D22_TE. Hopefully can be numerically more stable.
+	'''
+	S_matrices, T_matrices = S_T_matrices_TE(omega, g_array, eps_array, d_array)
+	D = S_matrices[0,:,:]
+	for i,S in enumerate(S_matrices[1:]):
+		T = T_matrices[i]
+		if np.linalg.cond(T)>1e20:
+			T = np.array([[0,0],[0,1]])
+		# D = RedhefferStar(TMtoSM(S), RedhefferStar(TMtoSM(T),D))
+		print('T\n',T,TMtoSM(T))
+		print('S\n',S,TMtoSM(S))
+		print('D\n',D)
+		# D = RedhefferStar(ST, D)
+		# D = RedhefferStar(RedhefferStar(TMtoSM(S),TMtoSM(T)),D)
+		D = S.dot(T.dot(D))
+	return D[1,1]
 
 def AB_matrices(omega, g_array, eps_array, d_array, chi_array = None, mode = 'TE'):
 	'''
