@@ -2,6 +2,8 @@ import numpy as np
 from scipy.special import jv as besselj 
 import matplotlib.path as mpltPath
 
+from .backend import backend as bd
+
 class Shape(object):
 	''' 
 	Parent class for shapes. Each child class should have the following methods:
@@ -11,6 +13,7 @@ class Shape(object):
 	'''
 	def __init__(self, eps=1):
 		self.eps = eps
+		self.area = bd.real(self.compute_ft(bd.array([[0], [0]])))
 
 	def parse_ft_gvec(self, gvec):
 		if type(gvec) == list:
@@ -36,11 +39,10 @@ class Circle(Shape):
 	Define class for a circular shape
 	'''
 	def __init__(self, eps=1, x=0, y=0, r=0):
-		super().__init__(eps=eps)
 		self.x = x
 		self.y = y
 		self.r = r
-		self.area=np.pi*r**2
+		super().__init__(eps=eps)
 
 	def compute_ft(self, gvec):
 		'''
@@ -51,11 +53,10 @@ class Circle(Shape):
 		(gx, gy) = self.parse_ft_gvec(gvec)
 
 		gabs = np.sqrt(np.abs(np.square(gx)) + np.abs(np.square(gy)))
-		gind = gabs > 1e-10
-		ft = np.pi*self.r**2*np.ones(gabs.shape, dtype=np.complex128)
+		gabs += 1e-10 # To avoid numerical instability at zero
 
-		ft[gind] = np.exp(1j*gx[gind]*self.x + 1j*gy[gind]*self.y)*self.r* \
-							2*np.pi/gabs[gind]*besselj(1, gabs[gind]*self.r)
+		ft = bd.exp(1j*gx*self.x + 1j*gy*self.y)*self.r* \
+							2*np.pi/gabs*bd.bessel1(gabs*self.r)
 
 		return ft
 
@@ -68,15 +69,13 @@ class Poly(Shape):
 	Define class for a polygonal shape
 	'''
 	def __init__(self, eps=1, x_edges=0, y_edges=0):
-		super().__init__(eps)
 		# Make extra sure that the last point of the polygon is the same as the 
 		# first point
 		self.x_edges = x_edges
 		self.y_edges = y_edges
 		self.x_edges.append(x_edges[0])
 		self.y_edges.append(y_edges[0])
-
-		self.area = np.real(self.compute_ft(np.array([[0], [0]])))
+		super().__init__(eps)
 
 	def compute_ft(self, gvec):
 		'''
@@ -97,7 +96,7 @@ class Poly(Shape):
 		xj = xj[np.newaxis, :]
 		yj = yj[np.newaxis, :]
 
-		ft = np.zeros((ng), dtype=np.complex128);
+		ft = np.zeros((ng), dtype=bd.complex);
 
 		aj = (np.roll(xj, -1, axis=1) - xj + 1e-10) / \
 				(np.roll(yj, -1, axis=1) - yj + 1e-20)
