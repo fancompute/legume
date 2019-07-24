@@ -113,7 +113,7 @@ class PlaneWaveExp(object):
 
 		plt.show()
 
-	def run(self, kpoints=np.array([[0, 0]]), pol='te'):
+	def run(self, kpoints=np.array([[1e-5], [0]]), pol='te'):
 		''' 
 		Run the simulation. Input:
 			- kpoints, [2xNk] numpy array over which band structure is simulated
@@ -138,9 +138,9 @@ class PlaneWaveExp(object):
 								(k[:, bd.newaxis] + self.gvec))
 				mat = mat * self.eps_inv_mat
 			elif self.pol == 'tm':
-				Gk = np.sqrt(np.square(k[0] + self.gvec[0, :]) + \
-						np.square(k[1] + self.gvec[1, :]))
-				mat = np.outer(Gk, Gk)
+				Gk = bd.sqrt(bd.square(k[0] + self.gvec[0, :]) + \
+						bd.square(k[1] + self.gvec[1, :]))
+				mat = bd.outer(Gk, Gk)
 				mat = mat * self.eps_inv_mat
 			else:
 				raise ValueError("Polarization should be 'TE' or 'TM'")
@@ -150,7 +150,7 @@ class PlaneWaveExp(object):
 			# NB: we shift the matrix by np.eye to avoid problems at the zero-
 			# frequency mode at Gamma
 			(freq2, vec) = bd.eigh(mat + bd.eye(mat.shape[0]))
-			freqs[ik, :] = bd.sqrt(bd.abs(freq2 - bd.ones(self.numeig)))
+			freqs = bd.sqrt(bd.abs(freq2 - bd.ones(self.numeig)))
 
 		# Store the eigenfrequencies taking the standard reduced frequency 
 		# convention for the units (2pi a/c)	

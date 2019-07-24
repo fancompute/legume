@@ -52,12 +52,14 @@ class NumpyBackend(Backend):
 	transpose = staticmethod(np.transpose)
 	toeplitz_block = staticmethod(toeplitz_block)
 	eigh = staticmethod(np.linalg.eigh)
+	outer = staticmethod(np.outer)
 
 	# math functions
 	exp = staticmethod(np.exp)
 	bessel1 = staticmethod(sp.special.j1)
 	sqrt = staticmethod(np.sqrt)
 	abs = staticmethod(np.abs)
+	square = staticmethod(np.square)
 
 	def is_array(self, arr):
 		""" check if an object is an array """
@@ -87,12 +89,14 @@ class AutogradBackend(Backend):
 	transpose = staticmethod(npa.transpose)
 	toeplitz_block = staticmethod(toeplitz_block_ag)
 	eigh = staticmethod(npa.linalg.eigh)
+	outer = staticmethod(npa.outer)
 
 	# math functions
 	exp = staticmethod(npa.exp)
 	bessel1 = staticmethod(spa.special.j1)
 	sqrt = staticmethod(npa.sqrt)
 	abs = staticmethod(npa.abs)
+	square = staticmethod(npa.square)
 
 	# constructors
 	array = staticmethod(npa.array)
