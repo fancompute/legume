@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import utils.utils as utils
+import core.utils as utils
 from .backend import backend as bd
 
 class PlaneWaveExp(object):
@@ -129,7 +129,7 @@ class PlaneWaveExp(object):
 		# Change this if switching to a solver that allows for variable numeig
 		self.numeig = self.gvec.shape[1]
 
-		freqs = bd.zeros((kpoints.shape[1], self.numeig))
+		freqs = []
 
 		for ik, k in enumerate(kpoints.T):
 			# Construct the matrix for diagonalization
@@ -150,11 +150,11 @@ class PlaneWaveExp(object):
 			# NB: we shift the matrix by np.eye to avoid problems at the zero-
 			# frequency mode at Gamma
 			(freq2, vec) = bd.eigh(mat + bd.eye(mat.shape[0]))
-			freqs = bd.sqrt(bd.abs(freq2 - bd.ones(self.numeig)))
+			freqs.append(bd.sqrt(bd.abs(freq2 - bd.ones(self.numeig))))
 
 		# Store the eigenfrequencies taking the standard reduced frequency 
 		# convention for the units (2pi a/c)	
-		self.freqs = freqs/2/np.pi
+		self.freqs = bd.array(freqs)/2/np.pi
 
 	def compute_eps_inv(self):
 		'''

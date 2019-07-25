@@ -1,5 +1,5 @@
 import numpy as np
-from utils.utils import toeplitz_block
+from .utils import toeplitz_block
 
 from autograd.extend import primitive, defvjp
 

@@ -1,9 +1,9 @@
 # This file defines the PhotCryst, Layer, and Lattice classes
 
 import numpy as np
-import utils.utils as utils
 import matplotlib.pyplot as plt
 
+import core.utils as utils 
 from .shapes import Circle, Poly, Square
 from .backend import backend as bd
 

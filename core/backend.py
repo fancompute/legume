@@ -14,7 +14,8 @@ it is used when needed only so as not to slow down everything
 import numpy as np
 import scipy as sp
 
-from utils.utils import toeplitz_block
+# Import some specially written functions
+from .utils import toeplitz_block
 from .primitives import toeplitz_block_ag
 
 # Import autograd if available
@@ -73,7 +74,6 @@ class NumpyBackend(Backend):
 	linspace = staticmethod(np.linspace)
 	arange = staticmethod(np.arange)
 	newaxis = staticmethod(np.newaxis)
-	# numpy = staticmethod(np.asarray)
 
 class AutogradBackend(Backend):
 	""" Autograd Backend """
