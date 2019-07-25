@@ -4,8 +4,8 @@ NOTE: there should be no autograd functions here, only plain numpy.
 '''
 
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.linalg import toeplitz
+import matplotlib.pyplot as plt
 
 def plot_eps(eps_r, clim=None, ax=None, extent=None, cmap="Greys", cbar=False):
 
@@ -19,11 +19,11 @@ def plot_eps(eps_r, clim=None, ax=None, extent=None, cmap="Greys", cbar=False):
 	if cbar:
 		plt.colorbar(im, ax=ax)
 
-def plot_xz(phc, y=0, dx=2e-2, dz=2e-2, ax=None, clim=None, cbar=False):
+def plot_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None, cbar=False):
 	'''
 	Plot an xz-cross section showing all the layers and shapes
 	'''
-	(xgrid, zgrid) = (phc.lattice.xy_grid(dx=dx)[0], phc.z_grid(dz=dz))
+	(xgrid, zgrid) = (phc.lattice.xy_grid(Nx=Nx)[0], phc.z_grid(Nz=Nz))
 
 	[xmesh, zmesh] = np.meshgrid(xgrid, zgrid)
 	ymesh = y*np.ones(xmesh.shape)
@@ -34,11 +34,11 @@ def plot_xz(phc, y=0, dx=2e-2, dz=2e-2, ax=None, clim=None, cbar=False):
 	plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar)
 
 
-def plot_xy(phc, z=0, dx=2e-2, dy=2e-2, ax=None, clim=None, cbar=False):
+def plot_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None, cbar=False):
 	'''
 	Plot an xy-cross section showing all the layers and shapes
 	'''
-	(xgrid, ygrid) = phc.lattice.xy_grid(dx=dx, dy=dy)
+	(xgrid, ygrid) = phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
 	[xmesh, ymesh] = np.meshgrid(xgrid, ygrid)
 	zmesh = z*np.ones(xmesh.shape)
 
@@ -48,11 +48,11 @@ def plot_xy(phc, z=0, dx=2e-2, dy=2e-2, ax=None, clim=None, cbar=False):
 	plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar)
 
 
-def plot_yz(phc, x=0, dy=2e-2, dz=2e-2, ax=None, clim=None, cbar=False):
+def plot_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None, cbar=False):
 	'''
 	Plot a yz-cross section showing all the layers and shapes
 	'''
-	(ygrid, zgrid) = (phc.lattice.xy_grid(dy=dy)[1], phc.z_grid(dz=dz))
+	(ygrid, zgrid) = (phc.lattice.xy_grid(Ny=Ny)[1], phc.z_grid(Nz=Nz))
 	[ymesh, zmesh] = np.meshgrid(ygrid, zgrid)
 	xmesh = x*np.ones(ymesh.shape)
 
@@ -125,6 +125,30 @@ def ft2square(lattice, ft_coeff, gvec):
 
 	return (eps_ft, gx_grid, gy_grid)
 
+
+def grad_num(fn, arg, step_size=1e-7):
+    ''' Numerically differentiate `fn` w.r.t. its argument `arg` 
+    `arg` can be a numpy array of arbitrary shape
+    `step_size` can be a number or an array of the same shape as `arg` '''
+
+    N = arg.size
+    shape = arg.shape
+    gradient = np.zeros((N,))
+    f_old = fn(arg)
+
+    if type(step_size) == float:
+        step = step_size*np.ones((N))
+    else:
+        step = step_size.ravel()
+
+    for i in range(N):
+        arg_new = arg.flatten()
+        arg_new[i] += step[i]
+        f_new_i = fn(arg_new.reshape(shape))
+        gradient[i] = (f_new_i - f_old) / step[i]
+
+    return gradient.reshape(shape)
+
 def toeplitz_block(n, T1, T2):
 	'''
 	Constructs a Hermitian Toeplitz-block-Toeplitz matrix with n blocks and 
@@ -136,8 +160,8 @@ def toeplitz_block(n, T1, T2):
 	Tmat = np.zeros((ntot, ntot), dtype=T1.dtype)
 	for ind1 in range(n):
 	    for ind2 in range(ind1, n):
-	        toep1=T1[(ind2-ind1)*p:(ind2-ind1+1)*p]
-	        toep2=T2[(ind2-ind1)*p:(ind2-ind1+1)*p]
+	        toep1 = T1[(ind2-ind1)*p:(ind2-ind1+1)*p]
+	        toep2 = T2[(ind2-ind1)*p:(ind2-ind1+1)*p]
 	        Tmat[ind1*p:(ind1+1)*p, ind2*p:(ind2+1)*p] = \
 	        		toeplitz(toep2, toep1)
 

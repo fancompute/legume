@@ -1,6 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import utils.utils as utils
+import core.utils as utils
+from .backend import backend as bd
 
 class PlaneWaveExp(object):
 	'''
@@ -62,8 +63,8 @@ class PlaneWaveExp(object):
 
 		# print(self.gvec,'\n', G1/2/np.pi,'\n', G2/2/np.pi,'\n')
 
-		T1 = np.zeros(self.gvec.shape[1])
-		T2 = np.zeros(self.gvec.shape[1])
+		T1 = bd.zeros(self.gvec.shape[1])
+		T2 = bd.zeros(self.gvec.shape[1])
 		eps_avg = self.eps_eff
 		
 		for shape in self.layer.shapes:
@@ -71,14 +72,17 @@ class PlaneWaveExp(object):
 			# inside the shape and zero outside
 			T1 = T1 + (shape.eps - self.eps_eff)*shape.compute_ft(G1)
 			T2 = T2 + (shape.eps - self.eps_eff)*shape.compute_ft(G2)
-			eps_avg = (eps_avg*(self.layer.lattice.ec_area - shape.area) + 
-						shape.eps*shape.area)/self.layer.lattice.ec_area
+			eps_avg = eps_avg + (shape.eps - self.eps_eff) * shape.area / \
+							self.layer.lattice.ec_area
 
 		# Apply some final coefficients
+		# Note the hacky way to set the zero element so as to work with
+		# 'autograd' backend
+		ind0 = bd.arange(T1.size) < 1  
 		T1 = T1 / self.layer.lattice.ec_area
-		T1[0] = eps_avg
+		T1 = T1*(1-ind0) + eps_avg*ind0
 		T2 = T2 / self.layer.lattice.ec_area
-		T2[0] = eps_avg
+		T2 = T2*(1-ind0) + eps_avg*ind0
 
 		# Store T1 and T2
 		self.T1 = T1
@@ -88,12 +92,12 @@ class PlaneWaveExp(object):
 		self.G1 = G1
 		self.G2 = G2
 
-	def plot_overview_ft(self, dx=1e-2, dy=1e-2):
+	def plot_overview_ft(self, Nx=100, Ny=100):
 		'''
 		Plot the permittivity of the layer as computed from an 
 		inverse Fourier transform with the GME reciprocal lattice vectors.
 		'''
-		(xgrid, ygrid) = self.layer.lattice.xy_grid(dx=dx, dy=dy)
+		(xgrid, ygrid) = self.layer.lattice.xy_grid(Nx=Nx, Ny=Ny)
 
 		fig, ax = plt.subplots(1, 1, constrained_layout=True)
 
@@ -109,7 +113,7 @@ class PlaneWaveExp(object):
 
 		plt.show()
 
-	def run(self, kpoints=np.array([0, 0]), pol='te'):
+	def run(self, kpoints=np.array([[1e-5], [0]]), pol='te'):
 		''' 
 		Run the simulation. Input:
 			- kpoints, [2xNk] numpy array over which band structure is simulated
@@ -125,18 +129,18 @@ class PlaneWaveExp(object):
 		# Change this if switching to a solver that allows for variable numeig
 		self.numeig = self.gvec.shape[1]
 
-		freqs = np.zeros((kpoints.shape[1], self.numeig))
+		freqs = []
 
 		for ik, k in enumerate(kpoints.T):
 			# Construct the matrix for diagonalization
 			if self.pol == 'te':
-				mat = np.dot((k[:, np.newaxis] + self.gvec).T, 
-								(k[:, np.newaxis] + self.gvec))
+				mat = bd.dot(bd.transpose(k[:, bd.newaxis] + self.gvec), 
+								(k[:, bd.newaxis] + self.gvec))
 				mat = mat * self.eps_inv_mat
 			elif self.pol == 'tm':
-				Gk = np.sqrt(np.square(k[0] + self.gvec[0, :]) + \
-						np.square(k[1] + self.gvec[1, :]))
-				mat = np.outer(Gk, Gk)
+				Gk = bd.sqrt(bd.square(k[0] + self.gvec[0, :]) + \
+						bd.square(k[1] + self.gvec[1, :]))
+				mat = bd.outer(Gk, Gk)
 				mat = mat * self.eps_inv_mat
 			else:
 				raise ValueError("Polarization should be 'TE' or 'TM'")
@@ -145,12 +149,12 @@ class PlaneWaveExp(object):
 			# to scipy.sparse.linalg.eish() in the future
 			# NB: we shift the matrix by np.eye to avoid problems at the zero-
 			# frequency mode at Gamma
-			(freq2, vec) = np.linalg.eigh(mat + np.eye(mat.shape[0]))
-			freqs[ik, :] = np.sqrt(np.abs(freq2 - np.ones(self.numeig)))
+			(freq2, vec) = bd.eigh(mat + bd.eye(mat.shape[0]))
+			freqs.append(bd.sqrt(bd.abs(freq2 - bd.ones(self.numeig))))
 
 		# Store the eigenfrequencies taking the standard reduced frequency 
 		# convention for the units (2pi a/c)	
-		self.freqs = freqs/2/np.pi
+		self.freqs = bd.array(freqs)/2/np.pi
 
 	def compute_eps_inv(self):
 		'''
@@ -159,6 +163,6 @@ class PlaneWaveExp(object):
 
 		# For now we just use the numpy inversion. Later on we could 
 		# implement the Toeplitz-Block-Toeplitz inversion (faster)
-		eps_mat = utils.toeplitz_block(self.n2g, self.T1, self.T2)
-		self.eps_inv_mat = np.linalg.inv(eps_mat)
+		eps_mat = bd.toeplitz_block(self.n2g, self.T1, self.T2)
+		self.eps_inv_mat = bd.inv(eps_mat)
 		
