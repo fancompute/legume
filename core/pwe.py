@@ -72,8 +72,8 @@ class PlaneWaveExp(object):
 			# inside the shape and zero outside
 			T1 = T1 + (shape.eps - self.eps_eff)*shape.compute_ft(G1)
 			T2 = T2 + (shape.eps - self.eps_eff)*shape.compute_ft(G2)
-			eps_avg = (eps_avg*(self.layer.lattice.ec_area - shape.area) + 
-						shape.eps*shape.area)/self.layer.lattice.ec_area
+			eps_avg = eps_avg + (shape.eps - self.eps_eff) * shape.area / \
+							self.layer.lattice.ec_area
 
 		# Apply some final coefficients
 		# Note the hacky way to set the zero element so as to work with

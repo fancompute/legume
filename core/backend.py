@@ -16,7 +16,7 @@ import scipy as sp
 
 # Import some specially written functions
 from .utils import toeplitz_block
-from .primitives import toeplitz_block_ag
+from .primitives import toeplitz_block_ag, eigh_ag
 
 # Import autograd if available
 try:
@@ -88,7 +88,7 @@ class AutogradBackend(Backend):
 	inv = staticmethod(npa.linalg.inv)
 	transpose = staticmethod(npa.transpose)
 	toeplitz_block = staticmethod(toeplitz_block_ag)
-	eigh = staticmethod(npa.linalg.eigh)
+	eigh = staticmethod(eigh_ag)
 	outer = staticmethod(npa.outer)
 
 	# math functions

@@ -199,8 +199,8 @@ class Layer(object):
 				"Shape instance or a tuple of (shape_type, parameters)")
 
 		self.shapes.append(shape)
-		self.eps_avg = (self.eps_avg*(self.lattice.ec_area - shape.area) + 
-						shape.eps*shape.area)/self.lattice.ec_area
+		self.eps_avg = self.eps_avg + (shape.eps - self.eps_b) * shape.area / \
+							self.lattice.ec_area
 
 
 class Lattice(object):
