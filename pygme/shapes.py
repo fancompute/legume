@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.special import jv as besselj 
 import matplotlib.path as mpltPath
 
 from .backend import backend as bd
@@ -87,19 +86,19 @@ class Poly(Shape):
 		'''
 		(gx, gy) = self.parse_ft_gvec(gvec)
 
-		xj = np.array(self.x_edges)
-		yj = np.array(self.y_edges)
+		xj = bd.array(self.x_edges)
+		yj = bd.array(self.y_edges)
 		npts = xj.shape[0]
 		ng = gx.shape[0]
-		gx = gx[:, np.newaxis]
-		gy = gy[:, np.newaxis]
-		xj = xj[np.newaxis, :]
-		yj = yj[np.newaxis, :]
+		gx = gx[:, bd.newaxis]
+		gy = gy[:, bd.newaxis]
+		xj = xj[bd.newaxis, :]
+		yj = yj[bd.newaxis, :]
 
-		ft = np.zeros((ng), dtype=bd.complex);
+		ft = bd.zeros((ng), dtype=bd.complex);
 
-		aj = (np.roll(xj, -1, axis=1) - xj + 1e-10) / \
-				(np.roll(yj, -1, axis=1) - yj + 1e-20)
+		aj = (bd.roll(xj, -1, axis=1) - xj + 1e-10) / \
+				(bd.roll(yj, -1, axis=1) - yj + 1e-20)
 		bj = xj - aj * yj
 
 		# We first handle the Gx = 0 case
@@ -109,31 +108,33 @@ class Poly(Shape):
 			# And first the Gy = 0 case
 			ind_gy0 = np.abs(gy[:, 0]) < 1e-10
 			if np.sum(ind_gy0*ind_gx0) > 0:
-				ft[ind_gx0*ind_gy0] = np.sum(xj * np.roll(yj, -1, axis=1) - \
-								yj * np.roll(xj, -1, axis=1))/2
+				ft = ft + ind_gx0*ind_gy0*bd.sum(xj * bd.roll(yj, -1, axis=1)-\
+								yj * bd.roll(xj, -1, axis=1))/2
 				# Remove the Gx = 0, Gy = 0 component
 				ind_gx0[ind_gy0] = False
 
 			# Compute the remaining Gx = 0 components
 			a2j = 1 / aj
 			b2j = yj - a2j * xj
-			bgtemp = gy[ind_gx0, :] * b2j
-			agtemp1 = gx[ind_gx0, :].dot(xj) + gy[ind_gx0, :].dot(a2j * xj)
-			agtemp2 = gx[ind_gx0, :].dot(np.roll(xj, -1, axis=1)) + \
-					gy[ind_gx0, :].dot(a2j * np.roll(xj, -1, axis=1));
-			ft[ind_gx0] = np.sum(np.exp(1j*bgtemp) * (np.exp(1j*agtemp2) - \
-					np.exp(1j*agtemp1)) / (gy[ind_gx0, :] * (gx[ind_gx0, :] + \
-					gy[ind_gx0, :].dot(a2j))), axis=1)
+			bgtemp = gy * b2j
+			agtemp1 = bd.dot(gx, xj) + bd.dot(gy, a2j * xj)
+			agtemp2 = bd.dot(gx, bd.roll(xj, -1, axis=1)) + \
+					bd.dot(gy, a2j * bd.roll(xj, -1, axis=1))
+			ftemp = bd.sum(bd.exp(1j*bgtemp) * (bd.exp(1j*agtemp2) - \
+					bd.exp(1j*agtemp1)) / (gy * (gx + \
+					bd.dot(gy, a2j)) + 1e-20), axis=1)
+			ft = bd.where(ind_gx0, ftemp, ft)
 
 		# Finally compute the general case for Gx != 0
 		if np.sum(ind_gx) > 0:
-			bgtemp = gx[ind_gx, :].dot(bj)
-			agtemp1 = gy[ind_gx, :].dot(yj) + gx[ind_gx, :].dot(aj * yj)
-			agtemp2 = gy[ind_gx, :].dot(np.roll(yj, -1, axis=1)) + \
-						gx[ind_gx, :].dot(aj * np.roll(yj, -1, axis=1))
-			ft[ind_gx] = -np.sum(np.exp(1j*bgtemp) * (np.exp(1j * agtemp2) - \
-						np.exp(1j * agtemp1)) / (gx[ind_gx, :] * \
-						(gy[ind_gx, :] + gx[ind_gx, :].dot(aj))), axis=1)
+			bgtemp = bd.dot(gx, bj)
+			agtemp1 = bd.dot(gy, yj) + bd.dot(gx, aj * yj)
+			agtemp2 = bd.dot(gy, bd.roll(yj, -1, axis=1)) + \
+						bd.dot(gx, aj * bd.roll(yj, -1, axis=1))
+			ftemp = -bd.sum(bd.exp(1j*bgtemp) * (bd.exp(1j * agtemp2) - \
+						bd.exp(1j * agtemp1)) / (gx * \
+						(gy + bd.dot(gx, aj)) + 1e-20), axis=1)
+			ft = bd.where(ind_gx, ftemp, ft)
 
 		return ft
 
