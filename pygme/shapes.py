@@ -70,10 +70,8 @@ class Poly(Shape):
 	def __init__(self, eps=1, x_edges=0, y_edges=0):
 		# Make extra sure that the last point of the polygon is the same as the 
 		# first point
-		self.x_edges = x_edges
-		self.y_edges = y_edges
-		self.x_edges.append(x_edges[0])
-		self.y_edges.append(y_edges[0])
+		self.x_edges = bd.hstack((x_edges, x_edges[0]))
+		self.y_edges = bd.hstack((y_edges, y_edges[0]))
 		super().__init__(eps)
 
 	def compute_ft(self, gvec):
@@ -86,8 +84,7 @@ class Poly(Shape):
 		'''
 		(gx, gy) = self.parse_ft_gvec(gvec)
 
-		xj = bd.array(self.x_edges)
-		yj = bd.array(self.y_edges)
+		(xj, yj) = self.x_edges, self.y_edges
 		npts = xj.shape[0]
 		ng = gx.shape[0]
 		gx = gx[:, bd.newaxis]
@@ -150,17 +147,19 @@ class Poly(Shape):
 		Rotate a polygon around its center of mass by angle radians
 		'''
 
-		rotmat = np.array([[np.cos(angle), -np.sin(angle)], \
-							[np.sin(angle), np.cos(angle)]])
-		(xj, yj) = (np.array(self.x_edges), np.array(self.y_edges))
-		com_x = np.sum((xj + np.roll(xj, -1)) * (xj * np.roll(yj, -1) - \
-					np.roll(xj, -1) * yj))/6/self.area
-		com_y = np.sum((yj + np.roll(yj, -1)) * (xj * np.roll(yj, -1) - \
-					np.roll(xj, -1) * yj))/6/self.area
-		new_coords = rotmat.dot(np.vstack((xj-com_x, yj-com_y)))
+		rotmat = bd.array([[bd.cos(angle), -bd.sin(angle)], \
+							[bd.sin(angle), bd.cos(angle)]])
+		(xj, yj) = (bd.array(self.x_edges), bd.array(self.y_edges))
+		com_x = bd.sum((xj + bd.roll(xj, -1)) * (xj * bd.roll(yj, -1) - \
+					bd.roll(xj, -1) * yj))/6/self.area
+		com_y = bd.sum((yj + bd.roll(yj, -1)) * (xj * bd.roll(yj, -1) - \
+					bd.roll(xj, -1) * yj))/6/self.area
+		new_coords = bd.dot(rotmat, np.vstack((xj-com_x, yj-com_y)))
 
 		self.x_edges = new_coords[0, :] + com_x
 		self.y_edges = new_coords[1, :] + com_y
+
+		return self
 
 class Square(Poly):
 	'''
@@ -170,6 +169,19 @@ class Square(Poly):
 		self.x_cent = x_cent
 		self.y_cent = y_cent
 		self.a = a
-		x_edges = [x_cent - a/2, x_cent + a/2, x_cent + a/2, x_cent - a/2]
-		y_edges = [y_cent - a/2, y_cent - a/2, y_cent + a/2, y_cent + a/2]
+		x_edges = x_cent + bd.array([-a/2, a/2, a/2, -a/2])
+		y_edges = y_cent + bd.array([-a/2, -a/2, a/2, a/2])
 		super().__init__(eps, x_edges, y_edges)
+
+class Hexagon(Poly):
+	'''
+	Define class for a hexagon shape
+	'''
+	def __init__(self, eps=1, x_cent=0, y_cent=0, a=0):
+		self.x_cent = x_cent
+		self.y_cent = y_cent
+		self.a = a
+		x_edges = x_cent + bd.array([a, a/2, -a/2, -a, -a/2, a/2, a])
+		y_edges = y_cent + bd.array([0, np.sqrt(3)/2*a, np.sqrt(3)/2*a, 0, \
+					-np.sqrt(3)/2*a, -np.sqrt(3)/2*a, 0])
+		super().__init__(eps, x_edges, y_edges)	

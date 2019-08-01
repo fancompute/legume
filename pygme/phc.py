@@ -3,8 +3,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import core.utils as utils 
-from .shapes import Circle, Poly, Square
+import pygme.utils as utils 
+from .shapes import Shape, Circle, Poly, Square
 from .backend import backend as bd
 
 class PhotCryst(object):
@@ -177,32 +177,15 @@ class Layer(object):
 		Add a shape to the layer
 		'''
 
-		if len(args) == 1:
-			shape = args[0]
-		elif len(args) == 2:
-			(sh_type, params) = args
-
-			if sh_type == 'circle':
-				shape = Circle(params['eps'], params['x'], 
-								params['y'], params['r'])
-			elif sh_type == 'square':
-				shape = Square(params['eps'], params['x_cent'], 
-								params['y_cent'], params['a'])
-			elif sh_type == 'poly':
-				shape = Poly(params['eps'], params['x_edges'], 
-								params['y_edges'])
+		for shape in args:
+			if isinstance(shape, Shape):
+				self.shapes.append(shape)
+				self.eps_avg = self.eps_avg + (shape.eps - self.eps_b) * \
+								shape.area/self.lattice.ec_area
 			else:
-				raise NotImplementedError("Shape must be one of" \
-							"{'circle', 'square', 'poly'}")
-		else:
-			raise ValueError("Arguments to add_shape() must be either a " \
-				"Shape instance or a tuple of (shape_type, parameters)")
-
-		self.shapes.append(shape)
-		self.eps_avg = self.eps_avg + (shape.eps - self.eps_b) * shape.area / \
-							self.lattice.ec_area
-
-
+				raise ValueError("Arguments to add_shape must be an instance" \
+					"of pygme.Shape (e.g pygme.Circle or pygme.Poly)")
+		
 class Lattice(object):
 	'''
 	Class for constructing a Bravais lattice

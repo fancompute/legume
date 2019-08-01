@@ -3,8 +3,8 @@ Backend for the simulations. Available backends:
  - numpy [default]
  - autograd
 A backend can be set with the 'set_backend'
-	import core
-	core.set_backend("autograd")
+	import pygme
+	pygme.set_backend("autograd")
 
 Numpy is still used with some functionalities; if autograd backend is set, 
 it is used when needed only so as not to slow down everything
@@ -54,6 +54,8 @@ class NumpyBackend(Backend):
 	toeplitz_block = staticmethod(toeplitz_block)
 	eigh = staticmethod(np.linalg.eigh)
 	outer = staticmethod(np.outer)
+	roll = staticmethod(np.roll)
+	where = staticmethod(np.where)
 
 	# math functions
 	exp = staticmethod(np.exp)
@@ -61,6 +63,8 @@ class NumpyBackend(Backend):
 	sqrt = staticmethod(np.sqrt)
 	abs = staticmethod(np.abs)
 	square = staticmethod(np.square)
+	sin = staticmethod(np.sin)
+	cos = staticmethod(np.cos)
 
 	def is_array(self, arr):
 		""" check if an object is an array """
@@ -90,6 +94,8 @@ class AutogradBackend(Backend):
 	toeplitz_block = staticmethod(toeplitz_block_ag)
 	eigh = staticmethod(eigh_ag)
 	outer = staticmethod(npa.outer)
+	roll = staticmethod(npa.roll)
+	where = staticmethod(npa.where)
 
 	# math functions
 	exp = staticmethod(npa.exp)
@@ -97,6 +103,8 @@ class AutogradBackend(Backend):
 	sqrt = staticmethod(npa.sqrt)
 	abs = staticmethod(npa.abs)
 	square = staticmethod(npa.square)
+	sin = staticmethod(npa.sin)
+	cos = staticmethod(npa.cos)
 
 	# constructors
 	array = staticmethod(npa.array)

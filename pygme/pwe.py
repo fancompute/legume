@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import core.utils as utils
+import pygme.utils as utils
 from .backend import backend as bd
 
 class PlaneWaveExp(object):
