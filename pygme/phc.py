@@ -34,6 +34,7 @@ class PhotCryst(object):
 		'''
 		zmin = self.layers[0].z_min - 1
 		zmax = self.layers[-1].z_max + 1
+    
 		return np.linspace(zmin, zmax, Nz)
 
 	def add_layer(self, d, eps_b=1):

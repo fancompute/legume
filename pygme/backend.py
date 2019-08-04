@@ -30,7 +30,6 @@ class Backend(object):
 	'''
 	Backend Base Class 
 	'''
-
 	# types
 	int = np.int64
 	float = np.float64
@@ -82,7 +81,6 @@ class NumpyBackend(Backend):
 
 class AutogradBackend(Backend):
 	""" Autograd Backend """
-
 	# methods
 	sum = staticmethod(npa.sum)
 	hstack = staticmethod(npa.hstack)
