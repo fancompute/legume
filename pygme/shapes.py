@@ -105,7 +105,7 @@ class Poly(Shape):
 			# And first the Gy = 0 case
 			ind_gy0 = np.abs(gy[:, 0]) < 1e-10
 			if np.sum(ind_gy0*ind_gx0) > 0:
-				ft = ft + ind_gx0*ind_gy0*bd.sum(xj * bd.roll(yj, -1, axis=1)-\
+				ft = ind_gx0*ind_gy0*bd.sum(xj * bd.roll(yj, -1, axis=1)-\
 								yj * bd.roll(xj, -1, axis=1))/2
 				# Remove the Gx = 0, Gy = 0 component
 				ind_gx0[ind_gy0] = False
@@ -117,9 +117,10 @@ class Poly(Shape):
 			agtemp1 = bd.dot(gx, xj) + bd.dot(gy, a2j * xj)
 			agtemp2 = bd.dot(gx, bd.roll(xj, -1, axis=1)) + \
 					bd.dot(gy, a2j * bd.roll(xj, -1, axis=1))
+			denom = gy * (gx + bd.dot(gy, a2j))
 			ftemp = bd.sum(bd.exp(1j*bgtemp) * (bd.exp(1j*agtemp2) - \
-					bd.exp(1j*agtemp1)) / (gy * (gx + \
-					bd.dot(gy, a2j)) + 1e-20), axis=1)
+					bd.exp(1j*agtemp1)) * 
+					denom / (bd.square(denom) + 1e-50) , axis=1)
 			ft = bd.where(ind_gx0, ftemp, ft)
 
 		# Finally compute the general case for Gx != 0
@@ -128,9 +129,10 @@ class Poly(Shape):
 			agtemp1 = bd.dot(gy, yj) + bd.dot(gx, aj * yj)
 			agtemp2 = bd.dot(gy, bd.roll(yj, -1, axis=1)) + \
 						bd.dot(gx, aj * bd.roll(yj, -1, axis=1))
+			denom = gx * (gy + bd.dot(gx, aj))
 			ftemp = -bd.sum(bd.exp(1j*bgtemp) * (bd.exp(1j * agtemp2) - \
-						bd.exp(1j * agtemp1)) / (gx * \
-						(gy + bd.dot(gx, aj)) + 1e-20), axis=1)
+					bd.exp(1j * agtemp1)) * \
+					denom / (bd.square(denom) + 1e-50) , axis=1)
 			ft = bd.where(ind_gx, ftemp, ft)
 
 		return ft
@@ -154,7 +156,7 @@ class Poly(Shape):
 					bd.roll(xj, -1) * yj))/6/self.area
 		com_y = bd.sum((yj + bd.roll(yj, -1)) * (xj * bd.roll(yj, -1) - \
 					bd.roll(xj, -1) * yj))/6/self.area
-		new_coords = bd.dot(rotmat, np.vstack((xj-com_x, yj-com_y)))
+		new_coords = bd.dot(rotmat, bd.vstack((xj-com_x, yj-com_y)))
 
 		self.x_edges = new_coords[0, :] + com_x
 		self.y_edges = new_coords[1, :] + com_y

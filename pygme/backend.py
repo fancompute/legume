@@ -45,6 +45,7 @@ class NumpyBackend(Backend):
 	# methods
 	sum = staticmethod(np.sum)
 	hstack = staticmethod(np.hstack)
+	vstack = staticmethod(np.vstack)
 	norm = staticmethod(np.linalg.norm)
 	dot = staticmethod(np.dot)
 	cross = staticmethod(np.cross)
@@ -85,6 +86,7 @@ class AutogradBackend(Backend):
 	# methods
 	sum = staticmethod(npa.sum)
 	hstack = staticmethod(npa.hstack)
+	vstack = staticmethod(npa.vstack)
 	cross = staticmethod(npa.cross)
 	norm = staticmethod(npa.linalg.norm)
 	dot = staticmethod(npa.dot)
