@@ -1,10 +1,11 @@
 # This file defines the PhotCryst, Layer, and Lattice classes
 
 import numpy as np
-import Utils.utils as utils
 import matplotlib.pyplot as plt
-from .shapes import Circle, Poly, Square
 
+import pygme.utils as utils 
+from .shapes import Shape, Circle, Poly, Square
+from .backend import backend as bd
 
 class PhotCryst(object):
 	'''
@@ -26,15 +27,15 @@ class PhotCryst(object):
 		# Initialize an empty list of layers
 		self.layers = []
 
-	def z_grid(self, dz=2e-2):
+	def z_grid(self, Nz=100):
 		''' 
 		Define a z-grid for visualization purposes once some layers have been 
 		added
 		'''
 		zmin = self.layers[0].z_min - 1
 		zmax = self.layers[-1].z_max + 1
-
-		return np.arange(zmin, zmax, dz)
+    
+		return np.linspace(zmin, zmax, Nz)
 
 	def add_layer(self, d, eps_b=1):
 		'''
@@ -109,30 +110,30 @@ class PhotCryst(object):
 
 		return (eps_min, eps_max)
 
-	def plot_cross(self, cross_section='xy', pos=0, res=[1e-2, 1e-2]):
+	def plot_cross(self, cross_section='xy', pos=0, Npts=[100, 100]):
 		'''
 		Plot a cross-section of the PhC at position pos along the third axis
 		'''
 		if cross_section == 'xy':
-			utils.plot_xy(self, z=pos, dx=res[0], dy=res[1])
+			utils.plot_xy(self, z=pos, Nx=Npts[0], Ny=Npts[1])
 		elif cross_section == 'xz':
-			utils.plot_xz(self, y=pos, dx=res[0], dz=res[1])
+			utils.plot_xz(self, y=pos, Nx=Npts[0], Nz=Npts[1])
 		elif cross_section == 'yz':
-			utils.plot_yz(self, x=pos, dy=res[0], dz=res[1])
+			utils.plot_yz(self, x=pos, Ny=Npts[0], Nz=Npts[1])
 		else:
 			raise ValueError("Cross-section must be in {'xy', 'yz', 'xz'}")
 
-	def plot_overview(self, res=[1e-2, 1e-2, 2e-2]):
+	def plot_overview(self, Npts=[100, 100, 50]):
 		'''
 		Plot an overview of PhC cross-sections
 		'''
 
 		(eps_min, eps_max) = self.get_eps_bounds()
 		fig, ax = plt.subplots(1, 2, constrained_layout=True)
-		utils.plot_xz(self, ax=ax[0], dx=res[0], dz=res[2],
+		utils.plot_xz(self, ax=ax[0], Nx=Npts[0], Nz=Npts[2],
 					clim=[eps_min, eps_max], cbar=False)
 		ax[0].set_title("xz at y = 0")
-		utils.plot_yz(self, ax=ax[1], dy=res[1], dz=res[2],
+		utils.plot_yz(self, ax=ax[1], Ny=Npts[1], Nz=Npts[2],
 					clim=[eps_min, eps_max], cbar=True)
 		ax[1].set_title("yz at x = 0")
 
@@ -145,7 +146,7 @@ class PhotCryst(object):
 
 		for indl in range(N_layers):
 			zpos = (self.layers[indl].z_max + self.layers[indl].z_min)/2
-			utils.plot_xy(self, z=zpos, ax=ax[indl], dx=res[0], dy=res[1],
+			utils.plot_xy(self, z=zpos, ax=ax[indl], Nx=Npts[0], Ny=Npts[1],
 					clim=[eps_min, eps_max], cbar=indl==N_layers-1)
 			ax[indl].set_title("xy in layer %d" % indl)
 		plt.show()
@@ -177,32 +178,15 @@ class Layer(object):
 		Add a shape to the layer
 		'''
 
-		if len(args) == 1:
-			shape = args[0]
-		elif len(args) == 2:
-			(sh_type, params) = args
-
-			if sh_type == 'circle':
-				shape = Circle(params['eps'], params['x'], 
-								params['y'], params['r'])
-			elif sh_type == 'square':
-				shape = Square(params['eps'], params['x_cent'], 
-								params['y_cent'], params['a'])
-			elif sh_type == 'poly':
-				shape = Poly(params['eps'], params['x_edges'], 
-								params['y_edges'])
+		for shape in args:
+			if isinstance(shape, Shape):
+				self.shapes.append(shape)
+				self.eps_avg = self.eps_avg + (shape.eps - self.eps_b) * \
+								shape.area/self.lattice.ec_area
 			else:
-				raise NotImplementedError("Shape must be one of" \
-							"{'circle', 'square', 'poly'}")
-		else:
-			raise ValueError("Arguments to add_shape() must be either a " \
-				"Shape instance or a tuple of (shape_type, parameters)")
-
-		self.shapes.append(shape)
-		self.eps_avg = (self.eps_avg*(self.lattice.ec_area - shape.area) + 
-						shape.eps*shape.area)/self.lattice.ec_area
-
-
+				raise ValueError("Arguments to add_shape must be an instance" \
+					"of pygme.Shape (e.g pygme.Circle or pygme.Poly)")
+		
 class Lattice(object):
 	'''
 	Class for constructing a Bravais lattice
@@ -219,20 +203,20 @@ class Lattice(object):
 		'''
 
 		(a1, a2) = self._parse_input(*args)
-		self.a1 = a1
-		self.a2 = a2
+		self.a1 = a1[0:2]
+		self.a2 = a2[0:2]
 
-		ec_area = np.linalg.norm(np.cross(a1, a2))
-		a3 = np.array([0, 0, 1])
+		ec_area = bd.norm(bd.cross(a1, a2))
+		a3 = bd.array([0, 0, 1])
 
-		b1_3d = 2*np.pi*np.cross(a2, a3)[0:2]/np.dot(a1, np.cross(a2, a3)[0:2]) 
-		b2_3d = 2*np.pi*np.cross(a3, a1)[0:2]/np.dot(a2, np.cross(a3, a1)[0:2])
+		b1 = 2*np.pi*bd.cross(a2, a3)/bd.dot(a1, bd.cross(a2, a3)) 
+		b2 = 2*np.pi*bd.cross(a3, a1)/bd.dot(a2, bd.cross(a3, a1))
 
-		bz_area = np.linalg.norm(np.cross(b1_3d, b2_3d))
+		bz_area = bd.norm(bd.cross(b1, b2))
 
 		# Reciprocal lattice vectors
-		self.b1 = b1_3d[0:2]
-		self.b2 = b2_3d[0:2]
+		self.b1 = b1[0:2]
+		self.b2 = b2[0:2]
 
 		self.ec_area = ec_area	# Elementary cell area
 		self.bz_area = bz_area	# Brillouin zone area
@@ -241,24 +225,24 @@ class Lattice(object):
 		if len(args) == 1:
 			if args[0] == 'square':
 				self.type = 'square'
-				a1 = np.array([1, 0])
-				a2 = np.array([0, 1])
+				a1 = bd.array([1, 0, 0])
+				a2 = bd.array([0, 1, 0])
 			elif args[0] == 'hexagonal':
 				self.type = 'hexagonal'
-				a1 = np.array([0.5, np.sqrt(3)/2])
-				a2 = np.array([0.5, -np.sqrt(3)/2])
+				a1 = bd.array([0.5, bd.sqrt(3)/2, 0])
+				a2 = bd.array([0.5, -bd.sqrt(3)/2, 0])
 			else:
 				raise ValueError("Lattice can be 'square' or 'hexagonal," \
 					"or defined through two primitive vectors.")
 
 		elif len(args) == 2:
 			self.type = 'custom'
-			a1 = np.array(args[0])
-			a2 = np.array(args[1])
+			a1 = bd.hstack((bd.array(args[0]), 0))
+			a2 = bd.hstack((bd.array(args[1]), 0))
 
 		return (a1, a2)
 
-	def xy_grid(self, dx=2e-2, dy=2e-2):
+	def xy_grid(self, Nx=100, Ny=100):
 		''' 
 		Define an xy-grid for visualization purposes based on the lattice
 		vectors of the PhC (not sure if it works for very weird lattices)
@@ -269,7 +253,7 @@ class Lattice(object):
 		xmax = np.abs(max([self.a1[0], self.a2[0]]))
 		xmin = -xmax
 
-		return (np.arange(xmin, xmax, dx),np.arange(ymin, ymax, dy))
+		return (np.linspace(xmin, xmax, Nx), np.linspace(ymin, ymax, Ny))
 
 	def bz_path(self, pts, ns):
 		'''

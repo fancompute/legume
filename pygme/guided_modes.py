@@ -7,6 +7,7 @@ Input
 	g_array  		: numpy array of wave vector amplitudes 
 	eps_array		: numpy array of slab permittivities, starting with lower 
 					  cladding and ending with upper cladding
+
 	d_array			: thicknesses of each layer
 	n_modes			: maximum number of solutions to look for, starting from 
 					  the lowest-frequency one
@@ -351,11 +352,3 @@ def H_by_z(zs, omega, g_array, eps_array, d_array, mode = 'TE'):
 		return None
 
 	return Hs
-	
-	
-
-
-
-
-
-

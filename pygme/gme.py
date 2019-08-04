@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import Utils.utils as utils
+import pygme.utils as utils
 
 class GuidedModeExp(object):
 	'''
@@ -91,12 +91,12 @@ class GuidedModeExp(object):
 		self.G1 = G1
 		self.G2 = G2
 
-	def plot_overview_ft(self, dx=1e-2, dy=1e-2):
+	def plot_overview_ft(self, Nx=100, Ny=100):
 		'''
 		Plot the permittivity of the PhC cross-sections as computed from an 
 		inverse Fourier transform with the GME reciprocal lattice vectors.
 		'''
-		(xgrid, ygrid) = self.phc.lattice.xy_grid(dx=dx, dy=dy)
+		(xgrid, ygrid) = self.phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
 
 		N_layers = len(self.phc.layers)
 		fig, ax = plt.subplots(1, N_layers, constrained_layout=True)
