@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import fsolve, bisect
-from Utils.utils import RedhefferStar
+from pygme.utils import RedhefferStar
 ''' 
 Function to compute the guided modes of a multi-layer structure
 Input
