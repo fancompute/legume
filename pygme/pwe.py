@@ -92,14 +92,15 @@ class PlaneWaveExp(object):
 		self.G1 = G1
 		self.G2 = G2
 
-	def plot_overview_ft(self, Nx=100, Ny=100):
+	def plot_overview_ft(self, Nx=100, Ny=100, ax=None):
 		'''
 		Plot the permittivity of the layer as computed from an 
 		inverse Fourier transform with the GME reciprocal lattice vectors.
 		'''
 		(xgrid, ygrid) = self.layer.lattice.xy_grid(Nx=Nx, Ny=Ny)
 
-		fig, ax = plt.subplots(1, 1, constrained_layout=True)
+		if ax is None:
+			fig, ax = plt.subplots(1, 1, constrained_layout=True)
 
 		ft_coeffs = np.hstack((self.T1, self.T2, 
 							np.conj(self.T1), np.conj(self.T2)))
