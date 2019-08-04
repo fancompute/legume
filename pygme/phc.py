@@ -13,9 +13,11 @@ class PhotCryst(object):
 	'''
 	def __init__(self, lattice, eps_l=1, eps_u=1):
 		# Define permittivity of lower and upper cladding
-		self.eps_l = eps_l
-		self.eps_u = eps_u
-
+		# self.eps_l = eps_l
+		# self.eps_u = eps_u
+		self.claddings = []
+		self.claddings.append(Layer(lattice, eps_b=eps_l, z_min=-1e50))
+		self.claddings.append(Layer(lattice, eps_b=eps_u, z_max=1e50))
 		'''
 		Define lattice parameters; variable lattice is initialized throug the 
 		init_lattice() function in utils.py
@@ -47,16 +49,30 @@ class PhotCryst(object):
 			z_min = self.layers[-1].z_max
 
 		layer = Layer(self.lattice, z_min, z_min + d, eps_b=eps_b)
+		self.claddings[1].z_min = z_min + d
 		self.layers.append(layer)
 
-	def add_shape(self, *args, layer_ind=-1):
+	def add_shape(self, *args, **kwargs):
 		'''
 		Add a shape to layer number layer_ind
 		'''
-		if layer_ind >= len(self.layers):
-			raise ValueError("Layer index larger than total number of layers")
+		cladding = kwargs.get('cladding', None)
+		layer = kwargs.get('layer', -1)
+		if cladding:
+			if cladding==0 or cladding.lower()=='l':
+				lay = self.claddings[0]
+			elif cladding==1 or cladding.lower()=='u':
+				lay = self.claddings[1]
+			else:
+				raise ValueError("'cladding' must be 0 or 'l' for lower" \
+					"cladding and 1 or 'u' for upper cladding")
 		else:
-			self.layers[layer_ind].add_shape(*args)
+			if layer >= len(self.layers):
+				raise ValueError("Layer index larger than total number of "\
+					"layers")
+			else:
+				lay = self.layers[layer]
+		lay.add_shape(*args)
 
 	def get_eps(self, points):
 		'''
@@ -71,12 +87,12 @@ class PhotCryst(object):
 
 		eps_r = np.zeros(a_shape)
 
-		eps_r[zmesh < self.layers[0].z_min] = self.eps_l
-		eps_r[zmesh >= self.layers[-1].z_max] = self.eps_u
+		# eps_r[zmesh < self.layers[0].z_min] = self.eps_l
+		# eps_r[zmesh >= self.layers[-1].z_max] = self.eps_u
 		a1 = self.lattice.a1
 		a2 = self.lattice.a2
 
-		for layer in self.layers:
+		for layer in self.layers + self.claddings:
 			zlayer = (zmesh >= layer.z_min) * (zmesh < layer.z_max)
 			eps_r[zlayer] = layer.eps_b
 
@@ -98,10 +114,10 @@ class PhotCryst(object):
 
 	def get_eps_bounds(self):
 		# Returns the minimum and maximum permittivity of the structure
-		eps_min = min([self.eps_l, self.eps_u])
-		eps_max = max([self.eps_l, self.eps_u])
+		eps_min = self.claddings[0].eps_b
+		eps_max = self.claddings[0].eps_b
 
-		for layer in self.layers:
+		for layer in self.layers + self.claddings:
 			eps_min = min([eps_min, layer.eps_b])
 			eps_max = max([eps_max, layer.eps_b])
 			for shape in layer.shapes:
@@ -123,7 +139,7 @@ class PhotCryst(object):
 		else:
 			raise ValueError("Cross-section must be in {'xy', 'yz', 'xz'}")
 
-	def plot_overview(self, Npts=[100, 100, 50]):
+	def plot_overview(self, Npts=[100, 100, 50], cladding=False):
 		'''
 		Plot an overview of PhC cross-sections
 		'''
@@ -137,18 +153,22 @@ class PhotCryst(object):
 					clim=[eps_min, eps_max], cbar=True)
 		ax[1].set_title("yz at x = 0")
 
-		N_layers = len(self.layers)
+		if cladding:
+			all_layers = [self.claddings[0]] + self.layers + [self.claddings[1]]
+		else:
+			all_layers = self.layers
+			
+		N_layers = len(all_layers)
 		fig, ax = plt.subplots(1, N_layers, constrained_layout=True)
 
-		# Hacky way to make sure that the loop below works for N_layers = 1
-		if N_layers == 1:
-			ax = [ax]
-
 		for indl in range(N_layers):
-			zpos = (self.layers[indl].z_max + self.layers[indl].z_min)/2
+			zpos = (all_layers[indl].z_max + all_layers[indl].z_min)/2
 			utils.plot_xy(self, z=zpos, ax=ax[indl], Nx=Npts[0], Ny=Npts[1],
 					clim=[eps_min, eps_max], cbar=indl==N_layers-1)
-			ax[indl].set_title("xy in layer %d" % indl)
+			if indl > 0 and indl < N_layers:
+				ax[indl].set_title("xy in layer %d" % indl)
+		ax[0].set_title("xy in lower cladding")
+		ax[-1].set_title("xy in upper cladding")
 		plt.show()
 
 

@@ -96,7 +96,7 @@ def S_T_matrices_TM(omega, g_array, eps_array, d_array):
 	assert len(g_array)==len(eps_array), 'g_array and eps_array should both have length = num_layers+2'
 	assert len(d_array)==len(eps_array)-2, 'd_array should have length = num_layers'
 	chi_array = chi(omega, g_array, eps_array)
-	print(chi_array)
+	# print(chi_array)
 	S11 = eps_array[1:]*chi_array[:-1] + eps_array[:-1]*chi_array[1:]
 	S12 = eps_array[1:]*chi_array[:-1] - eps_array[:-1]*chi_array[1:]
 	S22 = S11
@@ -121,8 +121,8 @@ def D22_TM(omega, g_array, eps_array, d_array):
 	(num_layers = M-1)
 	'''
 	S_matrices, T_matrices = S_T_matrices_TM(omega, g_array, eps_array, d_array)
-	print('S matrices', S_matrices)
-	print('T matrices', T_matrices)
+	# print('S matrices', S_matrices)
+	# print('T matrices', T_matrices)
 	D = S_matrices[0,:,:]
 	for i,S in enumerate(S_matrices[1:]):
 		T = T_matrices[i]
@@ -191,12 +191,12 @@ def D22_TE2(omega, g_array, eps_array, d_array):
 		T = T_matrices[i]
 		# print(np.linalg.cond(T)) ### roughly 1e30 at max
 		# D = RedhefferStar(TMtoSM(S), RedhefferStar(TMtoSM(T),D))
-		print('T\n',T,TMtoSM(T))
-		print('S\n',S,TMtoSM(S))
-		print('red\n',RedhefferStar(TMtoSM(S),TMtoSM(T)))
-		print('D\n',D)
+		# print('T\n',T,TMtoSM(T))
+		# print('S\n',S,TMtoSM(S))
+		# print('red\n',RedhefferStar(TMtoSM(S),TMtoSM(T)))
+		# print('D\n',D)
 		ST = TMtoSM(S.dot(T))
-		print('ST\n',ST)
+		# print('ST\n',ST)
 		# D = RedhefferStar(ST, D)
 		# D = RedhefferStar(RedhefferStar(TMtoSM(S),TMtoSM(T)),D)
 		D = RedhefferStar(TMtoSM(S),RedhefferStar(TMtoSM(T),D))
@@ -213,9 +213,9 @@ def D22_TE3(omega, g_array, eps_array, d_array):
 		if np.linalg.cond(T)>1e20:
 			T = np.array([[0,0],[0,1]])
 		# D = RedhefferStar(TMtoSM(S), RedhefferStar(TMtoSM(T),D))
-		print('T\n',T,TMtoSM(T))
-		print('S\n',S,TMtoSM(S))
-		print('D\n',D)
+		# print('T\n',T,TMtoSM(T))
+		# print('S\n',S,TMtoSM(S))
+		# print('D\n',D)
 		# D = RedhefferStar(ST, D)
 		# D = RedhefferStar(RedhefferStar(TMtoSM(S),TMtoSM(T)),D)
 		D = S.dot(T.dot(D))
@@ -230,8 +230,8 @@ def AB_matrices(omega, g_array, eps_array, d_array, chi_array = None, mode = 'TE
 	assert len(d_array)==len(eps_array)-2, 'd_array should have length = num_layers'
 	if chi_array is None:
 		chi_array = chi(omega, g_array, eps_array)
-	print('len chiarray', len(chi_array))
-	print(chi_array)
+	# print('len chiarray', len(chi_array))
+	# print(chi_array)
 	if mode=='TE':
 		S_matrices, T_matrices = S_T_matrices_TE(omega, g_array, eps_array, d_array)
 	elif mode=='TM':
