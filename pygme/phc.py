@@ -157,18 +157,23 @@ class PhotCryst(object):
 			all_layers = [self.claddings[0]] + self.layers + [self.claddings[1]]
 		else:
 			all_layers = self.layers
-			
 		N_layers = len(all_layers)
+
 		fig, ax = plt.subplots(1, N_layers, constrained_layout=True)
+		if N_layers==1: ax=[ax]
 
 		for indl in range(N_layers):
 			zpos = (all_layers[indl].z_max + all_layers[indl].z_min)/2
 			utils.plot_xy(self, z=zpos, ax=ax[indl], Nx=Npts[0], Ny=Npts[1],
 					clim=[eps_min, eps_max], cbar=indl==N_layers-1)
-			if indl > 0 and indl < N_layers:
+			if cladding:
+				if indl > 0 and indl < N_layers-1:
+					ax[indl].set_title("xy in layer %d" % indl)
+				elif indl==N_layers-1:
+					ax[0].set_title("xy in lower cladding")
+					ax[-1].set_title("xy in upper cladding")
+			else:
 				ax[indl].set_title("xy in layer %d" % indl)
-		ax[0].set_title("xy in lower cladding")
-		ax[-1].set_title("xy in upper cladding")
 		plt.show()
 
 
@@ -188,7 +193,7 @@ class Layer(object):
 		self.lattice = lattice
 
 		# Initialize average permittivity - needed for guided-mode computation
-		self.eps_avg = eps_b
+		self.eps_avg = np.array(eps_b)
 
 		# Initialize an empty list of shapes
 		self.shapes = []

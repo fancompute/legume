@@ -18,6 +18,8 @@ def plot_eps(eps_r, clim=None, ax=None, extent=None, cmap="Greys", cbar=False):
 
 	if cbar:
 		plt.colorbar(im, ax=ax)
+		
+	return im
 
 def plot_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None, cbar=False):
 	'''

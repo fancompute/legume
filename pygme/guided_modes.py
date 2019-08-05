@@ -13,43 +13,62 @@ Input
 					  the lowest-frequency one
 	omega_lb		: lower bound of omega
 	omega_ub		: upper bound of omega
-	step			: step size for root finding (i.e. the expected separation btw modes)
+	step			: step size for root finding (should be smaller than the 
+						minimum expected separation between modes)
+	tol 			: tolerance in the omega boundaries for the root finding 
+	mode			: polarization, 'te' or 'tm' (maybe change to "pol")
 Output
 	om_guided   	: array of size n_modes x length(g_array) with the guided 
 					  mode frequencies
-	(Will need further outputs in the future)  
+	coeffs_guided	: A, B coefficients for TE and C, D coefficients for TM 
 '''
 def test_mode():
 	return 'lol'
 
-def guided_modes(g_array, eps_array, d_array, n_modes=1, omega_lb=None, omega_ub=None, step=1e-3, tol=1e-4, mode='TE'):
+def guided_modes(g_array, eps_array, d_array, n_modes=1, 
+		omega_lb=None, omega_ub=None, step=1e-3, tol=1e-4, mode='TE'):
 	om_guided = []
+	coeffs_guided = []
 	for g in g_array:
-		om_guided.append(guided_mode_given_g(g=g, eps_array=eps_array, d_array=d_array, n_modes=n_modes, omega_lb=omega_lb, omega_ub=omega_ub, step=step, tol=tol, mode=mode))
-	return om_guided
+		(omegas, coeffs) = guided_mode_given_g(g=g, eps_array=eps_array, 
+			d_array=d_array, n_modes=n_modes, 
+			omega_lb=omega_lb, omega_ub=omega_ub, 
+			step=step, tol=tol, mode=mode)
+		om_guided.append(omegas)
+		coeffs_guided.append(coeffs)
+	return (om_guided, coeffs_guided)
 
-def guided_mode_given_g(g, eps_array, d_array, n_modes=1, omega_lb=None, omega_ub=None, step=1e-3, tol=1e-2, mode='TE'):
-	### Currently, we do 'bisection' in all the regions of interest until n_modes target is met
-	### For alternative variations, see guided_modes_draft.py
-	### This routine returns all modes found instead of first n_modes
+def guided_mode_given_g(g, eps_array, d_array, n_modes=1, 
+	omega_lb=None, omega_ub=None, step=1e-3, tol=1e-2, mode='TE'):
+	'''
+	Currently, we do 'bisection' in all the regions of interest until n_modes 
+	target is met. For alternative variations, see guided_modes_draft.py
+	'''
 	if omega_lb is None:
 		omega_lb = g/np.sqrt(eps_array[1:-1].max())
 	if omega_ub is None:
 		omega_ub = g/max(eps_array[0],eps_array[-1])
 	# print('omega bounds',omega_lb,omega_ub)
-	if mode=='TE':
-		D22real = lambda x,*args: D22_TE2(x,*args).real
-		D22imag = lambda x,*args: D22_TE2(x,*args).imag
+	if mode.lower()=='te':
+		D22real = lambda x,*args: D22_TE(x,*args).real
+		D22imag = lambda x,*args: D22_TE(x,*args).imag
 		# D22abs = lambda x,*args: abs(D22_TE(x,*args))
-	elif mode=='TM':
+	elif mode.lower()=='tm':
 		D22real = lambda x,*args: D22_TM(x,*args).real
 		D22imag = lambda x,*args: D22_TM(x,*args).imag
 		# D22abs = lambda x,*args: abs(D22_TM(x,*args))
 	else:
-		raise Exception('Mode should be TE or TM. What is {} ?'.format(mode))
+		raise ValueError("Mode should be 'TE' or 'TM'. What is {} ?".format(mode))
 	omega_bounds = np.arange(omega_lb + tol, omega_ub - tol, step)
+	# Some special care for when g is close to zero
+	if omega_bounds.size < 2:
+		omega_bounds = np.linspace(omega_lb+1e-15, omega_ub-1e-15, 2)
 	omega_solutions = [] ## solving for D22_real
+	chis = []
+	coeffs = []
 	gs = np.full(eps_array.shape, g)
+	print(gs, eps_array)
+	print(D22real(omega_bounds[0], gs, eps_array, d_array), D22real(omega_bounds[1], gs, eps_array, d_array))
 	# print('num of intervals to search:',len(omega_bounds))
 	for i,lb in enumerate(omega_bounds[:-1]):
 		if len(omega_solutions) >= n_modes:
@@ -58,11 +77,18 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1, omega_lb=None, omega_u
 		try:
 			omega = bisect(D22real,lb,ub,args=(gs,eps_array,d_array))
 			omega_solutions.append(omega)
+			if mode.lower()=='te':
+				chi_array = chi(omega, gs, eps_array)
+				coeffs.append(AB_matrices(omega, gs, eps_array, d_array, 
+									chi_array, mode))
+			else:
+				raise ValueError("Coefficient computation only implemented for 'TE' mode")
 			# print('mode in btw',lb,ub, D22real(omega,gs,eps_array,d_array))
 			# print(D22real(lb,gs,eps_array,d_array),D22real(ub,gs,eps_array,d_array))
 		except ValueError: ## i.e. no solution in the interval
 			# print('no modes in btw',lb,ub)
 			pass
+
 	# print('solution for real',omega_solutions)
 	omega_solutions_final = omega_solutions
 	### ideally we should pick simultaneous roots to both real and imag parts, but because imag part is too noisy and densely crossing zero, we just take roots to real part
@@ -74,7 +100,7 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1, omega_lb=None, omega_u
 	# 		print('Warning: D22 is not purely real. The numerical routine needs modification. Contact developers.')
 			### if this happens, c.f.guided_modes_draft.py and solve for the simultaneous root to D22real and D22imag
 	# print('final solution',omega_solutions_final)
-	return omega_solutions_final
+	return (omega_solutions_final, coeffs)
 
 
 def chi(omega, g, eps):
@@ -221,9 +247,9 @@ def D22_TE3(omega, g_array, eps_array, d_array):
 		D = S.dot(T.dot(D))
 	return D[1,1]
 
-def AB_matrices(omega, g_array, eps_array, d_array, chi_array = None, mode = 'TE'):
+def AB_matrices(omega, g_array, eps_array, d_array, chi_array=None, mode='TE'):
 	'''
-	Function to calculate A,B coeff given z
+	Function to calculate A,B coeff
 	Output: array of shape [M+1,2]
 	'''
 	assert len(g_array)==len(eps_array), 'g_array and eps_array should both have length = num_layers+2'
