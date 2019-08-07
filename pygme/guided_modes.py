@@ -20,7 +20,7 @@ Input
 Output
 	om_guided   	: array of size n_modes x length(g_array) with the guided 
 					  mode frequencies
-	coeffs_guided	: A, B coefficients for TE and C, D coefficients for TM 
+	coeffs_guided	: A, B coefficients of the modes in every layer
 '''
 def test_mode():
 	return 'lol'
@@ -67,8 +67,6 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 	chis = []
 	coeffs = []
 	gs = np.full(eps_array.shape, g)
-	print(gs, eps_array)
-	print(D22real(omega_bounds[0], gs, eps_array, d_array), D22real(omega_bounds[1], gs, eps_array, d_array))
 	# print('num of intervals to search:',len(omega_bounds))
 	for i,lb in enumerate(omega_bounds[:-1]):
 		if len(omega_solutions) >= n_modes:

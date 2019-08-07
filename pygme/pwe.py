@@ -143,7 +143,7 @@ class PlaneWaveExp(object):
 				raise ValueError("Polarization should be 'TE' or 'TM'")
 
 			# Diagonalize using numpy.linalg.eigh() for now; should maybe switch 
-			# to scipy.sparse.linalg.eish() in the future
+			# to scipy.sparse.linalg.eigsh() in the future
 			# NB: we shift the matrix by np.eye to avoid problems at the zero-
 			# frequency mode at Gamma
 			(freq2, vec) = bd.eigh(mat + bd.eye(mat.shape[0]))

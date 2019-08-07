@@ -49,6 +49,7 @@ class NumpyBackend(Backend):
 	dot = staticmethod(np.dot)
 	cross = staticmethod(np.cross)
 	real = staticmethod(np.real)
+	imag = staticmethod(np.imag)
 	inv = staticmethod(np.linalg.inv)
 	transpose = staticmethod(np.transpose)
 	toeplitz_block = staticmethod(toeplitz_block)
@@ -56,6 +57,9 @@ class NumpyBackend(Backend):
 	outer = staticmethod(np.outer)
 	roll = staticmethod(np.roll)
 	where = staticmethod(np.where)
+	triu = staticmethod(np.triu)
+	conj = staticmethod(np.conj)
+	amax = staticmethod(np.amax)
 
 	# math functions
 	exp = staticmethod(np.exp)
@@ -89,6 +93,7 @@ class AutogradBackend(Backend):
 	norm = staticmethod(npa.linalg.norm)
 	dot = staticmethod(npa.dot)
 	real = staticmethod(npa.real)
+	imag = staticmethod(npa.imag)
 	inv = staticmethod(npa.linalg.inv)
 	transpose = staticmethod(npa.transpose)
 	toeplitz_block = staticmethod(toeplitz_block_ag)
@@ -96,6 +101,9 @@ class AutogradBackend(Backend):
 	outer = staticmethod(npa.outer)
 	roll = staticmethod(npa.roll)
 	where = staticmethod(npa.where)
+	triu = staticmethod(npa.triu)
+	conj = staticmethod(npa.conj)
+	amax = staticmethod(npa.amax)
 
 	# math functions
 	exp = staticmethod(npa.exp)

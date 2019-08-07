@@ -3,6 +3,9 @@ import matplotlib.pyplot as plt
 import pygme.utils as utils
 from .guided_modes import guided_modes
 from .backend import backend as bd
+import time
+from itertools import zip_longest
+from functools import reduce
 
 class GuidedModeExp(object):
 	'''
@@ -11,6 +14,8 @@ class GuidedModeExp(object):
 	def __init__(self, phc, gmax=3):
 		# Object of class Phc which will be simulated
 		self.phc = phc
+		# Number of layers
+		self.N_layers = len(phc.layers)
 		# Maximum reciprocal lattice wave-vector length in units of 2pi/a
 		self.gmax = gmax
 
@@ -132,8 +137,11 @@ class GuidedModeExp(object):
 		plt.colorbar(ims[-1])
 		plt.show()
 
-	def run(self, kpoints=np.array([[0], [0]]), gmode_inds=[0], N_g_array=100, 
-				gmode_step=1e-1):
+	def run(self, gmode_inds, kpoints=np.array([[0], [0]]), N_g_array=100, 
+				gmode_step=1e-1, verbose=True):
+		t_start = time.time()
+		def print_vb(*args):
+			if verbose: print(*args)
 		''' 
 		Run the simulation. Basically:
 
@@ -141,10 +149,8 @@ class GuidedModeExp(object):
 		- Compute the inverse matrix of the FT of the permittivity eps(G - G')
 			in every phc layer, with G, G' reciprocal lattice vectors
 		- Iterate over the k points:
-			- interpolate the guided mode frequency and coefficient for every 
-				(G + k) 
-			- compute the matrix for diagonalization and eigenvalues
-			- compute imaginary part of eigenvalues perturbatively
+			- compute the Hermitian matrix for diagonalization 
+			- compute the real eigenvalues and corresponding eigenvectors
 		'''
 
 		# Bloch momenta over which band structure is imulated 
@@ -172,34 +178,162 @@ class GuidedModeExp(object):
 		# Array of thickness of every layer (not including claddings)
 		d_array = np.array(list(layer.d for layer in self.phc.layers), 
 							dtype=np.float64)
+		(self.g_array, self.eps_array, self.d_array) = \
+								(g_array, eps_array, d_array)
 
 		# Compute guided modes
+		t = time.time()
 		self.gmode_te = gmode_inds[np.remainder(gmode_inds, 2) == 0]
 		self.gmode_tm = gmode_inds[np.remainder(gmode_inds, 2) != 0]
+		reshape_list = lambda x: [list(filter(lambda y: y is not None, i)) \
+						for i in zip_longest(*x)]
 
 		if self.gmode_te.size > 0:
 			(omegas_te, coeffs_te) = guided_modes(g_array, eps_array, d_array, 
 						step=gmode_step, n_modes=1 + np.amax(self.gmode_te)//2, 
 						tol=1e-6, mode='TE')
+			self.omegas_te = reshape_list(omegas_te)
+			self.coeffs_te = reshape_list(coeffs_te)
+		else:
+			self.omegas_te = [[]]
+			self.coeffs_te = [[]]
+
 		if self.gmode_tm.size > 0:
 			(omegas_tm, coeffs_tm) = guided_modes(g_array, eps_array, d_array, 
 						step=gmode_step, n_modes=1 + np.amax(self.gmode_tm)//2, 
 						tol=1e-6, mode='TM')
-		# print(Gmax, self.gvec.shape)
-		print(omegas_te, coeffs_te, coeffs_te[0][0].shape) 
-		# print(np.array(omegas_tm).shape, np.array(coeffs_tm).shape) 
+			self.omegas_tm = reshape_list(omegas_tm)
+			self.coeffs_tm = reshape_list(coeffs_tm)
+		else:
+			self.omegas_tm = [[]]
+			self.coeffs_tm = [[]]
 
+		print_vb("%1.4f seconds for guided mode computation"% (time.time()-t)) 
+
+		# Compute inverse matrix of FT of permittivity
+		t = time.time()
 		self.compute_ft()	# Just in case something changed after __init__()
 		self.compute_eps_inv()
+		print_vb("%1.4f seconds for inverse matrix of Fourier-space "\
+			"permittivity"% (time.time()-t))
 
+		# Loop over all k-points, construct the matrix and diagonalize
+		freqs = []
+		for ik, k in enumerate(kpoints.T):
+			print_vb("Running k-point %d of %d" % (ik+1, kpoints.shape[1]))
+			mat = self.construct_mat(k=k)
+
+			# Diagonalize using numpy.linalg.eigh() for now; should maybe switch 
+			# to scipy.sparse.linalg.eigsh() in the future
+			# NB: we shift the matrix by np.eye to avoid problems at the zero-
+			# frequency mode at Gamma
+			(freq2, vec) = bd.eigh(mat + bd.eye(mat.shape[0]))
+			freqs.append(bd.sqrt(bd.abs(freq2 - bd.ones(self.numeig))))
+
+		# Store the eigenfrequencies taking the standard reduced frequency 
+		# convention for the units (2pi a/c)	
+		self.freqs = bd.array(freqs)/2/np.pi
+
+		print_vb("%1.4f seconds total time to run"% (time.time()-t_start))
 
 	def compute_eps_inv(self):
 		'''
 		Construct the inverse FT matrices for the permittivity in each layer
 		'''
-		for layer in self.phc.layers:
+		for layer in self.phc.layers + self.phc.claddings:
 			# For now we just use the numpy inversion. Later on we could 
 			# implement the Toeplitz-Block-Toeplitz inversion (faster)
 			eps_mat = bd.toeplitz_block(self.n2g, layer.T1, layer.T2)
 			layer.eps_inv_mat = bd.inv(eps_mat)
+
+	def construct_mat(self, k):
+		'''
+		Construct the Hermitian matrix for diagonalization for a given k
+		'''
+		N_basis = reduce((lambda x, y: x + y), [len(i) for i in self.omegas_te]
+								+ [len(i) for i in self.omegas_tm])
+		mat = bd.zeros((N_basis, N_basis), dtype=np.complex128)
+
+		# Number of G points included for every mode
+		self.modes_numg = []
+
+		for im1 in range(self.gmode_inds.size):
+			for im2 in range(im1, self.gmode_inds.size):
+				mode1 = self.gmode_inds[im1]
+				mode2 = self.gmode_inds[im2]
+				# TE-TE
+				if mode1%2 + mode2%2 == 0:
+					mat_block = self.mat_te_te(k, mode1, mode2)
+		'''
+		If the matrix is within numerical precision to real symmetric, 
+		make it explicitly so. This will speed up the diagonalization and will
+		often be the case, specifically when there is in-plane inversion
+		symmetry in the PhC elementary cell
+		'''
+		if bd.amax(bd.abs(bd.imag(mat))) < 1e-10*bd.amax(bd.abs(bd.real(mat))):
+			mat = bd.real(mat)
+
+		'''
+		Make the matrix Hermitian (note that only upper part of the blocks, i.e.
+		(im2 >= im1) was computed
+		'''
+		mat = bd.triu(mat) + bd.transpose(bd.conj(bd.triu(mat, 1)))  
+
+		return mat
+
+
+	'''===========MATRIX ELEMENTS BETWEEN GUIDED MODES BELOW============'''
+
+	def mat_te_te(self, k, mode1, mode2):
+		'''
+		Matrix block for TE-TE mode coupling
+		''' 
+
+		# G + k vectors
+		gkx = self.gvec[0, :] + k[0]
+		gky = self.gvec[1, :] + k[1]
+		gk = np.sqrt(np.square(gkx + 1e-20) + np.square(gky))
+
+		# Mode indexes
+		im1 = np.argwhere(mode1==self.gmode_te)[0][0]
+		im2 = np.argwhere(mode2==self.gmode_te)[0][0]
+
+		# g values for interpolation from guided modes computation
+		gs1 = self.g_array[-len(self.omegas_te[im1]):]
+		gs2 = self.g_array[-len(self.omegas_te[im2]):]
+
+		g_cutoff1 = gs1[0]
+		g_cutoff2 = gs2[0]
+		indmode1 = np.argwhere(gk > g_cutoff1)
+		indmode2 = np.argwhere(gk > g_cutoff2)
+		self.modes_numg.append(indmode1.size)
 		
+		# Do all interpolations
+		om1 = np.interp(gk[indmode1], gs1, self.omegas_te[im1])
+		om2 = np.interp(gk[indmode2], gs2, self.omegas_te[im2])
+
+		A1, A2, B1, B2, chi1, chi2 = (np.zeros((self.N_layers + 2, 
+					indmode1.size), dtype=np.complex128) for i in range(6))
+
+		def get_coeff(coeffs, il, ic, indmode, gs):
+			param_list = [coeffs[i][il, ic, 0] for i in range(len(coeffs))]
+			return np.interp(gk[indmode], gs, np.array(param_list)).ravel()
+
+		for il in range(self.N_layers + 2):
+			A1[il, :] = get_coeff(self.coeffs_te[im1], il, 0, indmode1, gs1)
+			A2[il, :] = get_coeff(self.coeffs_te[im2], il, 0, indmode2, gs2)
+			B1[il, :] = get_coeff(self.coeffs_te[im1], il, 1, indmode1, gs1)
+			B2[il, :] = get_coeff(self.coeffs_te[im2], il, 1, indmode2, gs2)
+			chi1[il, :] = np.sqrt(self.eps_array[il]*om1**2 - 
+								gk[indmode1]**2, dtype=np.complex128).ravel()
+			chi2[il, :] = np.sqrt(self.eps_array[il]*om1**2 - 
+								gk[indmode2]**2, dtype=np.complex128).ravel()
+
+		# chi1 = np.sqrt(eps*omega**2 - g**2, dtype=np.complex)
+		# chi2 = np.sqrt(eps*omega**2 - g**2, dtype=np.complex)
+
+		# Contributions from lower cladding
+		mat = self.phc.claddings[0].eps_inv_mat[indmode1, indmode2]* \
+				self.phc.claddings[0].eps_avg**2
+
+		return mat
