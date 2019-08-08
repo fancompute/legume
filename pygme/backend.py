@@ -60,6 +60,7 @@ class NumpyBackend(Backend):
 	triu = staticmethod(np.triu)
 	conj = staticmethod(np.conj)
 	amax = staticmethod(np.amax)
+	sort = staticmethod(np.sort)
 
 	# math functions
 	exp = staticmethod(np.exp)
@@ -104,6 +105,7 @@ class AutogradBackend(Backend):
 	triu = staticmethod(npa.triu)
 	conj = staticmethod(npa.conj)
 	amax = staticmethod(npa.amax)
+	sort = staticmethod(npa.sort)
 
 	# math functions
 	exp = staticmethod(npa.exp)

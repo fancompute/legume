@@ -147,7 +147,8 @@ class PlaneWaveExp(object):
 			# NB: we shift the matrix by np.eye to avoid problems at the zero-
 			# frequency mode at Gamma
 			(freq2, vec) = bd.eigh(mat + bd.eye(mat.shape[0]))
-			freqs.append(bd.sqrt(bd.abs(freq2 - bd.ones(self.numeig))))
+			freqs.append(bd.sort(bd.sqrt(
+					bd.abs(freq2 - bd.ones(self.numeig)))))
 
 		# Store the eigenfrequencies taking the standard reduced frequency 
 		# convention for the units (2pi a/c)	

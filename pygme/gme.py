@@ -158,8 +158,6 @@ class GuidedModeExp(object):
 		# Indexes of modes to be included in the expansion
 		gmode_inds = np.array(gmode_inds)
 		self.gmode_inds = gmode_inds
-		# Change this if switching to a solver that allows for variable numeig
-		self.numeig = self.gvec.shape[1]
 		# Number of points over which guided modes are computed
 		self.N_g_array = N_g_array
 		# Step in frequency in the search for guided mode solutions
@@ -228,10 +226,12 @@ class GuidedModeExp(object):
 			# NB: we shift the matrix by np.eye to avoid problems at the zero-
 			# frequency mode at Gamma
 			(freq2, vec) = bd.eigh(mat + bd.eye(mat.shape[0]))
-			freqs.append(bd.sqrt(bd.abs(freq2 - bd.ones(self.numeig))))
+			freqs.append(bd.sort(bd.sqrt(
+					bd.abs(freq2 - bd.ones(self.numeig)))))
 
 		# Store the eigenfrequencies taking the standard reduced frequency 
-		# convention for the units (2pi a/c)	
+		# convention for the units (2pi a/c)
+		self.mat = mat	
 		self.freqs = bd.array(freqs)/2/np.pi
 
 		print_vb("%1.4f seconds total time to run"% (time.time()-t_start))
@@ -250,20 +250,105 @@ class GuidedModeExp(object):
 		'''
 		Construct the Hermitian matrix for diagonalization for a given k
 		'''
-		N_basis = reduce((lambda x, y: x + y), [len(i) for i in self.omegas_te]
-								+ [len(i) for i in self.omegas_tm])
-		mat = bd.zeros((N_basis, N_basis), dtype=np.complex128)
+
+		# We only know how large the basis set will be at most
+		# We will truncate the matrix later on but for now initialize like this
+		max_basis = self.gvec.shape[1]*self.gmode_inds.size
+		mat = bd.zeros((max_basis, max_basis), dtype=np.complex128)
 
 		# Number of G points included for every mode
 		self.modes_numg = []
 
+		# G + k vectors
+		gkx = self.gvec[0, :] + k[0]
+		gky = self.gvec[1, :] + k[1]
+		gk = np.sqrt(np.square(gkx + 1e-20) + np.square(gky))
+
+		# Unit vectors in the propagation direction; we add a tiny component 
+		# in the x-direction to avoid problems at gk = 0
+		pkx = (gkx + 1e-20) / gk
+		pky = gky / gk
+
+		# Unit vectors in-plane orthogonal to the propagation direction
+		qkx = -gky / gk
+		qky = (gkx + 1e-20) / gk
+
+		pp = np.outer(qkx, qkx) + np.outer(qky, qky)
+		pq = np.outer(pkx, qkx) + np.outer(pky, qky)
+		qq = np.outer(qkx, qkx) + np.outer(qky, qky)
+
+		def interp_coeff(coeffs, il, ic, indmode, gs):
+			'''
+			Interpolate the A/B coefficient (ic = 0/1) in layer number il
+			'''
+			param_list = [coeffs[i][il, ic, 0] for i in range(len(coeffs))]
+			return np.interp(gk[indmode], gs, np.array(param_list)).ravel()
+
+		def interp_guided(im, omegas, coeffs):
+			'''
+			Interpolate all the relevant guided mode parameters over gk
+			'''
+			gs = self.g_array[-len(omegas[im]):]
+			indmode = np.argwhere(gk > gs[0])
+			oms = np.interp(gk[indmode], gs, omegas[im])
+
+			As, Bs, chis = (np.zeros((self.N_layers + 2, 
+					indmode.size), dtype=np.complex128) for i in range(3))
+
+			for il in range(self.N_layers + 2):
+				As[il, :] = interp_coeff(coeffs[im], il, 0, indmode, gs)
+				Bs[il, :] = interp_coeff(coeffs[im], il, 1, indmode, gs)
+				chis[il, :] = np.sqrt(self.eps_array[il]*oms**2 - 
+								gk[indmode]**2, dtype=np.complex128).ravel()
+			return (indmode, oms, As, Bs, chis)
+
+		def get_guided(mode):
+			'''
+			Get all the guided mode parameters over 'gk' for mode number 'mode'
+			Variable 'indmode' stores the indexes of 'gk' over which a guided
+			mode solution was found
+			'''
+			if mode%2 == 0:
+				im_te = np.argwhere(mode1==self.gmode_te)[0][0]
+				(indmode, oms, As, Bs, chis) = interp_guided(
+							im_te, self.omegas_te, self.coeffs_te)
+			else:
+				im_tm = np.argwhere(mode1==self.gmode_tm)[0][0]
+				(indmode, oms, As, Bs, chis) = interp_guided(
+							im_tm, self.omegas_tem, self.coeffs_tm)
+			return (indmode, oms, As, Bs, chis)
+
+		# Loop over modes and build the matrix block-by-block
+		count1 = 0
+		modes_numg = []
 		for im1 in range(self.gmode_inds.size):
+			mode1 = self.gmode_inds[im1]
+			(indmode1, oms1, As1, Bs1, chis1) = get_guided(mode1)
+			modes_numg.append(indmode1.size)
+			count2 = 0
+
 			for im2 in range(im1, self.gmode_inds.size):
-				mode1 = self.gmode_inds[im1]
 				mode2 = self.gmode_inds[im2]
+				(indmode2, oms2, As2, Bs2, chis2) = get_guided(mode2)
 				# TE-TE
 				if mode1%2 + mode2%2 == 0:
-					mat_block = self.mat_te_te(k, mode1, mode2)
+					mat_block = self.mat_te_te(k, gkx, gky, gk, indmode1, oms1,
+									As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
+									chis2, qq)
+				mat[count1:count1+indmode1.size, 
+					count2:count2+indmode2.size] = mat_block
+				count2 += indmode2.size
+			count1 += indmode1.size
+
+		N_basis = count1 # this should also be equal to count 2 at this point
+		# Change below if switching to a solver that allows for variable numeig
+		self.numeig = N_basis
+		# Store a list of how many g-points were used for each mode index
+		self.modes_numg.append(modes_numg) 
+
+		# Take only the filled part of the matrix
+		mat = mat[0:N_basis, 0:N_basis]
+
 		'''
 		If the matrix is within numerical precision to real symmetric, 
 		make it explicitly so. This will speed up the diagonalization and will
@@ -284,56 +369,52 @@ class GuidedModeExp(object):
 
 	'''===========MATRIX ELEMENTS BETWEEN GUIDED MODES BELOW============'''
 
-	def mat_te_te(self, k, mode1, mode2):
+	def mat_te_te(self, k, gkx, gky, gk, indmode1, oms1,
+						As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
+						chis2, qq):
 		'''
 		Matrix block for TE-TE mode coupling
-		''' 
-
-		# G + k vectors
-		gkx = self.gvec[0, :] + k[0]
-		gky = self.gvec[1, :] + k[1]
-		gk = np.sqrt(np.square(gkx + 1e-20) + np.square(gky))
-
-		# Mode indexes
-		im1 = np.argwhere(mode1==self.gmode_te)[0][0]
-		im2 = np.argwhere(mode2==self.gmode_te)[0][0]
-
-		# g values for interpolation from guided modes computation
-		gs1 = self.g_array[-len(self.omegas_te[im1]):]
-		gs2 = self.g_array[-len(self.omegas_te[im2]):]
-
-		g_cutoff1 = gs1[0]
-		g_cutoff2 = gs2[0]
-		indmode1 = np.argwhere(gk > g_cutoff1)
-		indmode2 = np.argwhere(gk > g_cutoff2)
-		self.modes_numg.append(indmode1.size)
+		Notation is following Vasily Zabelin's thesis
+		not Andreani and Gerace PRB 2006
+		'''
 		
-		# Do all interpolations
-		om1 = np.interp(gk[indmode1], gs1, self.omegas_te[im1])
-		om2 = np.interp(gk[indmode2], gs2, self.omegas_te[im2])
-
-		A1, A2, B1, B2, chi1, chi2 = (np.zeros((self.N_layers + 2, 
-					indmode1.size), dtype=np.complex128) for i in range(6))
-
-		def get_coeff(coeffs, il, ic, indmode, gs):
-			param_list = [coeffs[i][il, ic, 0] for i in range(len(coeffs))]
-			return np.interp(gk[indmode], gs, np.array(param_list)).ravel()
-
-		for il in range(self.N_layers + 2):
-			A1[il, :] = get_coeff(self.coeffs_te[im1], il, 0, indmode1, gs1)
-			A2[il, :] = get_coeff(self.coeffs_te[im2], il, 0, indmode2, gs2)
-			B1[il, :] = get_coeff(self.coeffs_te[im1], il, 1, indmode1, gs1)
-			B2[il, :] = get_coeff(self.coeffs_te[im2], il, 1, indmode2, gs2)
-			chi1[il, :] = np.sqrt(self.eps_array[il]*om1**2 - 
-								gk[indmode1]**2, dtype=np.complex128).ravel()
-			chi2[il, :] = np.sqrt(self.eps_array[il]*om1**2 - 
-								gk[indmode2]**2, dtype=np.complex128).ravel()
-
-		# chi1 = np.sqrt(eps*omega**2 - g**2, dtype=np.complex)
-		# chi2 = np.sqrt(eps*omega**2 - g**2, dtype=np.complex)
-
-		# Contributions from lower cladding
+		# Contribution from lower cladding
 		mat = self.phc.claddings[0].eps_inv_mat[indmode1, indmode2]* \
-				self.phc.claddings[0].eps_avg**2
+				self.phc.claddings[0].eps_avg**2 / \
+				np.outer(np.conj(chis1[0, :]), chis2[0, :]) * \
+				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
+				-1j / (chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
+		# raise Exception
 
+		# Contribution from upper cladding
+		mat = mat + self.phc.claddings[1].eps_inv_mat[indmode1, indmode2]* \
+				self.phc.claddings[1].eps_avg**2 / \
+				np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) * \
+				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
+				1j / (chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
+
+		# raise Exception
+
+		# Contributions from layers
+		def I(il, alpha): 
+			return -1j/(alpha + 1e-20)*(np.exp(1j*alpha*self.d_array[il-1]) - 1)
+
+		# note: self.N_layers = self.phc.layers.shape so without claddings
+		for il in range(1, self.N_layers+1):
+			mat = mat + self.phc.layers[il-1].eps_inv_mat[indmode1, indmode2] *\
+			self.phc.layers[il-1].eps_avg**2 / \
+			np.outer(np.conj(chis1[il, :]), chis2[il, :]) * \
+			(np.outer(np.conj(As1[il, :]), As2[il, :]) * \
+			I(il, (chis2[il, :] - np.conj(chis1[il, :][:, np.newaxis]))) + \
+			np.outer(np.conj(Bs1[il, :]), Bs2[il, :]) * \
+			I(il, (-chis2[il, :] + np.conj(chis1[il, :][:, np.newaxis]))) -
+			np.outer(np.conj(As1[il, :]), Bs2[il, :]) * \
+			I(il, (-chis2[il, :] - np.conj(chis1[il, :][:, np.newaxis]))) -
+			np.outer(np.conj(Bs1[il, :]), Bs2[il, :]) * \
+			I(il, (chis2[il, :] + np.conj(chis1[il, :][:, np.newaxis])))  )
+
+		# Final pre-factor		
+		mat = mat * np.outer(oms1**2, oms2**2) * qq[indmode1, indmode2]
+
+		# raise Exception
 		return mat
