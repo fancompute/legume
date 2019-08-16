@@ -176,8 +176,11 @@ def TMtoSM(TM):
 	'''
 	Function to convert 2*2 transfer matrix to corresponding scattering matrix
 	'''
-	SM = np.array([[-TM[1,0]/TM[1,1],				1.0/TM[1,1]],
-				   [TM[0,0]-TM[0,1]*TM[1,0]/TM[1,1],	TM[0,1]/TM[1,1]]])
+	# SM = np.array([[-TM[1,0]/TM[1,1],				1.0/TM[1,1]],
+	# 			   [TM[0,0]-TM[0,1]*TM[1,0]/TM[1,1],	TM[0,1]/TM[1,1]]])
+	# SM = np.array([[-TM[1,0]/TM[1,1],				1.0/TM[1,1]],
+	# 			   [TM[0,0]-TM[0,1]*TM[1,0]/TM[1,1],	TM[0,1]/TM[1,1]]])
+	
 	return SM
 
 def D22_TE2(omega, g_array, eps_array, d_array):
@@ -190,15 +193,17 @@ def D22_TE2(omega, g_array, eps_array, d_array):
 		T = T_matrices[i]
 		# print(np.linalg.cond(T)) ### roughly 1e30 at max
 		# D = RedhefferStar(TMtoSM(S), RedhefferStar(TMtoSM(T),D))
+		print('D\n',D)
 		print('T\n',T,TMtoSM(T))
 		print('S\n',S,TMtoSM(S))
+		# print('red\n',RedhefferStar(TMtoSM(S),TMtoSM(T)))
 		print('red\n',RedhefferStar(TMtoSM(S),TMtoSM(T)))
-		print('D\n',D)
 		ST = TMtoSM(S.dot(T))
 		print('ST\n',ST)
 		# D = RedhefferStar(ST, D)
 		# D = RedhefferStar(RedhefferStar(TMtoSM(S),TMtoSM(T)),D)
 		D = RedhefferStar(TMtoSM(S),RedhefferStar(TMtoSM(T),D))
+	print('end: \n',D)
 	return 1.0/D[0,1]
 
 def D22_TE3(omega, g_array, eps_array, d_array):
@@ -212,12 +217,13 @@ def D22_TE3(omega, g_array, eps_array, d_array):
 		if np.linalg.cond(T)>1e20:
 			T = np.array([[0,0],[0,1]])
 		# D = RedhefferStar(TMtoSM(S), RedhefferStar(TMtoSM(T),D))
+		print('D\n',D)
 		print('T\n',T,TMtoSM(T))
 		print('S\n',S,TMtoSM(S))
-		print('D\n',D)
 		# D = RedhefferStar(ST, D)
 		# D = RedhefferStar(RedhefferStar(TMtoSM(S),TMtoSM(T)),D)
 		D = S.dot(T.dot(D))
+	print('end: \n',D)
 	return D[1,1]
 
 def AB_matrices(omega, g_array, eps_array, d_array, chi_array = None, mode = 'TE'):
