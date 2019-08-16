@@ -26,3 +26,4 @@ if __name__ == '__main__':
 	gme = GuidedModeExp(phc, gmax=5)
 	# gme.plot_overview_ft(cladding=True)
 	gme.run(gmode_inds=[0], N_g_array = 100)
+	print(gme.freqs)

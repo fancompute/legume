@@ -379,15 +379,18 @@ class GuidedModeExp(object):
 		'''
 		
 		# Contribution from lower cladding
-		mat = self.phc.claddings[0].eps_inv_mat[indmode1, indmode2]* \
+		# NB: therer might be a better way than this (ind1, ind2) below
+		(ind1, ind2) = np.meshgrid(indmode2, indmode1)
+		mat = self.phc.claddings[0].eps_inv_mat[ind2, ind1]* \
 				self.phc.claddings[0].eps_avg**2 / \
 				np.outer(np.conj(chis1[0, :]), chis2[0, :]) * \
 				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
-				-1j / (chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
-		# raise Exception
+				1j / (chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
+		# NB: Check sign of the J function in the thesis
+		# raise Exception 
 
 		# Contribution from upper cladding
-		mat = mat + self.phc.claddings[1].eps_inv_mat[indmode1, indmode2]* \
+		mat = mat + self.phc.claddings[1].eps_inv_mat[ind2, ind1]* \
 				self.phc.claddings[1].eps_avg**2 / \
 				np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) * \
 				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
@@ -401,7 +404,7 @@ class GuidedModeExp(object):
 
 		# note: self.N_layers = self.phc.layers.shape so without claddings
 		for il in range(1, self.N_layers+1):
-			mat = mat + self.phc.layers[il-1].eps_inv_mat[indmode1, indmode2] *\
+			mat = mat + self.phc.layers[il-1].eps_inv_mat[ind2, ind1] *\
 			self.phc.layers[il-1].eps_avg**2 / \
 			np.outer(np.conj(chis1[il, :]), chis2[il, :]) * \
 			(np.outer(np.conj(As1[il, :]), As2[il, :]) * \
@@ -410,11 +413,11 @@ class GuidedModeExp(object):
 			I(il, (-chis2[il, :] + np.conj(chis1[il, :][:, np.newaxis]))) -
 			np.outer(np.conj(As1[il, :]), Bs2[il, :]) * \
 			I(il, (-chis2[il, :] - np.conj(chis1[il, :][:, np.newaxis]))) -
-			np.outer(np.conj(Bs1[il, :]), Bs2[il, :]) * \
+			np.outer(np.conj(Bs1[il, :]), As2[il, :]) * \
 			I(il, (chis2[il, :] + np.conj(chis1[il, :][:, np.newaxis])))  )
 
 		# Final pre-factor		
-		mat = mat * np.outer(oms1**2, oms2**2) * qq[indmode1, indmode2]
+		mat = mat * np.outer(oms1**2, oms2**2) * (qq[ind2, ind1])
 
-		# raise Exception
+		raise Exception
 		return mat
