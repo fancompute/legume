@@ -13,59 +13,42 @@ Input
 					  the lowest-frequency one
 	omega_lb		: lower bound of omega
 	omega_ub		: upper bound of omega
-	step			: step size for root finding (should be smaller than the 
-						minimum expected separation between modes)
-	tol 			: tolerance in the omega boundaries for the root finding 
-	mode			: polarization, 'te' or 'tm' (maybe change to "pol")
+	step			: step size for root finding (i.e. the expected separation btw modes)
 Output
 	om_guided   	: array of size n_modes x length(g_array) with the guided 
 					  mode frequencies
-	coeffs_guided	: A, B coefficients of the modes in every layer
+	(Will need further outputs in the future)  
 '''
 def test_mode():
 	return 'lol'
 
-def guided_modes(g_array, eps_array, d_array, n_modes=1, 
-		omega_lb=None, omega_ub=None, step=1e-3, tol=1e-4, mode='TE'):
+def guided_modes(g_array, eps_array, d_array, n_modes=1, omega_lb=None, omega_ub=None, step=1e-3, tol=1e-4, mode='TE'):
 	om_guided = []
-	coeffs_guided = []
 	for g in g_array:
-		(omegas, coeffs) = guided_mode_given_g(g=g, eps_array=eps_array, 
-			d_array=d_array, n_modes=n_modes, 
-			omega_lb=omega_lb, omega_ub=omega_ub, 
-			step=step, tol=tol, mode=mode)
-		om_guided.append(omegas)
-		coeffs_guided.append(coeffs)
-	return (om_guided, coeffs_guided)
+		om_guided.append(guided_mode_given_g(g=g, eps_array=eps_array, d_array=d_array, n_modes=n_modes, omega_lb=omega_lb, omega_ub=omega_ub, step=step, tol=tol, mode=mode))
+	return om_guided
 
-def guided_mode_given_g(g, eps_array, d_array, n_modes=1, 
-	omega_lb=None, omega_ub=None, step=1e-3, tol=1e-2, mode='TE'):
-	'''
-	Currently, we do 'bisection' in all the regions of interest until n_modes 
-	target is met. For alternative variations, see guided_modes_draft.py
-	'''
+def guided_mode_given_g(g, eps_array, d_array, n_modes=1, omega_lb=None, omega_ub=None, step=1e-3, tol=1e-2, mode='TE'):
+	### Currently, we do 'bisection' in all the regions of interest until n_modes target is met
+	### For alternative variations, see guided_modes_draft.py
+	### This routine returns all modes found instead of first n_modes
 	if omega_lb is None:
 		omega_lb = g/np.sqrt(eps_array[1:-1].max())
 	if omega_ub is None:
 		omega_ub = g/max(eps_array[0],eps_array[-1])
 	# print('omega bounds',omega_lb,omega_ub)
-	if mode.lower()=='te':
-		D22real = lambda x,*args: D22_TE(x,*args).real
-		D22imag = lambda x,*args: D22_TE(x,*args).imag
+	if mode=='TE':
+		D22real = lambda x,*args: D22_TE2(x,*args).real
+		D22imag = lambda x,*args: D22_TE2(x,*args).imag
 		# D22abs = lambda x,*args: abs(D22_TE(x,*args))
-	elif mode.lower()=='tm':
+	elif mode=='TM':
 		D22real = lambda x,*args: D22_TM(x,*args).real
 		D22imag = lambda x,*args: D22_TM(x,*args).imag
 		# D22abs = lambda x,*args: abs(D22_TM(x,*args))
 	else:
-		raise ValueError("Mode should be 'TE' or 'TM'. What is {} ?".format(mode))
+		raise Exception('Mode should be TE or TM. What is {} ?'.format(mode))
 	omega_bounds = np.arange(omega_lb + tol, omega_ub - tol, step)
-	# Some special care for when g is close to zero
-	if omega_bounds.size < 2:
-		omega_bounds = np.linspace(omega_lb+1e-15, omega_ub-1e-15, 2)
 	omega_solutions = [] ## solving for D22_real
-	chis = []
-	coeffs = []
 	gs = np.full(eps_array.shape, g)
 	# print('num of intervals to search:',len(omega_bounds))
 	for i,lb in enumerate(omega_bounds[:-1]):
@@ -75,18 +58,11 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 		try:
 			omega = bisect(D22real,lb,ub,args=(gs,eps_array,d_array))
 			omega_solutions.append(omega)
-			if mode.lower()=='te':
-				chi_array = chi(omega, gs, eps_array)
-				coeffs.append(AB_matrices(omega, gs, eps_array, d_array, 
-									chi_array, mode))
-			else:
-				raise ValueError("Coefficient computation only implemented for 'TE' mode")
 			# print('mode in btw',lb,ub, D22real(omega,gs,eps_array,d_array))
 			# print(D22real(lb,gs,eps_array,d_array),D22real(ub,gs,eps_array,d_array))
 		except ValueError: ## i.e. no solution in the interval
 			# print('no modes in btw',lb,ub)
 			pass
-
 	# print('solution for real',omega_solutions)
 	omega_solutions_final = omega_solutions
 	### ideally we should pick simultaneous roots to both real and imag parts, but because imag part is too noisy and densely crossing zero, we just take roots to real part
@@ -98,7 +74,7 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 	# 		print('Warning: D22 is not purely real. The numerical routine needs modification. Contact developers.')
 			### if this happens, c.f.guided_modes_draft.py and solve for the simultaneous root to D22real and D22imag
 	# print('final solution',omega_solutions_final)
-	return (omega_solutions_final, coeffs)
+	return omega_solutions_final
 
 
 def chi(omega, g, eps):
@@ -120,7 +96,7 @@ def S_T_matrices_TM(omega, g_array, eps_array, d_array):
 	assert len(g_array)==len(eps_array), 'g_array and eps_array should both have length = num_layers+2'
 	assert len(d_array)==len(eps_array)-2, 'd_array should have length = num_layers'
 	chi_array = chi(omega, g_array, eps_array)
-	# print(chi_array)
+	print(chi_array)
 	S11 = eps_array[1:]*chi_array[:-1] + eps_array[:-1]*chi_array[1:]
 	S12 = eps_array[1:]*chi_array[:-1] - eps_array[:-1]*chi_array[1:]
 	S22 = S11
@@ -145,8 +121,8 @@ def D22_TM(omega, g_array, eps_array, d_array):
 	(num_layers = M-1)
 	'''
 	S_matrices, T_matrices = S_T_matrices_TM(omega, g_array, eps_array, d_array)
-	# print('S matrices', S_matrices)
-	# print('T matrices', T_matrices)
+	print('S matrices', S_matrices)
+	print('T matrices', T_matrices)
 	D = S_matrices[0,:,:]
 	for i,S in enumerate(S_matrices[1:]):
 		T = T_matrices[i]
@@ -218,20 +194,13 @@ def D22_TE2(omega, g_array, eps_array, d_array):
 		T = T_matrices[i]
 		# print(np.linalg.cond(T)) ### roughly 1e30 at max
 		# D = RedhefferStar(TMtoSM(S), RedhefferStar(TMtoSM(T),D))
-<<<<<<< HEAD:core/guided_modes.py
 		print('D\n',D)
 		print('T\n',T,TMtoSM(T))
 		print('S\n',S,TMtoSM(S))
 		# print('red\n',RedhefferStar(TMtoSM(S),TMtoSM(T)))
 		print('red\n',RedhefferStar(TMtoSM(S),TMtoSM(T)))
-=======
-		# print('T\n',T,TMtoSM(T))
-		# print('S\n',S,TMtoSM(S))
-		# print('red\n',RedhefferStar(TMtoSM(S),TMtoSM(T)))
-		# print('D\n',D)
->>>>>>> be61a9ffd3dc76d2c16c2909066e04ba3abbf771:pygme/guided_modes.py
 		ST = TMtoSM(S.dot(T))
-		# print('ST\n',ST)
+		print('ST\n',ST)
 		# D = RedhefferStar(ST, D)
 		# D = RedhefferStar(RedhefferStar(TMtoSM(S),TMtoSM(T)),D)
 		D = RedhefferStar(TMtoSM(S),RedhefferStar(TMtoSM(T),D))
@@ -249,32 +218,26 @@ def D22_TE3(omega, g_array, eps_array, d_array):
 		if np.linalg.cond(T)>1e20:
 			T = np.array([[0,0],[0,1]])
 		# D = RedhefferStar(TMtoSM(S), RedhefferStar(TMtoSM(T),D))
-<<<<<<< HEAD:core/guided_modes.py
 		print('D\n',D)
 		print('T\n',T,TMtoSM(T))
 		print('S\n',S,TMtoSM(S))
-=======
-		# print('T\n',T,TMtoSM(T))
-		# print('S\n',S,TMtoSM(S))
-		# print('D\n',D)
->>>>>>> be61a9ffd3dc76d2c16c2909066e04ba3abbf771:pygme/guided_modes.py
 		# D = RedhefferStar(ST, D)
 		# D = RedhefferStar(RedhefferStar(TMtoSM(S),TMtoSM(T)),D)
 		D = S.dot(T.dot(D))
 	print('end: \n',D)
 	return D[1,1]
 
-def AB_matrices(omega, g_array, eps_array, d_array, chi_array=None, mode='TE'):
+def AB_matrices(omega, g_array, eps_array, d_array, chi_array = None, mode = 'TE'):
 	'''
-	Function to calculate A,B coeff
+	Function to calculate A,B coeff given z
 	Output: array of shape [M+1,2]
 	'''
 	assert len(g_array)==len(eps_array), 'g_array and eps_array should both have length = num_layers+2'
 	assert len(d_array)==len(eps_array)-2, 'd_array should have length = num_layers'
 	if chi_array is None:
 		chi_array = chi(omega, g_array, eps_array)
-	# print('len chiarray', len(chi_array))
-	# print(chi_array)
+	print('len chiarray', len(chi_array))
+	print(chi_array)
 	if mode=='TE':
 		S_matrices, T_matrices = S_T_matrices_TE(omega, g_array, eps_array, d_array)
 	elif mode=='TM':
@@ -394,4 +357,21 @@ def H_by_z(zs, omega, g_array, eps_array, d_array, mode = 'TE'):
 		print('not implemented yet')
 		return None
 
+<<<<<<< HEAD:core/guided_modes.py
 	return Hs
+	
+	
+def normalization_coeff(omega, gs, epses, ds, dcladding = 3, mode = 'TM'):
+	'''
+	Function to calculate \int H_conj * H dr from current choice of A,B
+	Input:
+		dcladding should be large enough for exponential decay into cladding to completely die off
+	Return the coeff s.t. if we do A/=coeff, B/=coeff, then we can get \int H_conj * H dr = 1
+	'''
+	zs = np.linspace(-dcladding,np.sum(ds)+dcladding,100)
+	Hs = H_by_z(zs=zs, omega=omega, gs=gs, epses=epses, ds=ds, mode=mode)
+	return np.sqrt(np.sum(Hs*Hs.conjugate()))
+
+=======
+	return Hs
+>>>>>>> 8fac97e88a2c10b57a83654dfce670c833c8a20a:pygme/guided_modes.py

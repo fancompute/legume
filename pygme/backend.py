@@ -49,7 +49,10 @@ class NumpyBackend(Backend):
 	dot = staticmethod(np.dot)
 	cross = staticmethod(np.cross)
 	real = staticmethod(np.real)
+<<<<<<< HEAD
 	imag = staticmethod(np.imag)
+=======
+>>>>>>> 8fac97e88a2c10b57a83654dfce670c833c8a20a
 	inv = staticmethod(np.linalg.inv)
 	transpose = staticmethod(np.transpose)
 	toeplitz_block = staticmethod(toeplitz_block)
@@ -57,10 +60,13 @@ class NumpyBackend(Backend):
 	outer = staticmethod(np.outer)
 	roll = staticmethod(np.roll)
 	where = staticmethod(np.where)
+<<<<<<< HEAD
 	triu = staticmethod(np.triu)
 	conj = staticmethod(np.conj)
 	amax = staticmethod(np.amax)
 	sort = staticmethod(np.sort)
+=======
+>>>>>>> 8fac97e88a2c10b57a83654dfce670c833c8a20a
 
 	# math functions
 	exp = staticmethod(np.exp)
@@ -94,7 +100,10 @@ class AutogradBackend(Backend):
 	norm = staticmethod(npa.linalg.norm)
 	dot = staticmethod(npa.dot)
 	real = staticmethod(npa.real)
+<<<<<<< HEAD
 	imag = staticmethod(npa.imag)
+=======
+>>>>>>> 8fac97e88a2c10b57a83654dfce670c833c8a20a
 	inv = staticmethod(npa.linalg.inv)
 	transpose = staticmethod(npa.transpose)
 	toeplitz_block = staticmethod(toeplitz_block_ag)
@@ -102,10 +111,13 @@ class AutogradBackend(Backend):
 	outer = staticmethod(npa.outer)
 	roll = staticmethod(npa.roll)
 	where = staticmethod(npa.where)
+<<<<<<< HEAD
 	triu = staticmethod(npa.triu)
 	conj = staticmethod(npa.conj)
 	amax = staticmethod(npa.amax)
 	sort = staticmethod(npa.sort)
+=======
+>>>>>>> 8fac97e88a2c10b57a83654dfce670c833c8a20a
 
 	# math functions
 	exp = staticmethod(npa.exp)

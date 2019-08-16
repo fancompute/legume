@@ -10,4 +10,3 @@ from .gme import GuidedModeExp
 from .shapes import Shape, Circle, Poly, Square, Hexagon
 from .backend import backend
 from .backend import set_backend
-from .guided_modes import guided_modes

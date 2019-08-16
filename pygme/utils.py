@@ -18,8 +18,6 @@ def plot_eps(eps_r, clim=None, ax=None, extent=None, cmap="Greys", cbar=False):
 
 	if cbar:
 		plt.colorbar(im, ax=ax)
-		
-	return im
 
 def plot_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None, cbar=False):
 	'''
@@ -193,4 +191,4 @@ def RedhefferStar(SB,SA): #SA and SB are both 2x2 matrices; return SBxSA
 =======
 	SAB = np.array([[SAB_11, SAB_12],[SAB_21, SAB_22]])
 	return SAB;
->>>>>>> be61a9ffd3dc76d2c16c2909066e04ba3abbf771:pygme/utils.py
+>>>>>>> 8fac97e88a2c10b57a83654dfce670c833c8a20a:pygme/utils.py

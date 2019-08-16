@@ -37,9 +37,9 @@ class Circle(Shape):
 	'''
 	Define class for a circular shape
 	'''
-	def __init__(self, eps=1, x_cent=0, y_cent=0, r=0):
-		self.x_cent = x_cent
-		self.y_cent = y_cent
+	def __init__(self, eps=1, x=0, y=0, r=0):
+		self.x = x
+		self.y = y
 		self.r = r
 		super().__init__(eps=eps)
 
@@ -54,13 +54,13 @@ class Circle(Shape):
 		gabs = np.sqrt(np.abs(np.square(gx)) + np.abs(np.square(gy)))
 		gabs += 1e-10 # To avoid numerical instability at zero
 
-		ft = bd.exp(1j*gx*self.x_cent + 1j*gy*self.y_cent)*self.r* \
+		ft = bd.exp(1j*gx*self.x + 1j*gy*self.y)*self.r* \
 							2*np.pi/gabs*bd.bessel1(gabs*self.r)
 
 		return ft
 
 	def is_inside(self, x, y):
-		return (np.square(x - self.x_cent) + np.square(y - self.y_cent)
+		return (np.square(x - self.x) + np.square(y - self.y)
 							<= np.square(self.r))
 
 class Poly(Shape):
