@@ -370,3 +370,4 @@ def normalization_coeff(omega, gs, epses, ds, dcladding = 3, mode = 'TM'):
 	Hs = H_by_z(zs=zs, omega=omega, gs=gs, epses=epses, ds=ds, mode=mode)
 	return np.sqrt(np.sum(Hs*Hs.conjugate()))
 
+
