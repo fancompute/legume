@@ -218,18 +218,10 @@ def D22_TE2(omega, g_array, eps_array, d_array):
 		T = T_matrices[i]
 		# print(np.linalg.cond(T)) ### roughly 1e30 at max
 		# D = RedhefferStar(TMtoSM(S), RedhefferStar(TMtoSM(T),D))
-<<<<<<< HEAD:core/guided_modes.py
-		print('D\n',D)
-		print('T\n',T,TMtoSM(T))
-		print('S\n',S,TMtoSM(S))
-		# print('red\n',RedhefferStar(TMtoSM(S),TMtoSM(T)))
-		print('red\n',RedhefferStar(TMtoSM(S),TMtoSM(T)))
-=======
 		# print('T\n',T,TMtoSM(T))
 		# print('S\n',S,TMtoSM(S))
 		# print('red\n',RedhefferStar(TMtoSM(S),TMtoSM(T)))
 		# print('D\n',D)
->>>>>>> be61a9ffd3dc76d2c16c2909066e04ba3abbf771:pygme/guided_modes.py
 		ST = TMtoSM(S.dot(T))
 		# print('ST\n',ST)
 		# D = RedhefferStar(ST, D)
@@ -249,15 +241,9 @@ def D22_TE3(omega, g_array, eps_array, d_array):
 		if np.linalg.cond(T)>1e20:
 			T = np.array([[0,0],[0,1]])
 		# D = RedhefferStar(TMtoSM(S), RedhefferStar(TMtoSM(T),D))
-<<<<<<< HEAD:core/guided_modes.py
-		print('D\n',D)
-		print('T\n',T,TMtoSM(T))
-		print('S\n',S,TMtoSM(S))
-=======
 		# print('T\n',T,TMtoSM(T))
 		# print('S\n',S,TMtoSM(S))
 		# print('D\n',D)
->>>>>>> be61a9ffd3dc76d2c16c2909066e04ba3abbf771:pygme/guided_modes.py
 		# D = RedhefferStar(ST, D)
 		# D = RedhefferStar(RedhefferStar(TMtoSM(S),TMtoSM(T)),D)
 		D = S.dot(T.dot(D))

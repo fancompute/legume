@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import fsolve, bisect
-from Utils.utils import RedhefferStar
+from Utils.utils import RedhefferStar, I_alpha, J_alpha
 ''' 
 Function to compute the guided modes of a multi-layer structure
 Input
@@ -344,14 +344,14 @@ def H_by_z(zs, omega, g_array, eps_array, d_array, mode = 'TE'):
 	# print('len chis should be l+1',len(chis))
 	# print('zs',zs)
 	# print('zjs',zjs)
-	print('zs-zjs',zs-zjs)
-	print('chis',chis)
-	print('As',As)
-	print('Bs',Bs)
+	# print('zs-zjs',zs-zjs)
+	# print('chis',chis)
+	# print('As',As)
+	# print('Bs',Bs)
 	if mode=='TM':
 		Hs = (As * np.exp(1j*chis*(zs-zjs)) - Bs * np.exp(-1j*chis*(zs-zjs))) * epses * omega / chis ### c=1
-		print(np.exp(1j*chis*(zs-zjs)))
-		print(np.exp(-1j*chis*(zs-zjs)))
+		# print(np.exp(1j*chis*(zs-zjs)))
+		# print(np.exp(-1j*chis*(zs-zjs)))
 	else:
 		print('not implemented yet')
 		return None
@@ -367,7 +367,40 @@ def normalization_coeff(omega, gs, epses, ds, dcladding = 3, mode = 'TM'):
 	Return the coeff s.t. if we do A/=coeff, B/=coeff, then we can get \int H_conj * H dr = 1
 	'''
 	zs = np.linspace(-dcladding,np.sum(ds)+dcladding,100)
-	Hs = H_by_z(zs=zs, omega=omega, gs=gs, epses=epses, ds=ds, mode=mode)
+	Hs = H_by_z(zs=zs, omega=omega, g_array=gs, eps_array=epses, d_array=ds, mode=mode)
 	return np.sqrt(np.sum(Hs*Hs.conjugate()))
 
-
+def normalization_coeff2(omega, gs, epses, ds, mode = 'TM'):
+	### here all entries in g_array should be same
+	assert len(gs)==len(epses), 'g_array and eps_array should both have length = num_layers+2'
+	assert len(ds)==len(epses)-2, 'd_array should have length = num_layers'
+	chi_array = chi(omega, gs, epses)
+	ABref = AB_matrices(omega, gs, epses, ds, chi_array, mode)
+	As = ABref[:,0]
+	Bs = ABref[:,1]
+	if mode == 'TM': ## ??? if we generalize for complex eps, shall we change square to modulus square?
+		term1 = epses[0]**2 / chi_array[0]**2 * omega**2 / 1 * (Bs[0] * Bs[0].conjugate()) * J_alpha(chi_array[0]-chi_array[0].conjugate())
+		term2 = epses[-1]**2 / chi_array[-1]**2 * omega**2 / 1 * (As[-1] * As[-1].conjugate()) * J_alpha(chi_array[-1]-chi_array[-1].conjugate())
+		term3 = epses[1:-1]**2 / chi_array[1:-1]**2 * omega**2 / 1 * (
+				(As[1:-1] * As[1:-1].conjugate()) * I_alpha(chi_array[1:-1]-chi_array[1:-1].conjugate(),ds) + \
+				(Bs[1:-1] * Bs[1:-1].conjugate()) * I_alpha(chi_array[1:-1].conjugate()-chi_array[1:-1],ds) - \
+				(As[1:-1].conjugate() * Bs[1:-1]) * I_alpha(-chi_array[1:-1]-chi_array[1:-1].conjugate(),ds) - \
+				(As[1:-1] * Bs[1:-1].conjugate()) * I_alpha(chi_array[1:-1]+chi_array[1:-1].conjugate(),ds)
+				)
+		print(term3.shape)
+		return term1 + term2 + np.sum(term3)
+	elif mode == 'TE': ## ??? if we generalize for complex eps, shall we change square to modulus square?
+		term1 = (1 + gs[0]**2 / chi_array[0] / chi_array[0].conjugate()) * (Bs[0] * Bs[0].conjugate()) * J_alpha(chi_array[0]-chi_array[0].conjugate())
+		term2 = (1 + gs[-1]**2 / chi_array[-1] / chi_array[-1].conjugate()) * (As[-1] * As[-1].conjugate()) * J_alpha(chi_array[-1]-chi_array[-1].conjugate())
+		term3 = (1 + gs**2 / chi_array[1:-1] / chi_array[1:-1].conjugate()) * (
+				(As[1:-1] * As[1:-1].conjugate()) * I_alpha(chi_array[1:-1]-chi_array[1:-1].conjugate(),ds) + \
+				(Bs[1:-1] * Bs[1:-1].conjugate()) * I_alpha(chi_array[1:-1].conjugate()-chi_array[1:-1],ds)
+				) +\
+				(1 - gs**2 / chi_array[1:-1] / chi_array[1:-1].conjugate()) * (
+				(As[1:-1].conjugate() * Bs[1:-1]) * I_alpha(-chi_array[1:-1]-chi_array[1:-1].conjugate(),ds) + \
+				(As[1:-1] * Bs[1:-1].conjugate()) * I_alpha(chi_array[1:-1]+chi_array[1:-1].conjugate(),ds)
+				)
+		print(term3.shape)
+		return term1 + term2 + np.sum(term3)
+	else:
+		raise Exception('Mode should be TE or TM. What is {} ?'.format(mode))

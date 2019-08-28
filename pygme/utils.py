@@ -187,10 +187,5 @@ def RedhefferStar(SB,SA): #SA and SB are both 2x2 matrices; return SBxSA
     SAB_21 = SB_21*F*SA_21;
     SAB_22 = SB_22 + SB_21*F*SA_22*SB_12;
 
-<<<<<<< HEAD:utils/utils.py
     SAB = np.array([[SAB_11, SAB_12],[SAB_21, SAB_22]])
     return SAB;
-=======
-	SAB = np.array([[SAB_11, SAB_12],[SAB_21, SAB_22]])
-	return SAB;
->>>>>>> be61a9ffd3dc76d2c16c2909066e04ba3abbf771:pygme/utils.py
