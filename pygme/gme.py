@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from pygme import utils as utils
+import pygme.utils as utils
 from .guided_modes import guided_modes
 from .backend import backend as bd
 import time

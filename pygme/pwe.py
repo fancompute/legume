@@ -61,8 +61,6 @@ class PlaneWaveExp(object):
 			G2[:, ind1*n2max:(ind1+1)*n2max] = self.gvec[:, [ind1*n2max]] - \
 							self.gvec[:, range(n2max)]
 
-		# print(self.gvec,'\n', G1/2/np.pi,'\n', G2/2/np.pi,'\n')
-
 		T1 = bd.zeros(self.gvec.shape[1])
 		T2 = bd.zeros(self.gvec.shape[1])
 		eps_avg = self.eps_eff
@@ -113,7 +111,7 @@ class PlaneWaveExp(object):
 
 		plt.show()
 
-	def run(self, kpoints=np.array([[1e-5], [0]]), pol='te'):
+	def run(self, kpoints=np.array([[0], [0]]), pol='te'):
 		''' 
 		Run the simulation. Input:
 			- kpoints, [2xNk] numpy array over which band structure is simulated
@@ -122,12 +120,11 @@ class PlaneWaveExp(object):
 		 
 		self.kpoints = kpoints
 		self.pol = pol.lower()
+		# Change this if switching to a solver that allows for variable numeig
+		self.numeig = self.gvec.shape[1]
 
 		self.compute_ft()
 		self.compute_eps_inv()
-
-		# Change this if switching to a solver that allows for variable numeig
-		self.numeig = self.gvec.shape[1]
 
 		freqs = []
 
@@ -146,11 +143,12 @@ class PlaneWaveExp(object):
 				raise ValueError("Polarization should be 'TE' or 'TM'")
 
 			# Diagonalize using numpy.linalg.eigh() for now; should maybe switch 
-			# to scipy.sparse.linalg.eish() in the future
+			# to scipy.sparse.linalg.eigsh() in the future
 			# NB: we shift the matrix by np.eye to avoid problems at the zero-
 			# frequency mode at Gamma
 			(freq2, vec) = bd.eigh(mat + bd.eye(mat.shape[0]))
-			freqs.append(bd.sqrt(bd.abs(freq2 - bd.ones(self.numeig))))
+			freqs.append(bd.sort(bd.sqrt(
+					bd.abs(freq2 - bd.ones(self.numeig)))))
 
 		# Store the eigenfrequencies taking the standard reduced frequency 
 		# convention for the units (2pi a/c)	
