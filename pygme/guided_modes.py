@@ -57,7 +57,7 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 	if omega_lb is None:
 		omega_lb = g/np.sqrt(eps_array[1:-1].max())
 	if omega_ub is None:
-		omega_ub = g/max(eps_array[0],eps_array[-1])
+		omega_ub = g/min(eps_array[0],eps_array[-1])
 	# print('omega bounds',omega_lb,omega_ub)
 	if mode.lower()=='te':
 		D22real = lambda x,*args: D22_TE(x,*args).real
@@ -180,6 +180,7 @@ def S_T_matrices_TE(omega, g_array, eps_array, d_array):
 	assert len(d_array)==len(eps_array)-2, 'd_array should have length = num_layers'
 	chi_array = chi(omega, g_array, eps_array)
 	# print('chi array',chi_array)
+	# print(omega, g_array[1], eps_array[1]*omega**2 - g_array[1]**2)
 	S11 = chi_array[:-1] + chi_array[1:]
 	S12 = chi_array[:-1] - chi_array[1:]
 	S22 = S11
