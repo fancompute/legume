@@ -6,6 +6,7 @@ from .backend import backend as bd
 import time
 from itertools import zip_longest
 from functools import reduce
+from pygme.utils import I_alpha, J_alpha
 
 class GuidedModeExp(object):
 	'''
@@ -138,7 +139,7 @@ class GuidedModeExp(object):
 		plt.show()
 
 	def run(self, gmode_inds, kpoints=np.array([[0], [0]]), N_g_array=100, 
-				gmode_step=1e-1, verbose=True):
+				gmode_step=1e-2, verbose=True):
 		t_start = time.time()
 		def print_vb(*args):
 			if verbose: print(*args)
@@ -168,7 +169,7 @@ class GuidedModeExp(object):
 		Gmax = np.amax(np.sqrt(np.square(self.gvec[0, :]) +
 							np.square(self.gvec[1, :])))
 		# Array of g-points over which the guided modes will be computed
-		g_array = np.linspace(1e-4, Gmax + kmax, N_g_array)
+		g_array = np.linspace(1e-5, Gmax + kmax, N_g_array)
 		# Array of average permittivity of every layer (including claddings)
 		eps_array = np.array(list(layer.eps_avg for layer in \
 			[self.phc.claddings[0]] + self.phc.layers + 
@@ -315,7 +316,7 @@ class GuidedModeExp(object):
 			else:
 				im_tm = np.argwhere(mode1==self.gmode_tm)[0][0]
 				(indmode, oms, As, Bs, chis) = interp_guided(
-							im_tm, self.omegas_tem, self.coeffs_tm)
+							im_tm, self.omegas_tm, self.coeffs_tm)
 			return (indmode, oms, As, Bs, chis)
 
 		# Loop over modes and build the matrix block-by-block
@@ -330,11 +331,16 @@ class GuidedModeExp(object):
 			for im2 in range(im1, self.gmode_inds.size):
 				mode2 = self.gmode_inds[im2]
 				(indmode2, oms2, As2, Bs2, chis2) = get_guided(mode2)
-				# TE-TE
+
 				if mode1%2 + mode2%2 == 0:
 					mat_block = self.mat_te_te(k, gkx, gky, gk, indmode1, oms1,
 									As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 									chis2, qq)
+				elif mode1%2 + mode2%2 == 2:
+					mat_block = self.mat_tm_tm(k, gkx, gky, gk, indmode1, oms1,
+									As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
+									chis2, pp)
+
 				mat[count1:count1+indmode1.size, 
 					count2:count2+indmode2.size] = mat_block
 				count2 += indmode2.size
@@ -368,14 +374,16 @@ class GuidedModeExp(object):
 
 
 	'''===========MATRIX ELEMENTS BETWEEN GUIDED MODES BELOW============'''
+	'''
+	Notation is following Vasily Zabelin's thesis 
+	not Andreani and Gerace PRB 2006
+	'''
 
 	def mat_te_te(self, k, gkx, gky, gk, indmode1, oms1,
 						As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 						chis2, qq):
 		'''
 		Matrix block for TE-TE mode coupling
-		Notation is following Vasily Zabelin's thesis
-		not Andreani and Gerace PRB 2006
 		'''
 		
 		# Contribution from lower cladding
@@ -385,8 +393,8 @@ class GuidedModeExp(object):
 				self.phc.claddings[0].eps_avg**2 / \
 				np.outer(np.conj(chis1[0, :]), chis2[0, :]) * \
 				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
-				1j / (chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
-		# NB: Check sign of the J function in the thesis
+				J_alpha(chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
+		# mat = mat*np.outer(np.conj(chis1[0, :]), chis2[0, :]) 
 		# raise Exception 
 
 		# Contribution from upper cladding
@@ -394,30 +402,81 @@ class GuidedModeExp(object):
 				self.phc.claddings[1].eps_avg**2 / \
 				np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) * \
 				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
-				1j / (chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
+				J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
+
+		# mat = mat*np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) 
+		# raise Exception
+
+		# Contributions from layers
+		# note: self.N_layers = self.phc.layers.shape so without claddings
+		for il in range(1, self.N_layers+1):
+			term = self.phc.layers[il-1].eps_inv_mat[ind2, ind1] *\
+			self.phc.layers[il-1].eps_avg**2 / \
+			np.outer(np.conj(chis1[il, :]), chis2[il, :]) * ( \
+			np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
+			np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +\
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) - \
+			np.outer(np.conj(As1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] -\
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) -
+			np.outer(np.conj(Bs1[il, :]), As2[il, :])*I_alpha(chis2[il, :] +\
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1])  )
+
+			mat = mat + term # * np.outer(np.conj(chis1[il, :]), chis2[il, :]) 
+		# Final pre-factor		
+		mat = mat * np.outer(oms1**2, oms2**2) * (qq[ind2, ind1])
+
+		# raise Exception
+		return mat
+
+	def mat_tm_tm(self, k, gkx, gky, gk, indmode1, oms1,
+						As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
+						chis2, pp):
+		'''
+		Matrix block for TM-TM mode coupling
+		'''
+		
+		# Contribution from lower cladding
+		# NB: therer might be a better way than this (ind1, ind2) below
+		(ind1, ind2) = np.meshgrid(indmode2, indmode1)
+		mat = self.phc.claddings[0].eps_inv_mat[ind2, ind1]* \
+				self.phc.claddings[0].eps_avg**2 * (pp[ind2, ind1] + \
+				np.outer(gk[indmode1], gk[indmode2]) / \
+				np.outer(np.conj(chis1[0, :]), chis2[0, :])) * \
+				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
+				J_alpha(chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
+		# raise Exception 
+
+		# Contribution from upper cladding
+		mat = mat + self.phc.claddings[1].eps_inv_mat[ind2, ind1]* \
+				self.phc.claddings[1].eps_avg**2 * (pp[ind2, ind1] + \
+				np.outer(gk[indmode1], gk[indmode2]) / \
+				np.outer(np.conj(chis1[-1, :]), chis2[-1, :])) * \
+				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
+				J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
 
 		# raise Exception
 
 		# Contributions from layers
-		def I(il, alpha): 
-			return -1j/(alpha + 1e-20)*(np.exp(1j*alpha*self.d_array[il-1]) - 1)
-
 		# note: self.N_layers = self.phc.layers.shape so without claddings
 		for il in range(1, self.N_layers+1):
 			mat = mat + self.phc.layers[il-1].eps_inv_mat[ind2, ind1] *\
-			self.phc.layers[il-1].eps_avg**2 / \
-			np.outer(np.conj(chis1[il, :]), chis2[il, :]) * \
-			(np.outer(np.conj(As1[il, :]), As2[il, :]) * \
-			I(il, (chis2[il, :] - np.conj(chis1[il, :][:, np.newaxis]))) + \
-			np.outer(np.conj(Bs1[il, :]), Bs2[il, :]) * \
-			I(il, (-chis2[il, :] + np.conj(chis1[il, :][:, np.newaxis]))) -
-			np.outer(np.conj(As1[il, :]), Bs2[il, :]) * \
-			I(il, (-chis2[il, :] - np.conj(chis1[il, :][:, np.newaxis]))) -
-			np.outer(np.conj(Bs1[il, :]), As2[il, :]) * \
-			I(il, (chis2[il, :] + np.conj(chis1[il, :][:, np.newaxis])))  )
+			self.phc.layers[il-1].eps_avg**2 * ( \
+			(pp[ind2, ind1] + np.outer(gk[indmode1], gk[indmode2]) / \
+				np.outer(np.conj(chis1[il, :]), chis2[il, :])) * ( \
+			np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
+			np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +\
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) ) + \
+			(pp[ind2, ind1] - np.outer(gk[indmode1], gk[indmode2]) / \
+				np.outer(np.conj(chis1[il, :]), chis2[il, :])) * ( \
+			np.outer(np.conj(As1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] -\
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) -
+			np.outer(np.conj(Bs1[il, :]), As2[il, :])*I_alpha(chis2[il, :] +\
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]))  )
 
-		# Final pre-factor		
-		mat = mat * np.outer(oms1**2, oms2**2) * (qq[ind2, ind1])
+		# Final pre-factor; Note the typo (c^4 instead of c^2) in the thesis
+		mat = mat * np.outer(oms1, oms2)
 
-		raise Exception
+		# raise Exception
 		return mat

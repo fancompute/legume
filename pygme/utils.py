@@ -189,3 +189,11 @@ def RedhefferStar(SA,SB): #SA and SB are both 2x2 matrices;
 
 	SAB = np.array([[SAB_11, SAB_12],[SAB_21, SAB_22]])
 	return SAB;
+
+def I_alpha(a, d): # integrate exp(iaz)dz from 0 to d
+	a = a + 1e-20
+	return -1j / a * (np.exp(1j*a*d) - 1)
+
+def J_alpha(a): # integrate exp(iaz)dz from 0 to inf
+	a = a + 1e-20
+	return 1j / a

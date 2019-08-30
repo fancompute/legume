@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import fsolve, bisect
-from pygme.utils import RedhefferStar
+from pygme.utils import RedhefferStar, I_alpha, J_alpha
 ''' 
 Function to compute the guided modes of a multi-layer structure
 Input
@@ -22,6 +22,16 @@ Output
 					  mode frequencies
 	coeffs_guided	: A, B coefficients of the modes in every layer
 '''
+
+
+'''
+Note: few things that need to be cleared out here 
+	- g_array in the functions should just be a single g-value 
+	- not clear if the analytic normalization works for more than one layer
+	- currenlty this is kinda slow, should be optimized
+	- and finally, the code should be cleaned up
+'''
+
 def test_mode():
 	return 'lol'
 
@@ -39,7 +49,7 @@ def guided_modes(g_array, eps_array, d_array, n_modes=1,
 	return (om_guided, coeffs_guided)
 
 def guided_mode_given_g(g, eps_array, d_array, n_modes=1, 
-	omega_lb=None, omega_ub=None, step=1e-3, tol=1e-2, mode='TE'):
+	omega_lb=None, omega_ub=None, step=1e-2, tol=1e-2, mode='TE'):
 	'''
 	Currently, we do 'bisection' in all the regions of interest until n_modes 
 	target is met. For alternative variations, see guided_modes_draft.py
@@ -75,12 +85,21 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 		try:
 			omega = bisect(D22real,lb,ub,args=(gs,eps_array,d_array))
 			omega_solutions.append(omega)
-			if mode.lower()=='te':
-				chi_array = chi(omega, gs, eps_array)
-				coeffs.append(AB_matrices(omega, gs, eps_array, d_array, 
-									chi_array, mode))
+			chi_array = chi(omega, gs, eps_array)
+			if mode.lower()=='te' or mode.lower()=='tm':				
+				AB = AB_matrices(omega, gs, eps_array, d_array, 
+									chi_array, mode)
+				norm = normalization_coeff(omega, gs, eps_array, d_array, 
+									AB, mode)
+
+				# norm_num = normalization_num(omega, gs, eps_array, d_array, mode=mode)
+				# print(np.abs(norm), np.abs(norm_num))
+
+				coeffs.append(AB / np.sqrt(norm))
 			else:
-				raise ValueError("Coefficient computation only implemented for 'TE' mode")
+				raise ValueError("Mode should be 'TE' or 'TM'")
+
+
 			# print('mode in btw',lb,ub, D22real(omega,gs,eps_array,d_array))
 			# print(D22real(lb,gs,eps_array,d_array),D22real(ub,gs,eps_array,d_array))
 		except ValueError: ## i.e. no solution in the interval
@@ -270,6 +289,41 @@ def AB_matrices(omega, g_array, eps_array, d_array, chi_array=None, mode='TE'):
 		ABs.append(S_matrices[i+1].dot(T_matrices[i].dot(ABs[-1])))
 	return np.array(ABs)
 
+def normalization_coeff(omega, g_array, eps_array, d_array, ABref, mode='TE'):
+	### here all entries in g_array should be same
+	assert len(g_array)==len(eps_array), 'g_array and eps_array should both have length = num_layers+2'
+	assert len(d_array)==len(eps_array)-2, 'd_array should have length = num_layers'
+	chi_array = chi(omega, g_array, eps_array)
+	As = ABref[:,0]
+	Bs = ABref[:,1]
+	if mode == 'TM': ## ??? if we generalize for complex eps, shall we change square to modulus square?
+		term1 = eps_array[0]**2 / np.abs(chi_array[0])**2 * omega**2 / 1 * (Bs[0] * Bs[0].conjugate()) * J_alpha(chi_array[0]-chi_array[0].conjugate())
+		term2 = eps_array[-1]**2 / np.abs(chi_array[-1])**2 * omega**2 / 1 * (As[-1] * As[-1].conjugate()) * J_alpha(chi_array[-1]-chi_array[-1].conjugate())
+		term3 = eps_array[1:-1]**2 / np.abs(chi_array[1:-1])**2 * omega**2 / 1 * (
+				(As[1:-1] * As[1:-1].conjugate()) * I_alpha(chi_array[1:-1]-chi_array[1:-1].conjugate(),d_array) + \
+				(Bs[1:-1] * Bs[1:-1].conjugate()) * I_alpha(chi_array[1:-1].conjugate()-chi_array[1:-1],d_array) - \
+				(As[1:-1].conjugate() * Bs[1:-1]) * I_alpha(-chi_array[1:-1]-chi_array[1:-1].conjugate(),d_array) - \
+				(As[1:-1] * Bs[1:-1].conjugate()) * I_alpha(chi_array[1:-1]+chi_array[1:-1].conjugate(),d_array)
+				)
+		# print(term3.shape)
+		return term1 + term2 + np.sum(term3)
+	elif mode == 'TE': ## ??? if we generalize for complex eps, shall we change square to modulus square?
+		term1 = (1 + g_array[0]**2 / chi_array[0] / chi_array[0].conjugate()) * (Bs[0] * Bs[0].conjugate()) * J_alpha(chi_array[0]-chi_array[0].conjugate())
+		term2 = (1 + g_array[-1]**2 / chi_array[-1] / chi_array[-1].conjugate()) * (As[-1] * As[-1].conjugate()) * J_alpha(chi_array[-1]-chi_array[-1].conjugate())
+		term3 = (1 + g_array[1:-1]**2 / chi_array[1:-1] / chi_array[1:-1].conjugate()) * (
+				(As[1:-1] * As[1:-1].conjugate()) * I_alpha(chi_array[1:-1]-chi_array[1:-1].conjugate(), d_array) + \
+				(Bs[1:-1] * Bs[1:-1].conjugate()) * I_alpha(chi_array[1:-1].conjugate()-chi_array[1:-1], d_array)
+				) +\
+				(1 - g_array[1:-1]**2 / chi_array[1:-1] / chi_array[1:-1].conjugate()) * (
+				(As[1:-1].conjugate() * Bs[1:-1]) * I_alpha(-chi_array[1:-1]-chi_array[1:-1].conjugate(), d_array) + \
+				(As[1:-1] * Bs[1:-1].conjugate()) * I_alpha(chi_array[1:-1]+chi_array[1:-1].conjugate(), d_array)
+				)
+		# print(g_array.shape, d_array.shape)
+		# print(term3.shape)
+		return term1 + term2 + np.sum(term3)
+	else:
+		raise Exception('Mode should be TE or TM. What is {} ?'.format(mode))
+
 def phi_by_z(zs, omega, g_array, eps_array, d_array, mode = 'TE'):
 	'''
 	Function to calculate A,B coeff given z (z=0 for the bottom layer's bottom surface)
@@ -363,16 +417,27 @@ def H_by_z(zs, omega, g_array, eps_array, d_array, mode = 'TE'):
 	# print('len chis should be l+1',len(chis))
 	# print('zs',zs)
 	# print('zjs',zjs)
-	print('zs-zjs',zs-zjs)
-	print('chis',chis)
-	print('As',As)
-	print('Bs',Bs)
+	# print('zs-zjs',zs-zjs)
+	# print('chis',chis)
+	# print('As',As)
+	# print('Bs',Bs)
 	if mode=='TM':
 		Hs = (As * np.exp(1j*chis*(zs-zjs)) - Bs * np.exp(-1j*chis*(zs-zjs))) * epses * omega / chis ### c=1
-		print(np.exp(1j*chis*(zs-zjs)))
-		print(np.exp(-1j*chis*(zs-zjs)))
+		# print(np.exp(1j*chis*(zs-zjs)))
+		# print(np.exp(-1j*chis*(zs-zjs)))
 	else:
 		print('not implemented yet')
 		return None
 
 	return Hs
+
+def normalization_num(omega, gs, epses, ds, dcladding=3, mode='TM'):
+	'''
+	Function to calculate int H_conj * H dr from current choice of A,B
+	Input:
+		dcladding should be large enough for exponential decay into cladding to completely die off
+	Return the coeff s.t. if we do A/=np.sqrt(coeff), B/=np.sqrt(coeff), then we can get int H_conj * H dr = 1
+	'''
+	zs = np.linspace(-dcladding, np.sum(ds)+dcladding, 2000)
+	Hs = H_by_z(zs=zs, omega=omega, g_array=gs, eps_array=epses, d_array=ds, mode=mode)
+	return np.sum(Hs*Hs.conjugate()*(zs[1]-zs[0]))
