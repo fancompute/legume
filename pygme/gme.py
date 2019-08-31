@@ -459,7 +459,7 @@ class GuidedModeExp(object):
 				np.outer(np.conj(chis1[-1, :]), chis2[-1, :])) * \
 				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
 				J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
-
+		# mat = np.zeros((indmode1.size, indmode2.size))
 		# raise Exception
 
 		# Contributions from layers
@@ -476,9 +476,11 @@ class GuidedModeExp(object):
 			(pp[indmat] - np.outer(gk[indmode1], gk[indmode2]) / \
 				np.outer(np.conj(chis1[il, :]), chis2[il, :])) * ( \
 			np.outer(np.conj(As1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] -\
-				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) -
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) +
 			np.outer(np.conj(Bs1[il, :]), As2[il, :])*I_alpha(chis2[il, :] +\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]))  )
+		# Note: typo in the thesis on line 3 of eq. (3.41), 
+		# the term in brackets should be A*B*I + B*A*I instead of minus
 
 		# Final pre-factor; Note the typo (c^4 instead of c^2) in the thesis
 		mat = mat * np.outer(oms1, oms2)
