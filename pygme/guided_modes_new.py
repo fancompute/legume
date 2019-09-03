@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import fsolve, bisect, brentq
+from scipy.optimize import brentq
 from pygme.utils import RedhefferStar, I_alpha, J_alpha
 ''' 
 Function to compute the guided modes of a multi-layer structure
@@ -25,11 +25,10 @@ Output
 
 
 '''
-Note: few things that need to be cleared out here 
-	- g_array in the functions should just be a single g-value 
+Note: still need to verify: 
 	- not clear if the analytic normalization works for more than one layer
-	- currenlty this is kinda slow, should be optimized
-	- and finally, the code should be cleaned up
+	- transmission matrix vs. scattering matrix for thick layers: 
+			can something be done?
 '''
 
 def guided_modes(g_array, eps_array, d_array, n_modes=1, 
@@ -69,10 +68,10 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 
 	if mode.lower()=='te':
 		D22real = lambda x,*args: D22_TE(x,*args).real
-		D22test = lambda x,*args: D22s_TE_vec(x,*args).real
+		D22test = lambda x,*args: D22s_vec(x,*args,mode='TE').real
 	elif mode.lower()=='tm':
 		D22real = lambda x,*args: D22_TM(x,*args).real
-		D22test = lambda x,*args: D22s_TM_vec(x,*args).real
+		D22test = lambda x,*args: D22s_vec(x,*args,mode='TM').real
 	else:
 		raise ValueError("Mode should be 'TE' or 'TM'.")
 
@@ -164,28 +163,81 @@ def D22_TM(omega, g, eps_array, d_array):
 	(num_layers = M-1)
 	'''
 	S_matrices, T_matrices = S_T_matrices_TM(omega, g, eps_array, d_array)
-	# print(S_matrices.shape, T_matrices.shape)
-	# print('S matrices', S_matrices)
-	# print('T matrices', T_matrices)
 	D = S_matrices[0,:,:]
 	for i,S in enumerate(S_matrices[1:]):
 		T = T_matrices[i]
 		D = S.dot(T.dot(D))
 	return D[1,1]
 
-def D22s_TM_vec(omegas, g, eps_array, d_array):
+def S_T_matrices_TE(omega, g, eps_array, d_array):
 	'''
-	Vectorized function to get eigen modes by solving D22=0
+	Function to get a list of S and T matrices for D22 calculation
+	'''
+	assert len(d_array)==len(eps_array)-2, \
+		'd_array should have length = num_layers'
+	chi_array = chi(omega, g, eps_array)
+
+	S11 = chi_array[:-1] + chi_array[1:]
+	S12 = chi_array[:-1] - chi_array[1:]
+	S22 = S11
+	S21 = S12
+	S_matrices = 0.5/chi_array[:-1].reshape(-1,1,1) * \
+		np.array([[S11,S12],[S21,S22]]).transpose([2,0,1])
+	T11 = np.exp(1j*chi_array[1:-1]*d_array)
+	T22 = np.exp(-1j*chi_array[1:-1]*d_array)
+	T_matrices = np.array([[T11,np.zeros_like(T11)],
+		[np.zeros_like(T11),T22]]).transpose([2,0,1])
+	return S_matrices, T_matrices
+
+def D22_TE(omega, g, eps_array, d_array):
+	'''
+	Function to get eigen modes by solving D22=0
+	Input
+		omega 			: frequency * 2π , in units of light speed/unit length
+		g   			: wave vector along propagation direction (ß_x)
+		eps_array		: shape[M+1,1], slab permittivities
+		d_array			: thicknesses of each layer
+	Output
+		abs(D_22) 
+	(S matrices describe layers 0...M-1, T matrices describe layers 1...M-1)
+	(num_layers = M-1)
+	'''
+	S_matrices, T_matrices = S_T_matrices_TE(omega, g, eps_array, d_array)
+	D = S_matrices[0,:,:]
+	for i,S in enumerate(S_matrices[1:]):
+		T = T_matrices[i]
+		D = S.dot(T.dot(D))
+	return D[1,1]
+
+def D22s_vec(omegas, g, eps_array, d_array, mode='TM'):
+	'''
+	Vectorized function to compute the matrix element D22 that needs to be zero
 	Input
 		omegas			: list of frequencies
 		g   			: wave vector along propagation direction (ß_x)
 		eps_array		: shape[M+1,1], slab permittivities
 		d_array			: thicknesses of each layer
+		mode 	 		: 'TE'/'TM'
 	Output
-		D_22 	  		: matrix element that has to be zero-ed 
+		D_22 	  		: list of the D22 matrix elements corresponding to each 
+							omega
+
+	Note: This function is used to find intervals at which D22 switches sign.
+	It is currently not used in the root finding, but it could be useful if 
+	there is a routine that can take advantage of the vectorization. 
 	'''
 
 	N_oms = omegas.size # mats below will be of shape [2*N_oms, 2]
+
+	def S_TE(eps1, eps2, chis1, chis2):
+		S11 = 0.5/chis1 * (chis1 + chis2)
+		S12 = 0.5/chis1 * (chis1 - chis2)
+		return (S11, S12, S12, S11)
+
+	def S_TM(eps1, eps2, chis1, chis2):
+		S11 = 0.5/eps2/chis1 * (eps2*chis1 + eps1*chis2)
+		S12 = 0.5/eps2/chis1 * (eps2*chis1 - eps1*chis2)
+		return (S11, S12, S12, S11)
 
 	def S_T_TM_prod(mats, omegas, g, eps1, eps2, d):
 		'''
@@ -196,10 +248,10 @@ def D22s_TM_vec(omegas, g, eps_array, d_array):
 		chis1 = chi_vec(omegas, g, eps1)
 		chis2 = chi_vec(omegas, g, eps2)
 
-		S11 = 0.5/eps2/chis1 * (eps2*chis1 + eps1*chis2)
-		S12 = 0.5/eps2/chis1 * (eps2*chis1 - eps1*chis2)
-		S22 = S11
-		S21 = S12
+		if mode.lower() == 'te':
+			(S11, S12, S21, S22) = S_TE(eps1, eps2, chis1, chis2)
+		elif mode.lower() == 'tm':
+			(S11, S12, S21, S22) = S_TM(eps1, eps2, chis1, chis2)
 		
 		T11 = np.exp(1j*chis1*d)
 		T22 = np.exp(-1j*chis1*d)
@@ -221,10 +273,10 @@ def D22s_TM_vec(omegas, g, eps_array, d_array):
 	chis1 = chi_vec(omegas, g, eps1)
 	chis2 = chi_vec(omegas, g, eps2)
 
-	S11 = 0.5/eps2/chis1 * (eps2*chis1 + eps1*chis2)
-	S12 = 0.5/eps2/chis1 * (eps2*chis1 - eps1*chis2)
-	S22 = S11
-	S21 = S12
+	if mode.lower() == 'te':
+		(S11, S12, S21, S22) = S_TE(eps1, eps2, chis1, chis2)
+	elif mode.lower() == 'tm':
+		(S11, S12, S21, S22) = S_TM(eps1, eps2, chis1, chis2)
 
 	mats = np.zeros((2*N_oms, 2), dtype=np.complex)
 	mats[0::2, 0] = S11
@@ -238,51 +290,6 @@ def D22s_TM_vec(omegas, g, eps_array, d_array):
 
 	D22s = mats[1::2, 1]
 	return D22s
-
-def S_T_matrices_TE(omega, g_array, eps_array, d_array):
-	'''
-	Function to get a list of S and T matrices for D22 calculation
-	'''
-	assert len(g_array)==len(eps_array), 'g_array and eps_array should both have length = num_layers+2'
-	assert len(d_array)==len(eps_array)-2, 'd_array should have length = num_layers'
-	chi_array = chi(omega, g_array, eps_array)
-	# print('chi array',chi_array)
-	# print(omega, g_array[1], eps_array[1]*omega**2 - g_array[1]**2)
-	S11 = chi_array[:-1] + chi_array[1:]
-	S12 = chi_array[:-1] - chi_array[1:]
-	S22 = S11
-	S21 = S12
-	S_matrices = 0.5/chi_array[:-1].reshape(-1,1,1) * np.array([[S11,S12],[S21,S22]]).transpose([2,0,1]) ## this is how TE differs from TM
-	T11 = np.exp(1j*chi_array[1:-1]*d_array)
-	T22 = np.exp(-1j*chi_array[1:-1]*d_array)
-	T_matrices = np.array([[T11,np.zeros_like(T11)],[np.zeros_like(T11),T22]]).transpose([2,0,1])
-	return S_matrices, T_matrices
-
-def D22_TE(omega, g_array, eps_array, d_array):
-	'''
-	Function to get eigen modes by solving D22=0
-	Input
-		omega 			: frequency * 2π , in units of light speed / unit length
-		g_array			: shape[M+1,1], wave vector along propagation direction (ß_x)
-		eps_array		: shape[M+1,1], slab permittivities
-		d_array			: thicknesses of each layer
-	Output
-		abs(D_22) 
-	(S matrices describe layers 0...M-1, T matrices describe layers 1...M-1)
-	(num_layers = M-1)
-	'''
-	S_matrices, T_matrices = S_T_matrices_TE(omega, g_array, eps_array, d_array)
-	# print('S matrices', S_matrices)
-	# print('T matrices', T_matrices)
-	D = S_matrices[0,:,:]
-	# print('S0',D)
-	for i,S in enumerate(S_matrices[1:]):
-		T = T_matrices[i]
-		D = S.dot(T.dot(D))
-		# print('S',S)
-		# print('T',T)
-	# print('D',D)
-	return D[1,1]
 
 def AB_matrices(omega, g, eps_array, d_array, chi_array=None, mode='TE'):
 	'''
