@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.optimize import fsolve, bisect
+from scipy.optimize import fsolve, bisect, brentq
 from pygme.utils import RedhefferStar, I_alpha, J_alpha
 ''' 
 Function to compute the guided modes of a multi-layer structure
@@ -32,24 +32,32 @@ Note: few things that need to be cleared out here
 	- and finally, the code should be cleaned up
 '''
 
-def test_mode():
-	return 'lol'
-
 def guided_modes(g_array, eps_array, d_array, n_modes=1, 
-		omega_lb=None, omega_ub=None, step=1e-3, tol=1e-4, mode='TE'):
+			step=1e-3, tol=1e-4, mode='TE'):
 	om_guided = []
 	coeffs_guided = []
-	for g in g_array:
+	for ig, g in enumerate(g_array):
+
+		om_lb = g/np.sqrt(eps_array[1:-1].max())
+		om_ub = g/min(eps_array[0],eps_array[-1])
+		if ig > 0:
+			if len(omegas) == n_modes:
+				# Dispersion cannot be faster than speed of light;
+				# step is added just to be on the safe side
+				om_ub = min(om_ub, 
+					omegas[-1] + step + (g_array[ig] - g_array[ig-1]))
+
 		(omegas, coeffs) = guided_mode_given_g(g=g, eps_array=eps_array, 
-			d_array=d_array, n_modes=n_modes, 
-			omega_lb=omega_lb, omega_ub=omega_ub, 
+			d_array=d_array, n_modes=n_modes, omega_lb=om_lb, omega_ub=om_ub,
 			step=step, tol=tol, mode=mode)
+
 		om_guided.append(omegas)
 		coeffs_guided.append(coeffs)
 	return (om_guided, coeffs_guided)
 
 def guided_mode_given_g(g, eps_array, d_array, n_modes=1, 
-	omega_lb=None, omega_ub=None, step=1e-2, tol=1e-2, mode='TE'):
+				omega_lb=None, omega_ub=None,
+				step=1e-2, tol=1e-2, mode='TE'):
 	'''
 	Currently, we do 'bisection' in all the regions of interest until n_modes 
 	target is met. For alternative variations, see guided_modes_draft.py
@@ -58,104 +66,96 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 		omega_lb = g/np.sqrt(eps_array[1:-1].max())
 	if omega_ub is None:
 		omega_ub = g/min(eps_array[0],eps_array[-1])
-	# print('omega bounds',omega_lb,omega_ub)
+
 	if mode.lower()=='te':
 		D22real = lambda x,*args: D22_TE(x,*args).real
-		D22imag = lambda x,*args: D22_TE(x,*args).imag
-		# D22abs = lambda x,*args: abs(D22_TE(x,*args))
+		D22test = lambda x,*args: D22s_TE_vec(x,*args).real
 	elif mode.lower()=='tm':
 		D22real = lambda x,*args: D22_TM(x,*args).real
-		D22imag = lambda x,*args: D22_TM(x,*args).imag
-		# D22abs = lambda x,*args: abs(D22_TM(x,*args))
+		D22test = lambda x,*args: D22s_TM_vec(x,*args).real
 	else:
-		raise ValueError("Mode should be 'TE' or 'TM'. What is {} ?".format(mode))
-	omega_bounds = np.arange(omega_lb + tol, omega_ub - tol, step)
+		raise ValueError("Mode should be 'TE' or 'TM'.")
+
+	# Making sure the bounds go all the way to om_ub - tol
+	omega_bounds = np.append(np.arange(omega_lb + tol, omega_ub - tol, step), 
+					omega_ub-tol) 
+
 	# Some special care for when g is close to zero
 	if omega_bounds.size < 2:
 		omega_bounds = np.linspace(omega_lb+1e-15, omega_ub-1e-15, 2)
+
 	omega_solutions = [] ## solving for D22_real
-	chis = []
 	coeffs = []
-	gs = np.full(eps_array.shape, g)
-	# print('num of intervals to search:',len(omega_bounds))
-	for i,lb in enumerate(omega_bounds[:-1]):
+
+	D22s = D22test(omega_bounds, g, eps_array, d_array).real
+	sign_change = np.where(D22s[0:-1]*D22s[1:] < 0)[0]
+	lb = omega_bounds[0]
+
+	for i in sign_change:
 		if len(omega_solutions) >= n_modes:
 			break
-		ub=omega_bounds[i+1]
-		if D22real(lb,gs,eps_array,d_array)*D22real(ub,gs,eps_array,d_array) < 0:
-			omega = bisect(D22real,lb,ub,args=(gs,eps_array,d_array))
-			omega_solutions.append(omega)
-			chi_array = chi(omega, gs, eps_array)
-			if mode.lower()=='te' or mode.lower()=='tm':				
-				AB = AB_matrices(omega, gs, eps_array, d_array, 
-									chi_array, mode)
-				norm = normalization_coeff(omega, gs, eps_array, d_array, 
-									AB, mode)
+		lb = omega_bounds[i]
+		ub = omega_bounds[i+1]
+		omega = brentq(D22real,lb,ub,args=(g,eps_array,d_array))
+		omega_solutions.append(omega)
+		chi_array = chi(omega, g, eps_array)
+		if mode.lower()=='te' or mode.lower()=='tm':				
+			AB = AB_matrices(omega, g, eps_array, d_array, 
+								chi_array, mode)
+			norm = normalization_coeff(omega, g, eps_array, d_array, 
+								AB, mode)
 
-				# norm_num = normalization_num(omega, gs, eps_array, d_array, mode=mode)
-				# print(np.abs(norm), np.abs(norm_num))
+			coeffs.append(AB / np.sqrt(norm))
+		else:
+			raise ValueError("Mode should be 'TE' or 'TM'")
 
-				coeffs.append(AB / np.sqrt(norm))
-			else:
-				raise ValueError("Mode should be 'TE' or 'TM'")
+	return (omega_solutions, coeffs)
 
-
-			# print('mode in btw',lb,ub, D22real(omega,gs,eps_array,d_array))
-			# print(D22real(lb,gs,eps_array,d_array),D22real(ub,gs,eps_array,d_array))
-		# except ValueError: ## i.e. no solution in the interval
-			# print('no modes in btw',lb,ub)
-			# pass
-
-	# print('solution for real',omega_solutions)
-	omega_solutions_final = omega_solutions
-	### ideally we should pick simultaneous roots to both real and imag parts, but because imag part is too noisy and densely crossing zero, we just take roots to real part
-	# omega_solutions_final = []
-	# for i in omega_solutions:
-	# 	if  D22imag(i,gs,eps_array,d_array)<tol:
-	# 		omega_solutions_final.append(i)
-	# 	else:
-	# 		print('Warning: D22 is not purely real. The numerical routine needs modification. Contact developers.')
-			### if this happens, c.f.guided_modes_draft.py and solve for the simultaneous root to D22real and D22imag
-	# print('final solution',omega_solutions_final)
-	return (omega_solutions_final, coeffs)
-
-
-def chi(omega, g, eps):
+def chi(omega, g, epses):
 	'''
 	Function to compute k_z
 	Input
 		omega			: frequency * 2π , in units of light speed / unit length
-		eps_array		: slab permittivity
+		epses 			: slab permittivity array
 		g 				: wave vector along propagation direction (ß_x)
 	Output
 		k_z
 	'''
-	return np.sqrt(eps*omega**2 - g**2, dtype=np.complex)
+	return np.sqrt(epses*omega**2 - g**2, dtype=np.complex)
 
-def S_T_matrices_TM(omega, g_array, eps_array, d_array):
+def chi_vec(omegas, g, eps):
+	'''
+	Here omegas is an array and eps is a single number
+	'''
+	return np.sqrt(eps*omegas**2 - g**2, dtype=np.complex)
+
+def S_T_matrices_TM(omega, g, eps_array, d_array):
 	'''
 	Function to get a list of S and T matrices for D22 calculation
 	'''
-	assert len(g_array)==len(eps_array), 'g_array and eps_array should both have length = num_layers+2'
-	assert len(d_array)==len(eps_array)-2, 'd_array should have length = num_layers'
-	chi_array = chi(omega, g_array, eps_array)
+	assert len(d_array)==len(eps_array)-2, \
+			'd_array should have length = num_layers'
+	chi_array = chi(omega, g, eps_array)
 	# print(chi_array)
 	S11 = eps_array[1:]*chi_array[:-1] + eps_array[:-1]*chi_array[1:]
 	S12 = eps_array[1:]*chi_array[:-1] - eps_array[:-1]*chi_array[1:]
 	S22 = S11
 	S21 = S12
-	S_matrices = 0.5/eps_array[1:].reshape(-1,1,1)/chi_array[:-1].reshape(-1,1,1) * np.array([[S11,S12],[S21,S22]]).transpose([2,0,1]) ## this is how TE differs from TM
+	S_matrices = 0.5/eps_array[1:].reshape(-1,1,1) / \
+		chi_array[:-1].reshape(-1,1,1) * \
+		np.array([[S11,S12],[S21,S22]]).transpose([2,0,1])
 	T11 = np.exp(1j*chi_array[1:-1]*d_array)
 	T22 = np.exp(-1j*chi_array[1:-1]*d_array)
-	T_matrices = np.array([[T11,np.zeros_like(T11)],[np.zeros_like(T11),T22]]).transpose([2,0,1])
+	T_matrices = np.array([[T11,np.zeros_like(T11)],
+					[np.zeros_like(T11),T22]]).transpose([2,0,1])
 	return S_matrices, T_matrices
 
-def D22_TM(omega, g_array, eps_array, d_array):
+def D22_TM(omega, g, eps_array, d_array):
 	'''
 	Function to get eigen modes by solving D22=0
 	Input
-		omega 			: frequency * 2π , in units of light speed / unit length
-		g_array			: shape[M+1,1], wave vector along propagation direction (ß_x)
+		omega 			: frequency * 2π , in units of light speed/unit length
+		g   			: wave vector along propagation direction (ß_x)
 		eps_array		: shape[M+1,1], slab permittivities
 		d_array			: thicknesses of each layer
 	Output
@@ -163,7 +163,8 @@ def D22_TM(omega, g_array, eps_array, d_array):
 	(S matrices describe layers 0...M-1, T matrices describe layers 1...M-1)
 	(num_layers = M-1)
 	'''
-	S_matrices, T_matrices = S_T_matrices_TM(omega, g_array, eps_array, d_array)
+	S_matrices, T_matrices = S_T_matrices_TM(omega, g, eps_array, d_array)
+	# print(S_matrices.shape, T_matrices.shape)
 	# print('S matrices', S_matrices)
 	# print('T matrices', T_matrices)
 	D = S_matrices[0,:,:]
@@ -171,6 +172,72 @@ def D22_TM(omega, g_array, eps_array, d_array):
 		T = T_matrices[i]
 		D = S.dot(T.dot(D))
 	return D[1,1]
+
+def D22s_TM_vec(omegas, g, eps_array, d_array):
+	'''
+	Vectorized function to get eigen modes by solving D22=0
+	Input
+		omegas			: list of frequencies
+		g   			: wave vector along propagation direction (ß_x)
+		eps_array		: shape[M+1,1], slab permittivities
+		d_array			: thicknesses of each layer
+	Output
+		D_22 	  		: matrix element that has to be zero-ed 
+	'''
+
+	N_oms = omegas.size # mats below will be of shape [2*N_oms, 2]
+
+	def S_T_TM_prod(mats, omegas, g, eps1, eps2, d):
+		'''
+		Get the i-th S and T matrices for an array of omegas given the i-th slab 
+		thickness d and permittivity of the slab eps1 and the next layer eps2
+		'''
+
+		chis1 = chi_vec(omegas, g, eps1)
+		chis2 = chi_vec(omegas, g, eps2)
+
+		S11 = 0.5/eps2/chis1 * (eps2*chis1 + eps1*chis2)
+		S12 = 0.5/eps2/chis1 * (eps2*chis1 - eps1*chis2)
+		S22 = S11
+		S21 = S12
+		
+		T11 = np.exp(1j*chis1*d)
+		T22 = np.exp(-1j*chis1*d)
+
+		T_dot_mats = np.zeros(mats.shape, dtype=np.complex)
+		T_dot_mats[0::2, :] = mats[0::2, :]*T11[:, np.newaxis]
+		T_dot_mats[1::2, :] = mats[1::2, :]*T22[:, np.newaxis]
+
+		S_dot_T = np.zeros(mats.shape, dtype=np.complex)
+		S_dot_T[0::2, 0] = S11*T_dot_mats[0::2, 0] + S12*T_dot_mats[1::2, 0]
+		S_dot_T[0::2, 1] = S11*T_dot_mats[0::2, 1] + S12*T_dot_mats[1::2, 1]
+		S_dot_T[1::2, 0] = S21*T_dot_mats[0::2, 0] + S22*T_dot_mats[1::2, 0]
+		S_dot_T[1::2, 1] = S21*T_dot_mats[0::2, 1] + S22*T_dot_mats[1::2, 1]
+
+		return S_dot_T
+
+	# Starting matrix array is constructed from S0
+	(eps1, eps2) = (eps_array[0], eps_array[1])
+	chis1 = chi_vec(omegas, g, eps1)
+	chis2 = chi_vec(omegas, g, eps2)
+
+	S11 = 0.5/eps2/chis1 * (eps2*chis1 + eps1*chis2)
+	S12 = 0.5/eps2/chis1 * (eps2*chis1 - eps1*chis2)
+	S22 = S11
+	S21 = S12
+
+	mats = np.zeros((2*N_oms, 2), dtype=np.complex)
+	mats[0::2, 0] = S11
+	mats[1::2, 0] = S21
+	mats[0::2, 1] = S12
+	mats[1::2, 1] = S22
+
+	for il in range(1, eps_array.size - 1):
+		mats = S_T_TM_prod(mats, omegas, g, eps_array[il], 
+							eps_array[il+1], d_array[il-1])
+
+	D22s = mats[1::2, 1]
+	return D22s
 
 def S_T_matrices_TE(omega, g_array, eps_array, d_array):
 	'''
@@ -216,6 +283,80 @@ def D22_TE(omega, g_array, eps_array, d_array):
 		# print('T',T)
 	# print('D',D)
 	return D[1,1]
+
+def AB_matrices(omega, g, eps_array, d_array, chi_array=None, mode='TE'):
+	'''
+	Function to calculate A,B coeff
+	Output: array of shape [M+1,2]
+	'''
+	assert len(d_array)==len(eps_array)-2, \
+		'd_array should have length = num_layers'
+	if chi_array is None:
+		chi_array = chi(omega, g, eps_array)
+
+	if mode.lower()=='te':
+		S_matrices, T_matrices = \
+				S_T_matrices_TE(omega, g, eps_array, d_array)
+	elif mode.lower()=='tm':
+		S_matrices, T_matrices = \
+				S_T_matrices_TM(omega, g, eps_array, d_array)
+	else:
+		raise Exception("Mode should be 'TE' or 'TM'.")
+	A0 = 0
+	B0 = 1 
+	AB0 = np.array([A0, B0]).reshape(-1,1)
+
+	ABs = [AB0, S_matrices[0].dot(AB0)] ### A, B coeff for each layer
+	for i,S in enumerate(S_matrices[1:]):
+		ABs.append(S_matrices[i+1].dot(T_matrices[i].dot(ABs[-1])))
+	return np.array(ABs)
+
+def normalization_coeff(omega, g, eps_array, d_array, ABref, mode='TE'):
+	assert len(d_array)==len(eps_array)-2, \
+		'd_array should have length = num_layers'
+	chi_array = chi(omega, g, eps_array)
+	As = ABref[:, 0]
+	Bs = ABref[:, 1]
+	if mode == 'TM': 
+		term1 = eps_array[0]**2 / np.abs(chi_array[0])**2 * omega**2 * \
+			(np.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
+		term2 = eps_array[-1]**2 / np.abs(chi_array[-1])**2 * omega**2 * \
+			(np.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
+		term3 = eps_array[1:-1]**2 / np.abs(chi_array[1:-1])**2 * omega**2 * \
+				(
+				(As[1:-1] * As[1:-1].conj()) * \
+				I_alpha(chi_array[1:-1]-chi_array[1:-1].conj(),d_array) + \
+				(Bs[1:-1] * Bs[1:-1].conj()) * \
+				I_alpha(chi_array[1:-1].conj()-chi_array[1:-1],d_array) - \
+				(As[1:-1].conj() * Bs[1:-1]) * \
+				I_alpha(-chi_array[1:-1]-chi_array[1:-1].conj(),d_array) - \
+				(As[1:-1] * Bs[1:-1].conj()) * \
+				I_alpha(chi_array[1:-1]+chi_array[1:-1].conj(),d_array)
+				)
+		return term1 + term2 + np.sum(term3)
+	elif mode == 'TE':
+		term1 = (1 + g**2 / np.abs(chi_array[0])**2) * \
+			(np.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
+		term2 = (1 + g**2 / np.abs(chi_array[-1])**2) * \
+			(np.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
+		term3 = (1 + g**2 / np.abs(chi_array[1:-1])**2) * (
+				(As[1:-1] * As[1:-1].conj()) * \
+				I_alpha(chi_array[1:-1]-chi_array[1:-1].conj(), d_array) + \
+				(Bs[1:-1] * Bs[1:-1].conj()) * \
+				I_alpha(chi_array[1:-1].conj()-chi_array[1:-1], d_array)
+				) + \
+				(1 - g**2 / np.abs(chi_array[1:-1])**2) * (
+				(As[1:-1].conj() * Bs[1:-1]) * \
+				I_alpha(-chi_array[1:-1]-chi_array[1:-1].conj(), d_array) + \
+				(As[1:-1] * Bs[1:-1].conj()) * \
+				I_alpha(chi_array[1:-1]+chi_array[1:-1].conj(), d_array)
+				)
+		return term1 + term2 + np.sum(term3)
+	else:
+		raise Exception('Mode should be TE or TM. What is {} ?'.format(mode))
+
+
+''' ===== Functions below haven't been touched by Momchil ===== '''
 
 def TMtoSM(TM):
 	'''
@@ -264,66 +405,6 @@ def D22_TE3(omega, g_array, eps_array, d_array):
 		# D = RedhefferStar(RedhefferStar(TMtoSM(S),TMtoSM(T)),D)
 		D = S.dot(T.dot(D))
 	return D[1,1]
-
-def AB_matrices(omega, g_array, eps_array, d_array, chi_array=None, mode='TE'):
-	'''
-	Function to calculate A,B coeff
-	Output: array of shape [M+1,2]
-	'''
-	assert len(g_array)==len(eps_array), 'g_array and eps_array should both have length = num_layers+2'
-	assert len(d_array)==len(eps_array)-2, 'd_array should have length = num_layers'
-	if chi_array is None:
-		chi_array = chi(omega, g_array, eps_array)
-	# print('len chiarray', len(chi_array))
-	# print(chi_array)
-	if mode=='TE':
-		S_matrices, T_matrices = S_T_matrices_TE(omega, g_array, eps_array, d_array)
-	elif mode=='TM':
-		S_matrices, T_matrices = S_T_matrices_TM(omega, g_array, eps_array, d_array)
-	else:
-		raise Exception('Mode should be TE or TM. What is {} ?'.format(mode))
-	A0 = 0
-	B0 = 1 ### this fixes the normalization for H and E
-	AB0 = np.array([A0, B0]).reshape(-1,1)
-	ABs = [AB0, S_matrices[0].dot(AB0)] ### A, B coeff for each layer
-	for i,S in enumerate(S_matrices[1:]):
-		ABs.append(S_matrices[i+1].dot(T_matrices[i].dot(ABs[-1])))
-	return np.array(ABs)
-
-def normalization_coeff(omega, g_array, eps_array, d_array, ABref, mode='TE'):
-	### here all entries in g_array should be same
-	assert len(g_array)==len(eps_array), 'g_array and eps_array should both have length = num_layers+2'
-	assert len(d_array)==len(eps_array)-2, 'd_array should have length = num_layers'
-	chi_array = chi(omega, g_array, eps_array)
-	As = ABref[:,0]
-	Bs = ABref[:,1]
-	if mode == 'TM': ## ??? if we generalize for complex eps, shall we change square to modulus square?
-		term1 = eps_array[0]**2 / np.abs(chi_array[0])**2 * omega**2 / 1 * (Bs[0] * Bs[0].conjugate()) * J_alpha(chi_array[0]-chi_array[0].conjugate())
-		term2 = eps_array[-1]**2 / np.abs(chi_array[-1])**2 * omega**2 / 1 * (As[-1] * As[-1].conjugate()) * J_alpha(chi_array[-1]-chi_array[-1].conjugate())
-		term3 = eps_array[1:-1]**2 / np.abs(chi_array[1:-1])**2 * omega**2 / 1 * (
-				(As[1:-1] * As[1:-1].conjugate()) * I_alpha(chi_array[1:-1]-chi_array[1:-1].conjugate(),d_array) + \
-				(Bs[1:-1] * Bs[1:-1].conjugate()) * I_alpha(chi_array[1:-1].conjugate()-chi_array[1:-1],d_array) - \
-				(As[1:-1].conjugate() * Bs[1:-1]) * I_alpha(-chi_array[1:-1]-chi_array[1:-1].conjugate(),d_array) - \
-				(As[1:-1] * Bs[1:-1].conjugate()) * I_alpha(chi_array[1:-1]+chi_array[1:-1].conjugate(),d_array)
-				)
-		# print(term3.shape)
-		return term1 + term2 + np.sum(term3)
-	elif mode == 'TE': ## ??? if we generalize for complex eps, shall we change square to modulus square?
-		term1 = (1 + g_array[0]**2 / chi_array[0] / chi_array[0].conjugate()) * (Bs[0] * Bs[0].conjugate()) * J_alpha(chi_array[0]-chi_array[0].conjugate())
-		term2 = (1 + g_array[-1]**2 / chi_array[-1] / chi_array[-1].conjugate()) * (As[-1] * As[-1].conjugate()) * J_alpha(chi_array[-1]-chi_array[-1].conjugate())
-		term3 = (1 + g_array[1:-1]**2 / chi_array[1:-1] / chi_array[1:-1].conjugate()) * (
-				(As[1:-1] * As[1:-1].conjugate()) * I_alpha(chi_array[1:-1]-chi_array[1:-1].conjugate(), d_array) + \
-				(Bs[1:-1] * Bs[1:-1].conjugate()) * I_alpha(chi_array[1:-1].conjugate()-chi_array[1:-1], d_array)
-				) +\
-				(1 - g_array[1:-1]**2 / chi_array[1:-1] / chi_array[1:-1].conjugate()) * (
-				(As[1:-1].conjugate() * Bs[1:-1]) * I_alpha(-chi_array[1:-1]-chi_array[1:-1].conjugate(), d_array) + \
-				(As[1:-1] * Bs[1:-1].conjugate()) * I_alpha(chi_array[1:-1]+chi_array[1:-1].conjugate(), d_array)
-				)
-		# print(g_array.shape, d_array.shape)
-		# print(term3.shape)
-		return term1 + term2 + np.sum(term3)
-	else:
-		raise Exception('Mode should be TE or TM. What is {} ?'.format(mode))
 
 def phi_by_z(zs, omega, g_array, eps_array, d_array, mode = 'TE'):
 	'''
