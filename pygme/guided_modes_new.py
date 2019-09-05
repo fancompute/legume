@@ -38,7 +38,7 @@ def guided_modes(g_array, eps_array, d_array, n_modes=1,
 	for ig, g in enumerate(g_array):
 
 		om_lb = g/np.sqrt(eps_array[1:-1].max())
-		om_ub = g/min(eps_array[0],eps_array[-1])
+		om_ub = g/np.sqrt(max(eps_array[0],eps_array[-1]))
 		if ig > 0:
 			if len(omegas) == n_modes:
 				# Dispersion cannot be faster than speed of light;
@@ -64,7 +64,7 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 	if omega_lb is None:
 		omega_lb = g/np.sqrt(eps_array[1:-1].max())
 	if omega_ub is None:
-		omega_ub = g/min(eps_array[0],eps_array[-1])
+		omega_ub = g/np.sqrt(max(eps_array[0],eps_array[-1]))
 
 	if mode.lower()=='te':
 		D22real = lambda x,*args: D22_TE(x,*args).real
@@ -103,6 +103,7 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 								chi_array, mode)
 			norm = normalization_coeff(omega, g, eps_array, d_array, 
 								AB, mode)
+			print(g, norm)
 
 			coeffs.append(AB / np.sqrt(norm))
 		else:
