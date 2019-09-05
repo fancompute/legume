@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pygme.utils as utils
-from .guided_modes import guided_modes
+from .guided_modes_new import guided_modes
 from .backend import backend as bd
 import time
 from itertools import zip_longest
@@ -302,6 +302,7 @@ class GuidedModeExp(object):
 			gs = self.g_array[-len(omegas[im]):]
 			indmode = np.argwhere(gk > gs[0]).ravel()
 			oms = np.interp(gk[indmode], gs, omegas[im])
+			print(np.sort(oms)/2/np.pi)
 
 			As, Bs, chis = (np.zeros((self.N_layers + 2, 
 					indmode.size), dtype=np.complex128) for i in range(3))
@@ -320,13 +321,11 @@ class GuidedModeExp(object):
 			mode solution was found
 			'''
 			if mode%2 == 0:
-				im_te = np.argwhere(mode==self.gmode_te)[0][0]
 				(indmode, oms, As, Bs, chis) = interp_guided(
-							im_te, self.omegas_te, self.coeffs_te)
+							mode//2, self.omegas_te, self.coeffs_te)
 			else:
-				im_tm = np.argwhere(mode==self.gmode_tm)[0][0]
 				(indmode, oms, As, Bs, chis) = interp_guided(
-							im_tm, self.omegas_tm, self.coeffs_tm)
+							mode//2, self.omegas_tm, self.coeffs_tm)
 			return (indmode, oms, As, Bs, chis)
 
 		# Loop over modes and build the matrix block-by-block
@@ -340,7 +339,6 @@ class GuidedModeExp(object):
 
 			for im2 in range(im1, self.gmode_inds.size):
 				mode2 = self.gmode_inds[im2]
-				print(mode1, mode2)
 				(indmode2, oms2, As2, Bs2, chis2) = get_guided(mode2)
 
 				if mode1%2 + mode2%2 == 0:
@@ -449,7 +447,7 @@ class GuidedModeExp(object):
 		# Final pre-factor		
 		mat = mat * np.outer(oms1**2, oms2**2) * (qq[indmat])
 
-		# raise Exception
+		raise Exception
 		return mat
 
 	def mat_tm_tm(self, k, gkx, gky, gk, indmode1, oms1,

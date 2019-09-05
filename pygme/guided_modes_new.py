@@ -103,7 +103,6 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 								chi_array, mode)
 			norm = normalization_coeff(omega, g, eps_array, d_array, 
 								AB, mode)
-			print(g, norm)
 
 			coeffs.append(AB / np.sqrt(norm))
 		else:
