@@ -18,12 +18,12 @@ if __name__ == '__main__':
 	# Add a layer to the PhC with thickness 1 and background permittivity 10
 	phc.add_layer(d=0.5, eps_b=12.)
 	# Add a shape to this layer 
-	phc.add_shape(Circle(r=0.3))
+	phc.add_shape(Circle(r=0.2))
 	# phc.claddings[0].add_shape(Circle(r=0.1, eps=5))
 	# Plot an overview picture
 	# phc.plot_overview(cladding='True')
 
 	gme = GuidedModeExp(phc, gmax=1)
 	# gme.plot_overview_ft(cladding=True)
-	gme.run(kpoints=np.array([[0.1], [0]]), gmode_inds=[0], N_g_array=500, numeig=10)
+	gme.run(kpoints=np.array([[0], [0]]), gmode_inds=[0], N_g_array=500, numeig=10)
 	print(gme.freqs)

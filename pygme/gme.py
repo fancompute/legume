@@ -6,7 +6,7 @@ from .backend import backend as bd
 import time
 from itertools import zip_longest
 from functools import reduce
-from pygme.utils import I_alpha, J_alpha
+from pygme.utils import I_alpha, J_alpha, get_value
 
 class GuidedModeExp(object):
 	'''
@@ -177,14 +177,14 @@ class GuidedModeExp(object):
 		Gmax = np.amax(np.sqrt(np.square(self.gvec[0, :]) +
 							np.square(self.gvec[1, :])))
 		# Array of g-points over which the guided modes will be computed
-		g_array = np.linspace(1e-5, Gmax + kmax, N_g_array)
+		g_array = np.linspace(1e-6, Gmax + kmax, N_g_array)
 		# Array of average permittivity of every layer (including claddings)
-		eps_array = np.array(list(layer.eps_avg for layer in \
+		eps_array = np.array(list(get_value(layer.eps_avg) for layer in \
 			[self.phc.claddings[0]] + self.phc.layers + 
 			[self.phc.claddings[1]]), dtype=np.float64)
 		# Array of thickness of every layer (not including claddings)
-		d_array = np.array(list(layer.d for layer in self.phc.layers), 
-							dtype=np.float64)
+		d_array = np.array(list(get_value(layer.d) for layer in \
+			self.phc.layers), dtype=np.float64)
 		(self.g_array, self.eps_array, self.d_array) = \
 								(g_array, eps_array, d_array)
 
@@ -257,7 +257,7 @@ class GuidedModeExp(object):
 		for layer in self.phc.layers + self.phc.claddings:
 			# For now we just use the numpy inversion. Later on we could 
 			# implement the Toeplitz-Block-Toeplitz inversion (faster)
-			eps_mat = bd.toeplitz_block(self.n2g, layer.T1, layer.T2)
+			eps_mat = bd.toeplitz_block(self.n1g, layer.T1, layer.T2)
 			layer.eps_inv_mat = bd.inv(eps_mat)
 
 	def construct_mat(self, k):
@@ -265,10 +265,8 @@ class GuidedModeExp(object):
 		Construct the Hermitian matrix for diagonalization for a given k
 		'''
 
-		# We only know how large the basis set will be at most
-		# We will truncate the matrix later on but for now initialize like this
-		max_basis = self.gvec.shape[1]*self.gmode_inds.size
-		mat = bd.zeros((max_basis, max_basis), dtype=np.complex128)
+		# We will construct the matrix block by block
+		mat_blocks = [[] for i in range(self.gmode_inds.size)]
 
 		# G + k vectors
 		gkx = self.gvec[0, :] + k[0]
@@ -302,7 +300,6 @@ class GuidedModeExp(object):
 			gs = self.g_array[-len(omegas[im]):]
 			indmode = np.argwhere(gk > gs[0]).ravel()
 			oms = np.interp(gk[indmode], gs, omegas[im])
-			print(np.sort(oms)/2/np.pi)
 
 			As, Bs, chis = (np.zeros((self.N_layers + 2, 
 					indmode.size), dtype=np.complex128) for i in range(3))
@@ -329,51 +326,52 @@ class GuidedModeExp(object):
 			return (indmode, oms, As, Bs, chis)
 
 		# Loop over modes and build the matrix block-by-block
-		count1 = 0
 		modes_numg = []
 		for im1 in range(self.gmode_inds.size):
 			mode1 = self.gmode_inds[im1]
 			(indmode1, oms1, As1, Bs1, chis1) = get_guided(mode1)
 			modes_numg.append(indmode1.size)
-			count2 = count1
+
+			if len(modes_numg) > 1:
+				mat_blocks[im1].append(bd.zeros((modes_numg[-1], 
+					bd.sum(modes_numg[:-1]))))
 
 			for im2 in range(im1, self.gmode_inds.size):
 				mode2 = self.gmode_inds[im2]
 				(indmode2, oms2, As2, Bs2, chis2) = get_guided(mode2)
 
 				if mode1%2 + mode2%2 == 0:
-					mat_block = self.mat_te_te(k, gkx, gky, gk, indmode1, oms1,
+					mat_block = self.mat_te_te(k, indmode1, oms1,
 									As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 									chis2, qq)
 				elif mode1%2 + mode2%2 == 2:
-					mat_block = self.mat_tm_tm(k, gkx, gky, gk, indmode1, oms1,
+					mat_block = self.mat_tm_tm(k, gk, indmode1, oms1,
 									As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 									chis2, pp)
 				elif mode1%2==0 and mode2%2==1:
-					mat_block = self.mat_te_tm(k, gkx, gky, gk, indmode1, oms1,
+					mat_block = self.mat_te_tm(k, indmode1, oms1,
 									As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 									chis2, pq.transpose())
 				elif mode1%2==1 and mode2%2==0:
 					# Note: TM-TE is just hermitian conjugate of TE-TM
 					# with switched indexes 1 <-> 2
-					mat_block = self.mat_te_tm(k, gkx, gky, gk, indmode2, oms2,
+					mat_block = self.mat_te_tm(k, indmode2, oms2,
 									As2, Bs2, chis2, indmode1, oms1, As1, Bs1, 
 									chis1, pq) 
 					mat_block = np.conj(np.transpose(mat_block))
 
-				mat[count1:count1+indmode1.size, 
-					count2:count2+indmode2.size] = mat_block
-				count2 += indmode2.size
-			count1 += indmode1.size
+				mat_blocks[im1].append(mat_block)
 
-		N_basis = count1 # this should also be equal to count 2 at this point
 		# Store how many modes total were included in the matrix
-		self.N_basis.append(N_basis)
+		self.N_basis.append(np.sum(modes_numg))
 		# Store a list of how many g-points were used for each mode index
 		self.modes_numg.append(modes_numg) 
 
-		# Take only the filled part of the matrix
-		mat = mat[0:N_basis, 0:N_basis]
+		# Stack all the blocks together
+		mat_rows = [bd.hstack(mb) for mb in mat_blocks]
+		mat = bd.vstack(mat_rows)
+
+		# raise Exception
 
 		'''
 		If the matrix is within numerical precision to real symmetric, 
@@ -388,9 +386,7 @@ class GuidedModeExp(object):
 		Make the matrix Hermitian (note that only upper part of the blocks, i.e.
 		(im2 >= im1) was computed
 		'''
-		mat = bd.triu(mat) + bd.transpose(bd.conj(bd.triu(mat, 1)))
-
-		# raise Exception  
+		mat = bd.triu(mat) + bd.transpose(bd.conj(bd.triu(mat, 1)))  
 
 		return mat
 
@@ -401,7 +397,7 @@ class GuidedModeExp(object):
 	not Andreani and Gerace PRB 2006
 	'''
 
-	def mat_te_te(self, k, gkx, gky, gk, indmode1, oms1,
+	def mat_te_te(self, k, indmode1, oms1,
 						As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 						chis2, qq):
 		'''
@@ -447,10 +443,10 @@ class GuidedModeExp(object):
 		# Final pre-factor		
 		mat = mat * np.outer(oms1**2, oms2**2) * (qq[indmat])
 
-		raise Exception
+		# raise Exception
 		return mat
 
-	def mat_tm_tm(self, k, gkx, gky, gk, indmode1, oms1,
+	def mat_tm_tm(self, k, gk, indmode1, oms1,
 						As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 						chis2, pp):
 		'''
@@ -503,7 +499,7 @@ class GuidedModeExp(object):
 		# raise Exception
 		return mat
 
-	def mat_te_tm(self, k, gkx, gky, gk, indmode1, oms1,
+	def mat_te_tm(self, k, indmode1, oms1,
 						As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 						chis2, qp):
 		'''

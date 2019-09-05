@@ -128,27 +128,27 @@ def ft2square(lattice, ft_coeff, gvec):
 	return (eps_ft, gx_grid, gy_grid)
 
 def grad_num(fn, arg, step_size=1e-7):
-    ''' Numerically differentiate `fn` w.r.t. its argument `arg` 
-    `arg` can be a numpy array of arbitrary shape
-    `step_size` can be a number or an array of the same shape as `arg` '''
+	''' Numerically differentiate `fn` w.r.t. its argument `arg` 
+	`arg` can be a numpy array of arbitrary shape
+	`step_size` can be a number or an array of the same shape as `arg` '''
 
-    N = arg.size
-    shape = arg.shape
-    gradient = np.zeros((N,))
-    f_old = fn(arg)
+	N = arg.size
+	shape = arg.shape
+	gradient = np.zeros((N,))
+	f_old = fn(arg)
 
-    if type(step_size) == float:
-        step = step_size*np.ones((N))
-    else:
-        step = step_size.ravel()
+	if type(step_size) == float:
+		step = step_size*np.ones((N))
+	else:
+		step = step_size.ravel()
 
-    for i in range(N):
-        arg_new = arg.flatten()
-        arg_new[i] += step[i]
-        f_new_i = fn(arg_new.reshape(shape))
-        gradient[i] = (f_new_i - f_old) / step[i]
+	for i in range(N):
+		arg_new = arg.flatten()
+		arg_new[i] += step[i]
+		f_new_i = fn(arg_new.reshape(shape))
+		gradient[i] = (f_new_i - f_old) / step[i]
 
-    return gradient.reshape(shape)
+	return gradient.reshape(shape)
 
 def toeplitz_block(n, T1, T2):
 	'''
@@ -160,15 +160,25 @@ def toeplitz_block(n, T1, T2):
 	p = int(ntot/n) # Linear size of each block
 	Tmat = np.zeros((ntot, ntot), dtype=T1.dtype)
 	for ind1 in range(n):
-	    for ind2 in range(ind1, n):
-	        toep1 = T1[(ind2-ind1)*p:(ind2-ind1+1)*p]
-	        toep2 = T2[(ind2-ind1)*p:(ind2-ind1+1)*p]
-	        Tmat[ind1*p:(ind1+1)*p, ind2*p:(ind2+1)*p] = \
-	        		toeplitz(toep2, toep1)
+		for ind2 in range(ind1, n):
+			toep1 = T1[(ind2-ind1)*p:(ind2-ind1+1)*p]
+			toep2 = T2[(ind2-ind1)*p:(ind2-ind1+1)*p]
+			Tmat[ind1*p:(ind1+1)*p, ind2*p:(ind2+1)*p] = \
+					toeplitz(toep2, toep1)
 
 	return np.triu(Tmat) + np.conj(np.transpose(np.triu(Tmat,1)))
 
 	return np.triu(Tmat) + np.conj(np.transpose(np.triu(Tmat,1)))
+
+def get_value(x):
+	'''
+	This is for when using the 'autograd' backend and you want to detach an 
+	ArrayBox and just convert it to a numpy array.
+	'''
+	if str(type(x)) == "<class 'autograd.numpy.numpy_boxes.ArrayBox'>":
+		return x._value
+	else:
+		return x
 
 def RedhefferStar(SA,SB): #SA and SB are both 2x2 matrices;
 	assert type(SA) == np.ndarray, 'not np.matrix'
