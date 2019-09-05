@@ -20,6 +20,11 @@ class GuidedModeExp(object):
 		# Maximum reciprocal lattice wave-vector length in units of 2pi/a
 		self.gmax = gmax
 
+		# Number of G points included for every mode, will be defined after run
+		self.modes_numg = []
+		# Total number of basis vectors (equal to np.sum(self.modes_numg))
+		self.N_basis = []
+
 		# Initialize the reciprocal lattice vectors and compute the FT of all
 		# the layers of the PhC
 		self._init_reciprocal()
@@ -139,7 +144,7 @@ class GuidedModeExp(object):
 		plt.show()
 
 	def run(self, gmode_inds, kpoints=np.array([[0], [0]]), N_g_array=100, 
-				gmode_step=1e-2, verbose=True):
+				gmode_step=1e-2, numeig=50, verbose=True):
 		t_start = time.time()
 		def print_vb(*args):
 			if verbose: print(*args)
@@ -163,6 +168,9 @@ class GuidedModeExp(object):
 		self.N_g_array = N_g_array
 		# Step in frequency in the search for guided mode solutions
 		self.gmode_step = gmode_step
+		# Number of eigen frequencies to be recorded
+		# Currently starting from lowest
+		self.numeig = numeig
 
 		kmax = np.amax(np.sqrt(np.square(kpoints[0, :]) +
 							np.square(kpoints[1, :])))
@@ -221,18 +229,23 @@ class GuidedModeExp(object):
 		for ik, k in enumerate(kpoints.T):
 			print_vb("Running k-point %d of %d" % (ik+1, kpoints.shape[1]))
 			mat = self.construct_mat(k=k)
+			if self.numeig > mat.shape[0]:
+				raise ValueError("""Requested number of eigenvalues 'numeig'
+					larger than total size of basis set. Reduce 'numeig' or
+					increase 'gmax'. """)
 
 			# Diagonalize using numpy.linalg.eigh() for now; should maybe switch 
 			# to scipy.sparse.linalg.eigsh() in the future
 			# NB: we shift the matrix by np.eye to avoid problems at the zero-
 			# frequency mode at Gamma
 			(freq2, vec) = bd.eigh(mat + bd.eye(mat.shape[0]))
-			freqs.append(bd.sort(bd.sqrt(
-					bd.abs(freq2 - bd.ones(self.numeig)))))
+			freq = bd.sort(bd.sqrt(bd.abs(freq2[:self.numeig]
+						- bd.ones(self.numeig))))
+			freqs.append(freq)
+			# raise Exception
 
 		# Store the eigenfrequencies taking the standard reduced frequency 
 		# convention for the units (2pi a/c)
-		self.mat = mat	
 		self.freqs = bd.array(freqs)/2/np.pi
 
 		print_vb("%1.4f seconds total time to run"% (time.time()-t_start))
@@ -256,9 +269,6 @@ class GuidedModeExp(object):
 		# We will truncate the matrix later on but for now initialize like this
 		max_basis = self.gvec.shape[1]*self.gmode_inds.size
 		mat = bd.zeros((max_basis, max_basis), dtype=np.complex128)
-
-		# Number of G points included for every mode
-		self.modes_numg = []
 
 		# G + k vectors
 		gkx = self.gvec[0, :] + k[0]
@@ -330,7 +340,7 @@ class GuidedModeExp(object):
 
 			for im2 in range(im1, self.gmode_inds.size):
 				mode2 = self.gmode_inds[im2]
-				# print(mode2)
+				print(mode1, mode2)
 				(indmode2, oms2, As2, Bs2, chis2) = get_guided(mode2)
 
 				if mode1%2 + mode2%2 == 0:
@@ -344,16 +354,23 @@ class GuidedModeExp(object):
 				elif mode1%2==0 and mode2%2==1:
 					mat_block = self.mat_te_tm(k, gkx, gky, gk, indmode1, oms1,
 									As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
-									chis2, pq)
-				print(count1, count2)
+									chis2, pq.transpose())
+				elif mode1%2==1 and mode2%2==0:
+					# Note: TM-TE is just hermitian conjugate of TE-TM
+					# with switched indexes 1 <-> 2
+					mat_block = self.mat_te_tm(k, gkx, gky, gk, indmode2, oms2,
+									As2, Bs2, chis2, indmode1, oms1, As1, Bs1, 
+									chis1, pq) 
+					mat_block = np.conj(np.transpose(mat_block))
+
 				mat[count1:count1+indmode1.size, 
 					count2:count2+indmode2.size] = mat_block
 				count2 += indmode2.size
 			count1 += indmode1.size
 
 		N_basis = count1 # this should also be equal to count 2 at this point
-		# Change below if switching to a solver that allows for variable numeig
-		self.numeig = N_basis
+		# Store how many modes total were included in the matrix
+		self.N_basis.append(N_basis)
 		# Store a list of how many g-points were used for each mode index
 		self.modes_numg.append(modes_numg) 
 
@@ -404,13 +421,13 @@ class GuidedModeExp(object):
 		# raise Exception 
 
 		# Contribution from upper cladding
-		mat = mat + self.phc.claddings[1].eps_inv_mat[indmat]* \
+		term = self.phc.claddings[1].eps_inv_mat[indmat]* \
 				self.phc.claddings[1].eps_avg**2 / \
 				np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) * \
 				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
 				J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
 
-		# mat = mat*np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) 
+		mat = mat + term # * np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) 
 		# raise Exception
 
 		# Contributions from layers
@@ -490,14 +507,14 @@ class GuidedModeExp(object):
 
 	def mat_te_tm(self, k, gkx, gky, gk, indmode1, oms1,
 						As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
-						chis2, pq):
+						chis2, qp):
 		'''
-		Matrix block for TM-TM mode coupling
+		Matrix block for TM-TE mode coupling
 		'''
 		
 		# Contribution from lower cladding
 		indmat = np.ix_(indmode1, indmode2)
-		mat = - self.phc.claddings[0].eps_inv_mat[indmat]* \
+		mat = - self.phc.claddings[0].eps_inv_mat[indmat] * \
 				self.phc.claddings[0].eps_avg**2 / \
 				np.conj(chis1[0, :])[:, np.newaxis] * \
 				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
@@ -505,10 +522,10 @@ class GuidedModeExp(object):
 		# raise Exception 
 
 		# Contribution from upper cladding
-		mat = mat + self.phc.claddings[1].eps_inv_mat[indmat]* \
+		mat = mat + self.phc.claddings[1].eps_inv_mat[indmat] * \
 				self.phc.claddings[1].eps_avg**2 / \
 				np.conj(chis1[-1, :])[:, np.newaxis] * \
-				np.outer(np.conj(Bs1[-1, :]), Bs2[-1, :]) * \
+				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
 				J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
 
 		# raise Exception
@@ -529,7 +546,7 @@ class GuidedModeExp(object):
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1])  )
 
 		# Final pre-factor
-		mat = - mat * np.outer(oms1**2, oms2) * pq.transpose()[indmat]
+		mat = - mat * np.outer(oms1**2, oms2) * qp[indmat]
 
 		# raise Exception
 		return mat

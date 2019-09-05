@@ -139,17 +139,17 @@ class PhotCryst(object):
 		else:
 			raise ValueError("Cross-section must be in {'xy', 'yz', 'xz'}")
 
-	def plot_overview(self, Npts=[100, 100, 50], cladding=False):
+	def plot_overview(self, Nx=100, Ny=100, Nz=50, cladding=False):
 		'''
 		Plot an overview of PhC cross-sections
 		'''
 
 		(eps_min, eps_max) = self.get_eps_bounds()
 		fig, ax = plt.subplots(1, 2, constrained_layout=True)
-		utils.plot_xz(self, ax=ax[0], Nx=Npts[0], Nz=Npts[2],
+		utils.plot_xz(self, ax=ax[0], Nx=Nx, Nz=Nz,
 					clim=[eps_min, eps_max], cbar=False)
 		ax[0].set_title("xz at y = 0")
-		utils.plot_yz(self, ax=ax[1], Ny=Npts[1], Nz=Npts[2],
+		utils.plot_yz(self, ax=ax[1], Ny=Ny, Nz=Nz,
 					clim=[eps_min, eps_max], cbar=True)
 		ax[1].set_title("yz at x = 0")
 
@@ -164,7 +164,7 @@ class PhotCryst(object):
 
 		for indl in range(N_layers):
 			zpos = (all_layers[indl].z_max + all_layers[indl].z_min)/2
-			utils.plot_xy(self, z=zpos, ax=ax[indl], Nx=Npts[0], Ny=Npts[1],
+			utils.plot_xy(self, z=zpos, ax=ax[indl], Nx=Nx, Ny=Ny,
 					clim=[eps_min, eps_max], cbar=indl==N_layers-1)
 			if cladding:
 				if indl > 0 and indl < N_layers-1:
