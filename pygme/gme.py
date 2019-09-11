@@ -159,7 +159,7 @@ class GuidedModeExp(object):
 			- compute the real eigenvalues and corresponding eigenvectors
 		'''
 
-		# Bloch momenta over which band structure is imulated 
+		# Bloch momenta over which band structure is simulated 
 		self.kpoints = kpoints
 		# Indexes of modes to be included in the expansion
 		gmode_inds = np.array(gmode_inds)
@@ -177,7 +177,7 @@ class GuidedModeExp(object):
 		Gmax = np.amax(np.sqrt(np.square(self.gvec[0, :]) +
 							np.square(self.gvec[1, :])))
 		# Array of g-points over which the guided modes will be computed
-		g_array = np.linspace(1e-6, Gmax + kmax, N_g_array)
+		g_array = np.linspace(1e-3, Gmax + kmax, N_g_array)
 		# Array of average permittivity of every layer (including claddings)
 		eps_array = np.array(list(get_value(layer.eps_avg) for layer in \
 			[self.phc.claddings[0]] + self.phc.layers + 
@@ -198,7 +198,7 @@ class GuidedModeExp(object):
 		if self.gmode_te.size > 0:
 			(omegas_te, coeffs_te) = guided_modes(g_array, eps_array, d_array, 
 						step=gmode_step, n_modes=1 + np.amax(self.gmode_te)//2, 
-						tol=1e-4, mode='TE')
+						tol=1e-10, mode='TE')
 			self.omegas_te = reshape_list(omegas_te)
 			self.coeffs_te = reshape_list(coeffs_te)
 		else:
@@ -208,7 +208,7 @@ class GuidedModeExp(object):
 		if self.gmode_tm.size > 0:
 			(omegas_tm, coeffs_tm) = guided_modes(g_array, eps_array, d_array, 
 						step=gmode_step, n_modes=1 + np.amax(self.gmode_tm)//2, 
-						tol=1e-4, mode='TM')
+						tol=1e-10, mode='TM')
 			self.omegas_tm = reshape_list(omegas_tm)
 			self.coeffs_tm = reshape_list(coeffs_tm)
 		else:
@@ -300,6 +300,7 @@ class GuidedModeExp(object):
 			gs = self.g_array[-len(omegas[im]):]
 			indmode = np.argwhere(gk > gs[0]).ravel()
 			oms = np.interp(gk[indmode], gs, omegas[im])
+			# prit('k=' )
 
 			As, Bs, chis = (np.zeros((self.N_layers + 2, 
 					indmode.size), dtype=np.complex128) for i in range(3))

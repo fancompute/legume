@@ -79,10 +79,6 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 	omega_bounds = np.append(np.arange(omega_lb + tol, omega_ub - tol, step), 
 					omega_ub-tol) 
 
-	# Some special care for when g is close to zero
-	if omega_bounds.size < 2:
-		omega_bounds = np.linspace(omega_lb+1e-15, omega_ub-1e-15, 2)
-
 	omega_solutions = [] ## solving for D22_real
 	coeffs = []
 
@@ -103,7 +99,8 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 								chi_array, mode)
 			norm = normalization_coeff(omega, g, eps_array, d_array, 
 								AB, mode)
-
+			# print(norm)
+ 
 			coeffs.append(AB / np.sqrt(norm))
 		else:
 			raise ValueError("Mode should be 'TE' or 'TM'")
@@ -319,11 +316,14 @@ def AB_matrices(omega, g, eps_array, d_array, chi_array=None, mode='TE'):
 	return np.array(ABs)
 
 def normalization_coeff(omega, g, eps_array, d_array, ABref, mode='TE'):
+	'''
+	Normalization of the guided modes (i.e. the A and B coeffs)
+	'''
 	assert len(d_array)==len(eps_array)-2, \
 		'd_array should have length = num_layers'
 	chi_array = chi(omega, g, eps_array)
-	As = ABref[:, 0]
-	Bs = ABref[:, 1]
+	As = ABref[:, 0].ravel()
+	Bs = ABref[:, 1].ravel()
 	if mode == 'TM': 
 		term1 = eps_array[0]**2 / np.abs(chi_array[0])**2 * omega**2 * \
 			(np.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
