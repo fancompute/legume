@@ -1,39 +1,66 @@
+import argparse
+
 import matplotlib.pyplot as plt
 import numpy as np
 
 import pygme
 
-gmax = 5
-y_max = 1e-1 # Generally anything < 1/gmax is fine, too small is bad for visualization
 
-W = 0.5
-H = 1 / 3
-D = 0.1
+def plot_bands(gme, cone=True, csv_file=None):
+    fig, ax = plt.subplots(1, constrained_layout=True, figsize=(4, 5))
+    plt.plot(gme.kpoints[0, :] / np.pi, gme.freqs, '-', c="#1f77b4", label="")
+    if cone:
+        ax.fill_between(gme.kpoints[0, :], gme.kpoints[0, :], gme.freqs[:].max(), facecolor="#cccccc", zorder=4,
+                        alpha=0.5)
+    if csv_file is not None:
+        data = np.loadtxt(csv_file, comments='%', delimiter=',')
+        comsol_K = data[:, 0]
+        comsol_bands = data[:, 1:]
+        plt.plot(comsol_K, comsol_bands, 'o', markeredgecolor='k', color='none', label="COMSOL")
+        # plt.legend()
 
-epsr_bot = 1.07
-epsr_top = 11.25
+    ax.set_xlim(left=0.0, right=1.0)
+    ax.set_ylim(bottom=0.0, top=gme.freqs[:].max())
+    ax.set_xlabel('Wave vector')
+    ax.set_ylabel('Frequency')
+    plt.show()
 
-lattice = pygme.Lattice([1, 0], [0, y_max])
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--overview', action='store_true')
+parser.add_argument('-gmax', default=5)
+parser.add_argument('-neig', default=5)
+parser.add_argument('-ymax', default=0.1)
+parser.add_argument('-W', default=0.50)
+parser.add_argument('-H', default=0.33)
+parser.add_argument('-D', default=0.20)
+parser.add_argument('-epsrb', default=12)
+parser.add_argument('-epsrt', default=12)
+args = parser.parse_args()
+
+lattice = pygme.Lattice([1, 0], [0, args.ymax])
 phc = pygme.PhotCryst(lattice)
 
 # Substrate
-phc.add_layer(d=D, eps_b=epsr_bot)
+phc.add_layer(d=args.D, eps_b=args.epsrb)
 
 # Grating
-phc.add_layer(d=H, eps_b=1)
+phc.add_layer(d=args.H, eps_b=1)
 
-grating = pygme.Poly(eps=epsr_top, x_edges=[-W / 2, -W / 2, +W / 2, +W / 2], y_edges=np.array([0.5, -0.5, -0.5, 0.5])*y_max)
+grating = pygme.Poly(eps=args.epsrt, x_edges=[-args.W / 2, -args.W / 2, +args.W / 2, +args.W / 2],
+                     y_edges=np.array([0.5, -0.5, -0.5, 0.5]) * args.ymax)
 phc.layers[-1].add_shape(grating)
 
-gme = pygme.GuidedModeExp(phc, gmax=gmax)
-# gme.plot_overview_ft()
-# phc.plot_overview()
+gme = pygme.GuidedModeExp(phc, gmax=args.gmax)
 
-path = phc.lattice.bz_path(['G', np.array([np.pi, 0])], [50])
-options = {'gmode_inds': [0], 'gmode_npts':500, 'numeig':10, 'verbose':False}
+if args.overview:
+    phc.plot_overview()
+    # gme.plot_overview_ft()
+
+path = phc.lattice.bz_path(['G', np.array([np.pi, 0])], [25])
+options = {'gmode_inds': np.arange(0, 8), 'gmode_npts':500, 'numeig':args.neig, 'verbose':False}
+
 gme.run(kpoints=path.kpoints, options=options)
 
-fig, ax = plt.subplots(1, constrained_layout=True)
-plt.plot(path.kpoints[0, :], gme.freqs, 'o')
-ax.set_xlim([0, path.kpoints[0, -1]])
-plt.show()
+plot_bands(gme, csv_file='./grating_bands_filtered.csv')
+plot_bands(gme, csv_file='./grating_bands.csv')
