@@ -3,7 +3,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import pygme.utils as utils 
+import pygme.utils as utils
 import pygme.backend as bd
 from .shapes import Shape, Circle, Poly, Square
 from .backend import backend as bd
@@ -193,6 +193,12 @@ class Layer(object):
 		self.d = z_max - z_min
 
 		self.lattice = lattice
+
+	def compute_ft(self, gvec):
+		'''
+		Compute fourier transform over gvec: [2 x Ng] numpy array
+		'''
+		raise NotImplementedError("compute_ft() needs to be implemented by Layer subclasses")
 
 class ShapesLayer(Layer):
 	'''
