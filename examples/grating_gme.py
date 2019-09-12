@@ -8,7 +8,7 @@ import pygme
 
 def plot_bands(gme, cone=True, csv_file=None):
     fig, ax = plt.subplots(1, constrained_layout=True, figsize=(4, 5))
-    plt.plot(gme.kpoints[0, :] / np.pi, gme.freqs, '-', c="#1f77b4", label="")
+    plt.plot(gme.kpoints[0, :] / np.pi, gme.freqs, '.', c="#1f77b4", label="")
     if cone:
         ax.fill_between(gme.kpoints[0, :], gme.kpoints[0, :], gme.freqs[:].max(), facecolor="#cccccc", zorder=4,
                         alpha=0.5)
@@ -51,16 +51,16 @@ grating = pygme.Poly(eps=args.epsrt, x_edges=[-args.W / 2, -args.W / 2, +args.W 
                      y_edges=np.array([0.5, -0.5, -0.5, 0.5]) * args.ymax)
 phc.layers[-1].add_shape(grating)
 
-gme = pygme.GuidedModeExp(phc, gmax=args.gmax)
+gme = pygme.GuidedModeExp(phc, gmax=float(args.gmax))
 
 if args.overview:
     phc.plot_overview()
     # gme.plot_overview_ft()
 
-path = phc.lattice.bz_path(['G', np.array([np.pi, 0])], [25])
-options = {'gmode_inds': np.arange(0, 8), 'gmode_npts':500, 'numeig':args.neig, 'verbose':False}
+path = phc.lattice.bz_path(['G', np.array([np.pi, 0])], [150])
+options = {'gmode_inds': np.arange(0, 4), 'gmode_npts':5000, 'gmode_step': 1e-2, 'numeig':int(args.neig), 'verbose':False}
 
 gme.run(kpoints=path.kpoints, options=options)
 
 plot_bands(gme, csv_file='./grating_bands_filtered.csv')
-plot_bands(gme, csv_file='./grating_bands.csv')
+# plot_bands(gme, csv_file='./grating_bands.csv')
