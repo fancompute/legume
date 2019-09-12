@@ -71,22 +71,8 @@ class GuidedModeExp(object):
 							self.gvec[:, range(n2max)]
 
 		for layer in self.phc.layers + self.phc.claddings:
-			T1 = bd.zeros(self.gvec.shape[1])
-			T2 = bd.zeros(self.gvec.shape[1])
-			for shape in layer.shapes:
-				# Note: compute_ft() returns the FT of a function that is one 
-				# inside the shape and zero outside
-				T1 = T1 + (shape.eps - layer.eps_b)*shape.compute_ft(G1)
-				T2 = T2 + (shape.eps - layer.eps_b)*shape.compute_ft(G2)
-
-			# Apply some final coefficients
-			# Note the hacky way to set the zero element so as to work with
-			# 'autograd' backend
-			ind0 = bd.arange(T1.size) < 1  
-			T1 = T1 / layer.lattice.ec_area
-			T1 = T1*(1-ind0) + layer.eps_avg*ind0
-			T2 = T2 / layer.lattice.ec_area
-			T2 = T2*(1-ind0) + layer.eps_avg*ind0
+			T1 = layer.compute_ft(G1)
+			T2 = layer.compute_ft(G2)
 
 			# Store T1 and T2
 			layer.T1 = T1

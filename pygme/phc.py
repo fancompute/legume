@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import pygme.utils as utils 
+import pygme.backend as bd
 from .shapes import Shape, Circle, Poly, Square
 from .backend import backend as bd
 
@@ -13,17 +14,11 @@ class PhotCryst(object):
 	'''
 	def __init__(self, lattice, eps_l=1, eps_u=1):
 		# Define permittivity of lower and upper cladding
-		# self.eps_l = eps_l
-		# self.eps_u = eps_u
+		# For now claddings are just ShapesLayer, maybe extend to freeform
 		self.claddings = []
-		self.claddings.append(Layer(lattice, eps_b=eps_l, z_min=-1e50))
-		self.claddings.append(Layer(lattice, eps_b=eps_u, z_max=1e50))
-		'''
-		Define lattice parameters; variable lattice is initialized throug the 
-		init_lattice() function in utils.py
-		Note: for twisted layers, a separate lattice should be initialized 
-		for every object in the Layer class
-		'''
+		self.claddings.append(ShapesLayer(lattice, eps_b=eps_l, z_min=-1e50))
+		self.claddings.append(ShapesLayer(lattice, eps_b=eps_u, z_max=1e50))
+		
 		self.lattice = lattice
 
 		# Initialize an empty list of layers
@@ -39,7 +34,7 @@ class PhotCryst(object):
     
 		return np.linspace(zmin, zmax, Nz)
 
-	def add_layer(self, d, eps_b=1):
+	def add_layer(self, d, eps_b=1, layer_type='shapes'):
 		'''
 		Add a layer with thickness d and background permittivity eps_b
 		'''
@@ -48,7 +43,13 @@ class PhotCryst(object):
 		else:
 			z_min = self.layers[-1].z_max
 
-		layer = Layer(self.lattice, z_min, z_min + d, eps_b=eps_b)
+		if layer_type.lower() == 'shapes':
+			layer = ShapesLayer(self.lattice, z_min, z_min + d, eps_b=eps_b)
+		elif layer_type.lower() == 'freeform':
+			layer = FreeformLayer(self.lattice, z_min, z_min + d, eps_b=eps_b)
+		else:
+			raise ValueError("'layer_type' must be 'shapes' or 'freeform'")
+
 		self.claddings[1].z_min = z_min + d
 		self.layers.append(layer)
 
@@ -72,7 +73,10 @@ class PhotCryst(object):
 					"layers")
 			else:
 				lay = self.layers[layer]
-		lay.add_shape(*args)
+		if lay.layer_type == 'shapes':
+			lay.add_shape(*args)
+		else:
+			raise TypeError("Shapes can only be added to a ShapesLayer")
 
 	def get_eps(self, points):
 		'''
@@ -176,26 +180,35 @@ class PhotCryst(object):
 				ax[indl].set_title("xy in layer %d" % indl)
 		plt.show()
 
+''' ======================== Layers ======================== '''
 
 class Layer(object):
 	'''
 	Class for a single layer in the potentially multi-layer PhC
 	'''
-	def __init__(self, lattice, z_min=0, z_max=0, eps_b=1):
+	def __init__(self, lattice, z_min=0, z_max=0):
 		# Define beginning and end in z-direction
 		self.z_min = z_min
 		self.z_max = z_max
 		self.d = z_max - z_min
 
+		self.lattice = lattice
+
+class ShapesLayer(Layer):
+	'''
+	Layer with permittivity defined by Shape objects
+	'''
+	def __init__(self, lattice, z_min=0, z_max=0, eps_b=1):
+		super().__init__(lattice, z_min, z_max)
+
 		# Define background permittivity
 		self.eps_b = eps_b
-		# Define lattice parameters (right now inherited from Phc)
-		self.lattice = lattice
 
 		# Initialize average permittivity - needed for guided-mode computation
 		self.eps_avg = np.array(eps_b)
 
 		# Initialize an empty list of shapes
+		self.layer_type = 'shapes'
 		self.shapes = []
 
 	def add_shape(self, *args):
@@ -211,6 +224,56 @@ class Layer(object):
 			else:
 				raise ValueError("Arguments to add_shape must be an instance" \
 					"of pygme.Shape (e.g pygme.Circle or pygme.Poly)")
+
+	def compute_ft(self, gvec):
+		'''
+		Compute fourier transform over gvec: [2 x Ng] numpy array
+		'''
+		FT = bd.zeros(gvec.shape[1])
+		for shape in self.shapes:
+			# Note: compute_ft() returns the FT of a function that is one 
+			# inside the shape and zero outside
+			FT = FT + (shape.eps - self.eps_b)*shape.compute_ft(gvec)
+
+		# Apply some final coefficients
+		# Note the hacky way to set the zero element so as to work with
+		# 'autograd' backend
+		ind0 = bd.arange(FT.size) < 1  
+		FT = FT / self.lattice.ec_area
+		FT = FT*(1-ind0) + self.eps_avg*ind0
+
+		return FT
+
+class FreeformLayer(Layer):
+	'''
+	Layer with permittivity defined by a freeform distribution on a grid
+	'''
+	def __init__(self, lattice, z_min=0, z_max=0, eps_init=1, res=10):
+		super().__init__(lattice, z_min, z_max, eps_b)
+
+		# Initialize average permittivity - needed for guided-mode computation
+		self.eps_avg = np.array(eps_init)
+
+		# Initialize an empty list of shapes
+		self.layer_type = 'freeform'
+		self._init_grid(res)
+
+	def _init_grid(res):
+		'''
+		Initialize a grid with resolution res, with res[0] pixels along the 
+		lattice.a1 direction and res[1] pixels along the lattice.a2 direction
+		'''
+		res = np.array(res)
+		if res.size == 1: 
+			res = res * np.ones((2,))
+
+	def compute_ft(self, gvec):
+		'''
+		Compute fourier transform over gvec: [2 x Ng] numpy array
+		'''
+		pass
+
+''' ======================== Lattice ======================== '''
 		
 class Lattice(object):
 	'''
