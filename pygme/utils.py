@@ -91,6 +91,18 @@ def ftinv(ft_coeff, gvec, xgrid, ygrid):
 		ftinv += ft_coeff[indg]*np.exp(-1j*gvec[0, indg]*xmesh - \
 							1j*gvec[1, indg]*ymesh)
 
+	# # Do the x- and y-transforms separately 
+	# # I wrote this but then realized it doesn't improve anything
+	# (gx_u, indx) = np.unique(gvec[0, :], return_inverse=True)
+	# for ix, gx in enumerate(gx_u):
+	# 	ind_match = np.where(indx==ix)[0]
+	# 	(gy_u, indy) = np.unique(gvec[1, ind_match], return_index=True)
+	# 	term = np.zeros(xmesh.shape, dtype=np.complex128)
+	# 	for iy, gy in enumerate(gy_u):
+	# 		# print(ft_coeff[indx[indy[iy]]])
+	# 		term += ft_coeff[ind_match[indy[iy]]]*np.exp(-1j*gy*ymesh)
+	# 	ftinv += term*np.exp(-1j*gx*xmesh)
+
 	# # Can also be defined through a DFT matrix but it doesn't seem faster and 
 	# # it's *very* memory intensive.
 	# exp_matrix = xmesh.reshape((-1, 1)).dot(g_unique[[0], :]) + \
@@ -98,7 +110,7 @@ def ftinv(ft_coeff, gvec, xgrid, ygrid):
 
 	# dft_matrix = np.exp(1j*exp_matrix)
 	# ftinv = dft_matrix.dot(ft_coeff[ind_unique]).reshape(xmesh.shape)
-
+	# print(ftinv)
 	return ftinv
 
 def ft2square(lattice, ft_coeff, gvec):

@@ -30,8 +30,8 @@ gme = pygme.GuidedModeExp(phc, gmax=gmax)
 # phc.plot_overview()
 
 path = phc.lattice.bz_path(['G', np.array([np.pi, 0])], [50])
-
-gme.run(kpoints=path.kpoints, gmode_inds=[0], N_g_array=500, verbose=False, numeig=10)
+options = {'gmode_inds': [0], 'gmode_npts':500, 'numeig':10, 'verbose':False}
+gme.run(kpoints=path.kpoints, options=options)
 
 fig, ax = plt.subplots(1, constrained_layout=True)
 plt.plot(path.kpoints[0, :], gme.freqs, 'o')

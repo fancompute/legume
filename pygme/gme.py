@@ -57,6 +57,38 @@ class GuidedModeExp(object):
 		self.n1g = 2*n1max + 1
 		self.n2g = 2*n2max + 1
 
+	def _run_options(self, options):
+		default_options = {
+			# Indexes of modes to be included in the expansion
+			'gmode_inds'   : [0],
+			# Number of points over which guided modes are computed
+			'gmode_npts'    : 500,
+			# Step in frequency in the search for guided mode solutions
+			'gmode_step'   : 1e-2,
+			# Tolerance in the minimum and maximum omega value when looking for 
+			# the guided-mode solutions
+			'gmode_tol'    : 1e-10,
+			# Number of eigen-frequencies to be stored (starting from lowest)
+			'numeig'	   : 10,
+			# Print information at intermmediate steps
+			'verbose'	   : True
+			}
+
+		for key in default_options.keys():
+			if key not in options.keys():
+				options[key] = default_options[key]
+
+		for key in options.keys():
+			if key not in default_options.keys():
+				raise ValueError("Unrecognized option '%s'" % key)
+
+		for (option, value) in options.items():
+			# Make sure 'gmode_inds' is a numpy array
+			if option.lower() == 'gmode_inds':
+				value = np.array(value)
+			# Set all the options as class attributes
+			setattr(self, option, value)
+
 	def compute_ft(self):
 		'''
 		Compute the unique FT coefficients of the permittivity, eps(g-g') for
@@ -129,11 +161,7 @@ class GuidedModeExp(object):
 		plt.colorbar(ims[-1])
 		plt.show()
 
-	def run(self, gmode_inds, kpoints=np.array([[0], [0]]), N_g_array=100, 
-				gmode_step=1e-2, numeig=50, verbose=True):
-		t_start = time.time()
-		def print_vb(*args):
-			if verbose: print(*args)
+	def run(self, kpoints=np.array([[0], [0]]), options={}):
 		''' 
 		Run the simulation. Basically:
 
@@ -144,26 +172,22 @@ class GuidedModeExp(object):
 			- compute the Hermitian matrix for diagonalization 
 			- compute the real eigenvalues and corresponding eigenvectors
 		'''
+		t_start = time.time()
+		
+		def print_vb(*args):
+			if self.verbose: print(*args)
 
+		# Parse the input options
+		self._run_options(options)
 		# Bloch momenta over which band structure is simulated 
 		self.kpoints = kpoints
-		# Indexes of modes to be included in the expansion
-		gmode_inds = np.array(gmode_inds)
-		self.gmode_inds = gmode_inds
-		# Number of points over which guided modes are computed
-		self.N_g_array = N_g_array
-		# Step in frequency in the search for guided mode solutions
-		self.gmode_step = gmode_step
-		# Number of eigen frequencies to be recorded
-		# Currently starting from lowest
-		self.numeig = numeig
 
 		kmax = np.amax(np.sqrt(np.square(kpoints[0, :]) +
 							np.square(kpoints[1, :])))
 		Gmax = np.amax(np.sqrt(np.square(self.gvec[0, :]) +
 							np.square(self.gvec[1, :])))
 		# Array of g-points over which the guided modes will be computed
-		g_array = np.linspace(1e-3, Gmax + kmax, N_g_array)
+		g_array = np.linspace(1e-3, Gmax + kmax, self.gmode_npts)
 		# Array of average permittivity of every layer (including claddings)
 		eps_array = np.array(list(get_value(layer.eps_avg) for layer in \
 			[self.phc.claddings[0]] + self.phc.layers + 
@@ -176,15 +200,15 @@ class GuidedModeExp(object):
 
 		# Compute guided modes
 		t = time.time()
-		self.gmode_te = gmode_inds[np.remainder(gmode_inds, 2) == 0]
-		self.gmode_tm = gmode_inds[np.remainder(gmode_inds, 2) != 0]
+		self.gmode_te = self.gmode_inds[np.remainder(self.gmode_inds, 2) == 0]
+		self.gmode_tm = self.gmode_inds[np.remainder(self.gmode_inds, 2) != 0]
 		reshape_list = lambda x: [list(filter(lambda y: y is not None, i)) \
 						for i in zip_longest(*x)]
 
 		if self.gmode_te.size > 0:
 			(omegas_te, coeffs_te) = guided_modes(g_array, eps_array, d_array, 
-						step=gmode_step, n_modes=1 + np.amax(self.gmode_te)//2, 
-						tol=1e-10, mode='TE')
+					step=self.gmode_step, n_modes=1 + np.amax(self.gmode_te)//2, 
+					tol=self.gmode_tol, mode='TE')
 			self.omegas_te = reshape_list(omegas_te)
 			self.coeffs_te = reshape_list(coeffs_te)
 		else:
@@ -193,8 +217,8 @@ class GuidedModeExp(object):
 
 		if self.gmode_tm.size > 0:
 			(omegas_tm, coeffs_tm) = guided_modes(g_array, eps_array, d_array, 
-						step=gmode_step, n_modes=1 + np.amax(self.gmode_tm)//2, 
-						tol=1e-10, mode='TM')
+					step=self.gmode_step, n_modes=1 + np.amax(self.gmode_tm)//2, 
+					tol=self.gmode_tol, mode='TM')
 			self.omegas_tm = reshape_list(omegas_tm)
 			self.coeffs_tm = reshape_list(coeffs_tm)
 		else:
