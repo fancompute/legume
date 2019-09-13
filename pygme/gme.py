@@ -517,14 +517,14 @@ class GuidedModeExp(object):
 		# Contribution from lower cladding
 		indmat = np.ix_(indmode1, indmode2)
 		mat = - self.phc.claddings[0].eps_inv_mat[indmat] * \
-				self.phc.claddings[0].eps_avg * \
+				self.phc.claddings[0].eps_avg * chis2[0, :][np.newaxis, :]* \
 				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
 				J_alpha(chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
 		# raise Exception 
 
 		# Contribution from upper cladding
 		mat = mat + self.phc.claddings[1].eps_inv_mat[indmat] * \
-				self.phc.claddings[1].eps_avg * \
+				self.phc.claddings[1].eps_avg * chis2[-1, :][np.newaxis, :] * \
 				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
 				J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
 
@@ -534,7 +534,7 @@ class GuidedModeExp(object):
 		# note: self.N_layers = self.phc.layers.shape so without claddings
 		for il in range(1, self.N_layers+1):
 			mat = mat + self.phc.layers[il-1].eps_inv_mat[indmat] *\
-			self.phc.layers[il-1].eps_avg * ( \
+			self.phc.layers[il-1].eps_avg * chis2[il, :][np.newaxis, :] * ( \
 			np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) - \
 			np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +\

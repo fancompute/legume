@@ -23,8 +23,8 @@ if __name__ == '__main__':
 	# Plot an overview picture
 	# phc.plot_overview(cladding='True')
 
-	gme = GuidedModeExp(phc, gmax=2)
+	gme = GuidedModeExp(phc, gmax=4)
 	# gme.plot_overview_ft(cladding=True)
-	options = {'gmode_inds': [0, 1], 'gmode_npts':500, 'numeig':10, 'gmode_tol':1e-10}
+	options = {'gmode_inds': [2, 3, 4], 'gmode_npts':2500, 'numeig':20, 'gmode_tol':1e-10, 'gmode_step':1e-2}
 	gme.run(kpoints=np.array([[0.1], [0]]), options=options)
 	print(gme.freqs)
