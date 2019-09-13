@@ -132,16 +132,16 @@ def S_T_matrices_TM(omega, g, eps_array, d_array):
 			'd_array should have length = num_layers'
 	chi_array = chi(omega, g, eps_array)
 	# print(chi_array)
-	S11 = eps_array[1:]*chi_array[:-1] + eps_array[:-1]*chi_array[1:]
-	S12 = eps_array[1:]*chi_array[:-1] - eps_array[:-1]*chi_array[1:]
+	S11 = (chi_array[:-1]/eps_array[:-1] + chi_array[1:]/eps_array[1:])
+	S12 = -chi_array[:-1]/eps_array[:-1] + chi_array[1:]/eps_array[1:]
 	S22 = S11
 	S21 = S12
-	S_matrices = 0.5/eps_array[1:].reshape(-1,1,1) * \
+	S_matrices = 0.5 / (chi_array[1:]/eps_array[1:]).reshape(-1,1,1) * \
 		np.array([[S11,S12],[S21,S22]]).transpose([2,0,1])
-	T11 = np.exp(1j*chi_array[1:-1]*d_array)
-	T22 = np.exp(-1j*chi_array[1:-1]*d_array)
+	T11 = np.exp(1j*chi_array[1:-1]*d_array/2)
+	T22 = np.exp(-1j*chi_array[1:-1]*d_array/2)
 	T_matrices = np.array([[T11,np.zeros_like(T11)],
-					[np.zeros_like(T11),T22]]).transpose([2,0,1])
+		[np.zeros_like(T11),T22]]).transpose([2,0,1])
 	return S_matrices, T_matrices
 
 def D22_TM(omega, g, eps_array, d_array):
@@ -161,7 +161,7 @@ def D22_TM(omega, g, eps_array, d_array):
 	D = S_matrices[0,:,:]
 	for i,S in enumerate(S_matrices[1:]):
 		T = T_matrices[i]
-		D = S.dot(T.dot(D))
+		D = S.dot(T.dot(T.dot(D)))
 	return D[1,1]
 
 def S_T_matrices_TE(omega, g, eps_array, d_array):
@@ -231,11 +231,11 @@ def D22s_vec(omegas, g, eps_array, d_array, mode='TM'):
 		return (S11, S12, S12, S11)
 
 	def S_TM(eps1, eps2, chis1, chis2):
-		S11 = 0.5/eps2 * (eps2*chis1 + eps1*chis2)
-		S12 = 0.5/eps2 * (eps2*chis1 - eps1*chis2)
+		S11 = 0.5 / eps2/chis1 * (eps2*chis1 + eps1*chis2)
+		S12 = 0.5 / eps2/chis1 * (eps2*chis1 - eps1*chis2)
 		return (S11, S12, S12, S11)
 
-	def S_T_TM_prod(mats, omegas, g, eps1, eps2, d):
+	def S_T_prod(mats, omegas, g, eps1, eps2, d):
 		'''
 		Get the i-th S and T matrices for an array of omegas given the i-th slab 
 		thickness d and permittivity of the slab eps1 and the next layer eps2
@@ -281,7 +281,7 @@ def D22s_vec(omegas, g, eps_array, d_array, mode='TM'):
 	mats[1::2, 1] = S22
 
 	for il in range(1, eps_array.size - 1):
-		mats = S_T_TM_prod(mats, omegas, g, eps_array[il], 
+		mats = S_T_prod(mats, omegas, g, eps_array[il], 
 							eps_array[il+1], d_array[il-1])
 
 	D22s = mats[1::2, 1]
@@ -327,18 +327,15 @@ def normalization_coeff(omega, g, eps_array, d_array, ABref, mode='TE'):
 	As = ABref[:, 0].ravel()
 	Bs = ABref[:, 1].ravel()
 	if mode == 'TM': 
-		term1 = eps_array[0]**2 / np.abs(chi_array[0])**2 * omega**2 * \
-			(np.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
-		term2 = eps_array[-1]**2 / np.abs(chi_array[-1])**2 * omega**2 * \
-			(np.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
-		term3 = eps_array[1:-1]**2 / np.abs(chi_array[1:-1])**2 * omega**2 * \
-				(
+		term1 = (np.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
+		term2 = (np.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
+		term3 = (
 				(As[1:-1] * As[1:-1].conj()) * \
 				I_alpha(chi_array[1:-1]-chi_array[1:-1].conj(),d_array) + \
 				(Bs[1:-1] * Bs[1:-1].conj()) * \
-				I_alpha(chi_array[1:-1].conj()-chi_array[1:-1],d_array) - \
+				I_alpha(chi_array[1:-1].conj()-chi_array[1:-1],d_array) + \
 				(As[1:-1].conj() * Bs[1:-1]) * \
-				I_alpha(-chi_array[1:-1]-chi_array[1:-1].conj(),d_array) - \
+				I_alpha(-chi_array[1:-1]-chi_array[1:-1].conj(),d_array) + \
 				(As[1:-1] * Bs[1:-1].conj()) * \
 				I_alpha(chi_array[1:-1]+chi_array[1:-1].conj(),d_array)
 				)
