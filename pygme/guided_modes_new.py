@@ -49,7 +49,6 @@ def guided_modes(g_array, eps_array, d_array, n_modes=1,
 		(omegas, coeffs) = guided_mode_given_g(g=g, eps_array=eps_array, 
 			d_array=d_array, n_modes=n_modes, omega_lb=om_lb, omega_ub=om_ub,
 			step=step, tol=tol, mode=mode)
-
 		om_guided.append(omegas)
 		coeffs_guided.append(coeffs)
 	return (om_guided, coeffs_guided)
@@ -137,8 +136,7 @@ def S_T_matrices_TM(omega, g, eps_array, d_array):
 	S12 = eps_array[1:]*chi_array[:-1] - eps_array[:-1]*chi_array[1:]
 	S22 = S11
 	S21 = S12
-	S_matrices = 0.5/eps_array[1:].reshape(-1,1,1) / \
-		chi_array[:-1].reshape(-1,1,1) * \
+	S_matrices = 0.5/eps_array[1:].reshape(-1,1,1) * \
 		np.array([[S11,S12],[S21,S22]]).transpose([2,0,1])
 	T11 = np.exp(1j*chi_array[1:-1]*d_array)
 	T22 = np.exp(-1j*chi_array[1:-1]*d_array)
@@ -174,14 +172,14 @@ def S_T_matrices_TE(omega, g, eps_array, d_array):
 		'd_array should have length = num_layers'
 	chi_array = chi(omega, g, eps_array)
 
-	S11 = chi_array[:-1] + chi_array[1:]
-	S12 = chi_array[:-1] - chi_array[1:]
+	S11 = (chi_array[:-1] + chi_array[1:])
+	S12 = -chi_array[:-1] + chi_array[1:]
 	S22 = S11
 	S21 = S12
-	S_matrices = 0.5/chi_array[:-1].reshape(-1,1,1) * \
+	S_matrices = 0.5 / chi_array[1:].reshape(-1,1,1) * \
 		np.array([[S11,S12],[S21,S22]]).transpose([2,0,1])
-	T11 = np.exp(1j*chi_array[1:-1]*d_array)
-	T22 = np.exp(-1j*chi_array[1:-1]*d_array)
+	T11 = np.exp(1j*chi_array[1:-1]*d_array/2)
+	T22 = np.exp(-1j*chi_array[1:-1]*d_array/2)
 	T_matrices = np.array([[T11,np.zeros_like(T11)],
 		[np.zeros_like(T11),T22]]).transpose([2,0,1])
 	return S_matrices, T_matrices
@@ -203,7 +201,7 @@ def D22_TE(omega, g, eps_array, d_array):
 	D = S_matrices[0,:,:]
 	for i,S in enumerate(S_matrices[1:]):
 		T = T_matrices[i]
-		D = S.dot(T.dot(D))
+		D = S.dot(T.dot(T.dot(D)))
 	return D[1,1]
 
 def D22s_vec(omegas, g, eps_array, d_array, mode='TM'):
@@ -227,13 +225,14 @@ def D22s_vec(omegas, g, eps_array, d_array, mode='TM'):
 	N_oms = omegas.size # mats below will be of shape [2*N_oms, 2]
 
 	def S_TE(eps1, eps2, chis1, chis2):
-		S11 = 0.5/chis1 * (chis1 + chis2)
-		S12 = 0.5/chis1 * (chis1 - chis2)
+		# print((np.real(chis1) + np.imag(chis1)) / chis1)
+		S11 = 0.5 / chis2 * (chis1 + chis2)
+		S12 = 0.5 / chis2 * (chis1 - chis2)
 		return (S11, S12, S12, S11)
 
 	def S_TM(eps1, eps2, chis1, chis2):
-		S11 = 0.5/eps2/chis1 * (eps2*chis1 + eps1*chis2)
-		S12 = 0.5/eps2/chis1 * (eps2*chis1 - eps1*chis2)
+		S11 = 0.5/eps2 * (eps2*chis1 + eps1*chis2)
+		S12 = 0.5/eps2 * (eps2*chis1 - eps1*chis2)
 		return (S11, S12, S12, S11)
 
 	def S_T_TM_prod(mats, omegas, g, eps1, eps2, d):
@@ -310,9 +309,12 @@ def AB_matrices(omega, g, eps_array, d_array, chi_array=None, mode='TE'):
 	B0 = 1 
 	AB0 = np.array([A0, B0]).reshape(-1,1)
 
-	ABs = [AB0, S_matrices[0].dot(AB0)] ### A, B coeff for each layer
+	ABs = [AB0, T_matrices[0].dot(S_matrices[0].dot(AB0))] ### A, B coeff for each layer
 	for i,S in enumerate(S_matrices[1:]):
-		ABs.append(S_matrices[i+1].dot(T_matrices[i].dot(ABs[-1])))
+		term = S_matrices[i+1].dot(T_matrices[i].dot(ABs[-1]))
+		if i < len(S_matrices)-2:
+			term = T_matrices[i+1].dot(term)
+		ABs.append(term)
 	return np.array(ABs)
 
 def normalization_coeff(omega, g, eps_array, d_array, ABref, mode='TE'):
@@ -342,17 +344,17 @@ def normalization_coeff(omega, g, eps_array, d_array, ABref, mode='TE'):
 				)
 		return term1 + term2 + np.sum(term3)
 	elif mode == 'TE':
-		term1 = (1 + g**2 / np.abs(chi_array[0])**2) * \
+		term1 = (np.abs(chi_array[0])**2 + g**2) * \
 			(np.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
-		term2 = (1 + g**2 / np.abs(chi_array[-1])**2) * \
+		term2 = (np.abs(chi_array[-1])**2 + g**2) * \
 			(np.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
-		term3 = (1 + g**2 / np.abs(chi_array[1:-1])**2) * (
+		term3 = (np.abs(chi_array[1:-1])**2 + g**2) * (
 				(As[1:-1] * As[1:-1].conj()) * \
 				I_alpha(chi_array[1:-1]-chi_array[1:-1].conj(), d_array) + \
 				(Bs[1:-1] * Bs[1:-1].conj()) * \
 				I_alpha(chi_array[1:-1].conj()-chi_array[1:-1], d_array)
-				) + \
-				(1 - g**2 / np.abs(chi_array[1:-1])**2) * (
+				) - \
+				(np.abs(chi_array[1:-1])**2 - g**2) * (
 				(As[1:-1].conj() * Bs[1:-1]) * \
 				I_alpha(-chi_array[1:-1]-chi_array[1:-1].conj(), d_array) + \
 				(As[1:-1] * Bs[1:-1].conj()) * \

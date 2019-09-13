@@ -14,7 +14,7 @@ if __name__ == '__main__':
 	# Initialize a lattice
 	lattice = Lattice('square')
 	# Initialize a PhC (by default with eps = 1 in upper and lower cladding, we set upper one to 5)
-	phc = PhotCryst(lattice, eps_u=1.)
+	phc = PhotCryst(lattice, eps_u=5.)
 	# Add a layer to the PhC with thickness 1 and background permittivity 10
 	phc.add_layer(d=0.5, eps_b=12.)
 	# Add a shape to this layer 
@@ -23,8 +23,8 @@ if __name__ == '__main__':
 	# Plot an overview picture
 	# phc.plot_overview(cladding='True')
 
-	gme = GuidedModeExp(phc, gmax=1)
+	gme = GuidedModeExp(phc, gmax=2)
 	# gme.plot_overview_ft(cladding=True)
-	options = {'gmode_inds': [0, 3], 'gmode_npts':500, 'numeig':10}
+	options = {'gmode_inds': [0, 2], 'gmode_npts':500, 'numeig':10, 'gmode_tol':1e-10}
 	gme.run(kpoints=np.array([[0.1], [0]]), options=options)
 	print(gme.freqs)

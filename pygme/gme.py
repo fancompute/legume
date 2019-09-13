@@ -422,7 +422,7 @@ class GuidedModeExp(object):
 				np.outer(np.conj(chis1[0, :]), chis2[0, :]) * \
 				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
 				J_alpha(chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
-		# mat = mat*np.outer(np.conj(chis1[0, :]), chis2[0, :]) 
+		mat = mat*np.outer(np.conj(chis1[0, :]), chis2[0, :]) 
 		# raise Exception 
 
 		# Contribution from upper cladding
@@ -432,7 +432,7 @@ class GuidedModeExp(object):
 				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
 				J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
 
-		mat = mat + term # * np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) 
+		mat = mat + term * np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) 
 		# raise Exception
 
 		# Contributions from layers
@@ -444,13 +444,13 @@ class GuidedModeExp(object):
 			np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
 			np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +\
-				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) - \
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
 			np.outer(np.conj(As1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] -\
-				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) -
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) +
 			np.outer(np.conj(Bs1[il, :]), As2[il, :])*I_alpha(chis2[il, :] +\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1])  )
 
-			mat = mat + term # * np.outer(np.conj(chis1[il, :]), chis2[il, :]) 
+			mat = mat + term * np.outer(np.conj(chis1[il, :]), chis2[il, :]) 
 		# Final pre-factor		
 		mat = mat * np.outer(oms1**2, oms2**2) * (qq[indmat])
 
