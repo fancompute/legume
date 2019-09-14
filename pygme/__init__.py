@@ -4,6 +4,8 @@ Monkey-patching numpy/autograd backend inspired by Floris Laporte's FDTD
 package at github.com/flaport/fdtd
 '''
 
+from . import viz
+
 from .phc import PhotCryst, Layer, Lattice
 from .pwe import PlaneWaveExp
 from .gme import GuidedModeExp
