@@ -357,15 +357,15 @@ def normalization_coeff(omega, g, eps_array, d_array, ABref, mode='TE'):
 
 def leaky_modes(g_array, eps_array, d_array, n_modes=1, 
 			step=1e-3, tol=1e-4, mode='TE'):
-''' 
-Function to compute the leaky modes of a multi-layer structure
-Input
+	''' 
+	Function to compute the leaky modes of a multi-layer structure
+	Input
 	g_array  		: numpy array of wave vector amplitudes 
 	eps_array		: numpy array of slab permittivities, starting with lower 
 					  cladding and ending with upper cladding
 
 	d_array			: thicknesses of each layer
-Output
+	Output
 	coeffs_leaky	: X, Y coefficients of the modes in every layer
-'''
+	'''
 	pass
