@@ -236,7 +236,7 @@ def D22s_vec(omegas, g, eps_array, d_array, mode='TM'):
 		S12 = 0.5/eps2/chis1 * (eps2*chis1 - eps1*chis2)
 		return (S11, S12, S12, S11)
 
-	def S_T_TM_prod(mats, omegas, g, eps1, eps2, d):
+	def S_T_prod(mats, omegas, g, eps1, eps2, d):
 		'''
 		Get the i-th S and T matrices for an array of omegas given the i-th slab 
 		thickness d and permittivity of the slab eps1 and the next layer eps2
@@ -282,7 +282,7 @@ def D22s_vec(omegas, g, eps_array, d_array, mode='TM'):
 	mats[1::2, 1] = S22
 
 	for il in range(1, eps_array.size - 1):
-		mats = S_T_TM_prod(mats, omegas, g, eps_array[il], 
+		mats = S_T_prod(mats, omegas, g, eps_array[il], 
 							eps_array[il+1], d_array[il-1])
 
 	D22s = mats[1::2, 1]

@@ -397,7 +397,8 @@ class GuidedModeExp(object):
 		Make the matrix Hermitian (note that only upper part of the blocks, i.e.
 		(im2 >= im1) was computed
 		'''
-		mat = bd.triu(mat) + bd.transpose(bd.conj(bd.triu(mat, 1)))  
+		mat = bd.triu(mat) + bd.transpose(bd.conj(bd.triu(mat, 1)))
+		self.mat = mat
 
 		return mat
 
@@ -540,7 +541,7 @@ class GuidedModeExp(object):
 		for il in range(1, self.N_layers+1):
 			mat = mat + self.phc.layers[il-1].eps_inv_mat[indmat] *\
 			self.phc.layers[il-1].eps_avg**2 / \
-			np.conj(chis1[-1, :])[:, np.newaxis] * ( \
+			np.conj(chis1[il, :])[:, np.newaxis] * ( \
 			np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) - \
 			np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +\
