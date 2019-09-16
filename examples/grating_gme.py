@@ -57,8 +57,8 @@ if args.overview:
     phc.plot_overview()
     # gme.plot_overview_ft()
 
-path = phc.lattice.bz_path(['G', np.array([np.pi, 0])], [150])
-options = {'gmode_inds': np.arange(0, 4), 'gmode_npts':5000, 'gmode_step': 1e-2, 'numeig':int(args.neig), 'verbose':False}
+path = phc.lattice.bz_path(['G', np.array([np.pi, 0])], [50])
+options = {'gmode_inds': np.arange(0, 4), 'gmode_npts':2500, 'gmode_step': 1e-2, 'numeig':int(args.neig), 'verbose':False}
 
 gme.run(kpoints=path.kpoints, options=options)
 

@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pygme.utils as utils
-from .slab_modes import guided_modes
+from .guided_modes_new import guided_modes
 from .backend import backend as bd
 import time
 from itertools import zip_longest
@@ -62,7 +62,7 @@ class GuidedModeExp(object):
 			# Indexes of modes to be included in the expansion
 			'gmode_inds'   : [0],
 			# Number of points over which guided modes are computed
-			'gmode_npts'   : 1000,
+			'gmode_npts'    : 500,
 			# Step in frequency in the search for guided mode solutions
 			'gmode_step'   : 1e-2,
 			# Tolerance in the minimum and maximum omega value when looking for 
@@ -362,13 +362,13 @@ class GuidedModeExp(object):
 				elif mode1%2==0 and mode2%2==1:
 					mat_block = self.mat_te_tm(k, indmode1, oms1,
 									As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
-									chis2, pq.transpose(), 1j)
+									chis2, pq.transpose())
 				elif mode1%2==1 and mode2%2==0:
 					# Note: TM-TE is just hermitian conjugate of TE-TM
 					# with switched indexes 1 <-> 2
 					mat_block = self.mat_te_tm(k, indmode2, oms2,
 									As2, Bs2, chis2, indmode1, oms1, As1, Bs1, 
-									chis1, pq, -1j) 
+									chis1, pq) 
 					mat_block = np.conj(np.transpose(mat_block))
 
 				mat_blocks[im1].append(mat_block)
@@ -398,14 +398,15 @@ class GuidedModeExp(object):
 		(im2 >= im1) was computed
 		'''
 		mat = bd.triu(mat) + bd.transpose(bd.conj(bd.triu(mat, 1)))
-		self.mat = mat  
+		self.mat = mat
 
 		return mat
 
 
 	'''===========MATRIX ELEMENTS BETWEEN GUIDED MODES BELOW============'''
 	'''
-	Notation is following Andreani and Gerace PRB 2006
+	Notation is following Vasily Zabelin's thesis 
+	not Andreani and Gerace PRB 2006
 	'''
 
 	def mat_te_te(self, k, indmode1, oms1,
@@ -422,7 +423,7 @@ class GuidedModeExp(object):
 				np.outer(np.conj(chis1[0, :]), chis2[0, :]) * \
 				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
 				J_alpha(chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
-		mat = mat*np.outer(np.conj(chis1[0, :]), chis2[0, :]) 
+		# mat = mat*np.outer(np.conj(chis1[0, :]), chis2[0, :]) 
 		# raise Exception 
 
 		# Contribution from upper cladding
@@ -432,7 +433,7 @@ class GuidedModeExp(object):
 				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
 				J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
 
-		mat = mat + term * np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) 
+		mat = mat + term # * np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) 
 		# raise Exception
 
 		# Contributions from layers
@@ -444,13 +445,13 @@ class GuidedModeExp(object):
 			np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
 			np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +\
-				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) - \
 			np.outer(np.conj(As1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] -\
-				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) +
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) -
 			np.outer(np.conj(Bs1[il, :]), As2[il, :])*I_alpha(chis2[il, :] +\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1])  )
 
-			mat = mat + term * np.outer(np.conj(chis1[il, :]), chis2[il, :]) 
+			mat = mat + term # * np.outer(np.conj(chis1[il, :]), chis2[il, :]) 
 		# Final pre-factor		
 		mat = mat * np.outer(oms1**2, oms2**2) * (qq[indmat])
 
@@ -466,17 +467,19 @@ class GuidedModeExp(object):
 		
 		# Contribution from lower cladding
 		indmat = np.ix_(indmode1, indmode2)
-		mat = self.phc.claddings[0].eps_inv_mat[indmat]*(pp[indmat] * \
-				np.outer(np.conj(chis1[0, :]), chis2[0, :]) + \
-				np.outer(gk[indmode1], gk[indmode2])) * \
+		mat = self.phc.claddings[0].eps_inv_mat[indmat]* \
+				self.phc.claddings[0].eps_avg**2 * (pp[indmat] + \
+				np.outer(gk[indmode1], gk[indmode2]) / \
+				np.outer(np.conj(chis1[0, :]), chis2[0, :])) * \
 				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
 				J_alpha(chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
 		# raise Exception 
 
 		# Contribution from upper cladding
-		mat = mat + self.phc.claddings[1].eps_inv_mat[indmat]*(pp[indmat] * \
-				np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) + \
-				np.outer(gk[indmode1], gk[indmode2])) * \
+		mat = mat + self.phc.claddings[1].eps_inv_mat[indmat]* \
+				self.phc.claddings[1].eps_avg**2 * (pp[indmat] + \
+				np.outer(gk[indmode1], gk[indmode2]) / \
+				np.outer(np.conj(chis1[-1, :]), chis2[-1, :])) * \
 				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
 				J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
 		# mat = np.zeros((indmode1.size, indmode2.size))
@@ -485,15 +488,16 @@ class GuidedModeExp(object):
 		# Contributions from layers
 		# note: self.N_layers = self.phc.layers.shape so without claddings
 		for il in range(1, self.N_layers+1):
-			mat = mat + self.phc.layers[il-1].eps_inv_mat[indmat]*( \
-			(pp[indmat] * np.outer(np.conj(chis1[il, :]), chis2[il, :]) + \
-				np.outer(gk[indmode1], gk[indmode2])) * ( \
+			mat = mat + self.phc.layers[il-1].eps_inv_mat[indmat] *\
+			self.phc.layers[il-1].eps_avg**2 * ( \
+			(pp[indmat] + np.outer(gk[indmode1], gk[indmode2]) / \
+				np.outer(np.conj(chis1[il, :]), chis2[il, :])) * ( \
 			np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
 			np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +\
-				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) ) - \
-			(pp[indmat] * np.outer(np.conj(chis1[il, :]), chis2[il, :]) - \
-				np.outer(gk[indmode1], gk[indmode2])) * ( \
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) ) + \
+			(pp[indmat] - np.outer(gk[indmode1], gk[indmode2]) / \
+				np.outer(np.conj(chis1[il, :]), chis2[il, :])) * ( \
 			np.outer(np.conj(As1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] -\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) +
 			np.outer(np.conj(Bs1[il, :]), As2[il, :])*I_alpha(chis2[il, :] +\
@@ -502,14 +506,14 @@ class GuidedModeExp(object):
 		# the term in brackets should be A*B*I + B*A*I instead of minus
 
 		# Final pre-factor; Note the typo (c^4 instead of c^2) in the thesis
-		mat = mat
+		mat = mat * np.outer(oms1, oms2)
 
 		# raise Exception
 		return mat
 
 	def mat_te_tm(self, k, indmode1, oms1,
 						As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
-						chis2, qp, signed_1j):
+						chis2, qp):
 		'''
 		Matrix block for TM-TE mode coupling
 		'''
@@ -517,14 +521,16 @@ class GuidedModeExp(object):
 		# Contribution from lower cladding
 		indmat = np.ix_(indmode1, indmode2)
 		mat = - self.phc.claddings[0].eps_inv_mat[indmat] * \
-				self.phc.claddings[0].eps_avg * chis2[0, :][np.newaxis, :]* \
+				self.phc.claddings[0].eps_avg**2 / \
+				np.conj(chis1[0, :])[:, np.newaxis] * \
 				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
 				J_alpha(chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
 		# raise Exception 
 
 		# Contribution from upper cladding
 		mat = mat + self.phc.claddings[1].eps_inv_mat[indmat] * \
-				self.phc.claddings[1].eps_avg * chis2[-1, :][np.newaxis, :] * \
+				self.phc.claddings[1].eps_avg**2 / \
+				np.conj(chis1[-1, :])[:, np.newaxis] * \
 				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
 				J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
 
@@ -533,19 +539,20 @@ class GuidedModeExp(object):
 		# Contributions from layers
 		# note: self.N_layers = self.phc.layers.shape so without claddings
 		for il in range(1, self.N_layers+1):
-			mat = mat + signed_1j * self.phc.layers[il-1].eps_inv_mat[indmat] *\
-			self.phc.layers[il-1].eps_avg * chis2[il, :][np.newaxis, :] * ( \
+			mat = mat + self.phc.layers[il-1].eps_inv_mat[indmat] *\
+			self.phc.layers[il-1].eps_avg**2 / \
+			np.conj(chis1[il, :])[:, np.newaxis] * ( \
 			np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) - \
 			np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +\
-				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) - \
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
 			np.outer(np.conj(As1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] -\
-				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) +
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) -
 			np.outer(np.conj(Bs1[il, :]), As2[il, :])*I_alpha(chis2[il, :] +\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1])  )
 
 		# Final pre-factor
-		mat = - mat * np.outer(oms1**2, np.ones(oms2.shape)) * qp[indmat]
+		mat = - mat * np.outer(oms1**2, oms2) * qp[indmat]
 
 		# raise Exception
 		return mat
