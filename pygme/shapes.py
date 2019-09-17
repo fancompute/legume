@@ -70,7 +70,9 @@ class Poly(Shape):
 	def __init__(self, eps=1, x_edges=0, y_edges=0):
 		# Make extra sure that the last point of the polygon is the same as the 
 		# first point
-		self._check_counterclockwise(x_edges, y_edges)
+		if not self._check_counterclockwise(x_edges, y_edges):
+			raise ValueError("The edges defined by x_edges and y_edges must be specified in counter-clockwise order")
+
 		self.x_edges = bd.hstack((x_edges, x_edges[0]))
 		self.y_edges = bd.hstack((y_edges, y_edges[0]))
 		super().__init__(eps)
