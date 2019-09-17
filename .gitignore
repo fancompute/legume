@@ -1,5 +1,7 @@
 .ipynb_checkpoints
 
+.idea/*
+
 *.png
 *.swp
 Rakefile
