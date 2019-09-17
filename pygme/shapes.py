@@ -70,9 +70,25 @@ class Poly(Shape):
 	def __init__(self, eps=1, x_edges=0, y_edges=0):
 		# Make extra sure that the last point of the polygon is the same as the 
 		# first point
+		self._check_counterclockwise(x_edges, y_edges)
 		self.x_edges = bd.hstack((x_edges, x_edges[0]))
 		self.y_edges = bd.hstack((y_edges, y_edges[0]))
 		super().__init__(eps)
+
+	@staticmethod
+	def _check_counterclockwise(x_edges, y_edges):
+		x = x_edges + [x_edges[0]]
+		y = y_edges + [y_edges[0]]
+
+		count = 0
+		for i in range(0, len(x_edges) - 1):
+			xt = (x[i + 1] - x[i])
+			yt = (y[i + 1] + y[i])
+
+			count += xt / yt if yt != 0 else 0
+
+		# result is 2*Area with +/- depending on clockwise/counter-clockwise
+		return count < 0
 
 	def compute_ft(self, gvec):
 		'''
