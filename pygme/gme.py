@@ -25,6 +25,10 @@ class GuidedModeExp(object):
 		# Total number of basis vectors (equal to np.sum(self.modes_numg))
 		self.N_basis = []
 
+		# Eigenfrequencies and eigenvectors
+		self.freqs = []
+		self.eigvecs = []
+
 		# Initialize the reciprocal lattice vectors and compute the FT of all
 		# the layers of the PhC
 		self._init_reciprocal()
@@ -61,15 +65,20 @@ class GuidedModeExp(object):
 		default_options = {
 			# Indexes of modes to be included in the expansion
 			'gmode_inds'   : [0],
+
 			# Number of points over which guided modes are computed
 			'gmode_npts'   : 1000,
+
 			# Step in frequency in the search for guided mode solutions
 			'gmode_step'   : 1e-2,
+
 			# Tolerance in the minimum and maximum omega value when looking for 
 			# the guided-mode solutions
 			'gmode_tol'    : 1e-10,
+
 			# Number of eigen-frequencies to be stored (starting from lowest)
 			'numeig'	   : 10,
+
 			# Print information at intermmediate steps
 			'verbose'	   : True
 			}
@@ -80,7 +89,7 @@ class GuidedModeExp(object):
 
 		for key in options.keys():
 			if key not in default_options.keys():
-				raise ValueError("Unrecognized option '%s'" % key)
+				raise ValueError("Unknown run() argument '%s'" % key)
 
 		for (option, value) in options.items():
 			# Make sure 'gmode_inds' is a numpy array
@@ -88,6 +97,47 @@ class GuidedModeExp(object):
 				value = np.array(value)
 			# Set all the options as class attributes
 			setattr(self, option, value)
+
+	def _get_guided(self, gk, mode):
+		'''
+		Get all the guided mode parameters over 'gk' for mode number 'mode'
+		Variable 'indmode' stores the indexes of 'gk' over which a guided
+		mode solution was found
+		'''
+
+		def interp_coeff(coeffs, il, ic, indmode, gs):
+			'''
+			Interpolate the A/B coefficient (ic = 0/1) in layer number il
+			'''
+			param_list = [coeffs[i][il, ic, 0] for i in range(len(coeffs))]
+			return np.interp(gk[indmode], gs, np.array(param_list)).ravel()
+
+		def interp_guided(im, omegas, coeffs):
+			'''
+			Interpolate all the relevant guided mode parameters over gk
+			'''
+			gs = self.g_array[-len(omegas[im]):]
+			indmode = np.argwhere(gk > gs[0]).ravel()
+			oms = np.interp(gk[indmode], gs, omegas[im])
+			# prit('k=' )
+
+			As, Bs, chis = (np.zeros((self.N_layers + 2, 
+					indmode.size), dtype=np.complex128) for i in range(3))
+
+			for il in range(self.N_layers + 2):
+				As[il, :] = interp_coeff(coeffs[im], il, 0, indmode, gs)
+				Bs[il, :] = interp_coeff(coeffs[im], il, 1, indmode, gs)
+				chis[il, :] = np.sqrt(self.eps_array[il]*oms**2 - 
+								gk[indmode]**2, dtype=np.complex128).ravel()
+			return (indmode, oms, As, Bs, chis)
+
+		if mode%2 == 0:
+			(indmode, oms, As, Bs, chis) = interp_guided(
+						mode//2, self.omegas_te, self.coeffs_te)
+		else:
+			(indmode, oms, As, Bs, chis) = interp_guided(
+						mode//2, self.omegas_tm, self.coeffs_tm)
+		return (indmode, oms, As, Bs, chis)
 
 	def compute_ft(self):
 		'''
@@ -161,7 +211,7 @@ class GuidedModeExp(object):
 		plt.colorbar(ims[-1])
 		plt.show()
 
-	def run(self, kpoints=np.array([[0], [0]]), options={}):
+	def run(self, kpoints=np.array([[0], [0]]), **kwargs):
 		''' 
 		Run the simulation. Basically:
 
@@ -177,8 +227,8 @@ class GuidedModeExp(object):
 		def print_vb(*args):
 			if self.verbose: print(*args)
 
-		# Parse the input options
-		self._run_options(options)
+		# Parse the input arguments
+		self._run_options(kwargs)
 		# Bloch momenta over which band structure is simulated 
 		self.kpoints = kpoints
 
@@ -231,32 +281,38 @@ class GuidedModeExp(object):
 		t = time.time()
 		self.compute_ft()	# Just in case something changed after __init__()
 		self.compute_eps_inv()
-		print_vb("%1.4f seconds for inverse matrix of Fourier-space "\
+		print_vb("%1.4f seconds for inverse matrix of Fourier-space"
 			"permittivity"% (time.time()-t))
 
-		# Loop over all k-points, construct the matrix and diagonalize
+		# Loop over all k-points, construct the matrix, diagonalize, and compute
+		# radiative losses for the modes requested by kinds_rad and minds_rad
+		t_rad = 0
 		freqs = []
+		freqs_im = []
+		eigvecs = []
 		for ik, k in enumerate(kpoints.T):
 			print_vb("Running k-point %d of %d" % (ik+1, kpoints.shape[1]))
 			mat = self.construct_mat(k=k)
 			if self.numeig > mat.shape[0]:
-				raise ValueError("""Requested number of eigenvalues 'numeig'
-					larger than total size of basis set. Reduce 'numeig' or
-					increase 'gmax'. """)
+				raise ValueError("Requested number of eigenvalues 'numeig' "
+					"larger than total size of basis set. Reduce 'numeig' or"
+					"increase 'gmax'. ")
 
 			# Diagonalize using numpy.linalg.eigh() for now; should maybe switch 
 			# to scipy.sparse.linalg.eigsh() in the future
 			# NB: we shift the matrix by np.eye to avoid problems at the zero-
 			# frequency mode at Gamma
-			(freq2, vec) = bd.eigh(mat + bd.eye(mat.shape[0]))
+			(freq2, evec) = bd.eigh(mat + bd.eye(mat.shape[0]))
 			freq = bd.sort(bd.sqrt(bd.abs(freq2[:self.numeig]
 						- bd.ones(self.numeig))))
 			freqs.append(freq)
+			eigvecs.append(evec[:, self.numeig])
 			# raise Exception
 
 		# Store the eigenfrequencies taking the standard reduced frequency 
 		# convention for the units (2pi a/c)
 		self.freqs = bd.array(freqs)/2/np.pi
+		self.eigvecs = eigvecs
 
 		print_vb("%1.4f seconds total time to run"% (time.time()-t_start))
 
@@ -289,58 +345,18 @@ class GuidedModeExp(object):
 		pky = gky / gk
 
 		# Unit vectors in-plane orthogonal to the propagation direction
-		qkx = -gky / gk
-		qky = (gkx + 1e-20) / gk
+		qkx = gky / gk
+		qky = -(gkx + 1e-20) / gk
 
-		pp = np.outer(qkx, qkx) + np.outer(qky, qky)
+		pp = np.outer(pkx, pkx) + np.outer(pky, pky)
 		pq = np.outer(pkx, qkx) + np.outer(pky, qky)
 		qq = np.outer(qkx, qkx) + np.outer(qky, qky)
-
-		def interp_coeff(coeffs, il, ic, indmode, gs):
-			'''
-			Interpolate the A/B coefficient (ic = 0/1) in layer number il
-			'''
-			param_list = [coeffs[i][il, ic, 0] for i in range(len(coeffs))]
-			return np.interp(gk[indmode], gs, np.array(param_list)).ravel()
-
-		def interp_guided(im, omegas, coeffs):
-			'''
-			Interpolate all the relevant guided mode parameters over gk
-			'''
-			gs = self.g_array[-len(omegas[im]):]
-			indmode = np.argwhere(gk > gs[0]).ravel()
-			oms = np.interp(gk[indmode], gs, omegas[im])
-			# prit('k=' )
-
-			As, Bs, chis = (np.zeros((self.N_layers + 2, 
-					indmode.size), dtype=np.complex128) for i in range(3))
-
-			for il in range(self.N_layers + 2):
-				As[il, :] = interp_coeff(coeffs[im], il, 0, indmode, gs)
-				Bs[il, :] = interp_coeff(coeffs[im], il, 1, indmode, gs)
-				chis[il, :] = np.sqrt(self.eps_array[il]*oms**2 - 
-								gk[indmode]**2, dtype=np.complex128).ravel()
-			return (indmode, oms, As, Bs, chis)
-
-		def get_guided(mode):
-			'''
-			Get all the guided mode parameters over 'gk' for mode number 'mode'
-			Variable 'indmode' stores the indexes of 'gk' over which a guided
-			mode solution was found
-			'''
-			if mode%2 == 0:
-				(indmode, oms, As, Bs, chis) = interp_guided(
-							mode//2, self.omegas_te, self.coeffs_te)
-			else:
-				(indmode, oms, As, Bs, chis) = interp_guided(
-							mode//2, self.omegas_tm, self.coeffs_tm)
-			return (indmode, oms, As, Bs, chis)
 
 		# Loop over modes and build the matrix block-by-block
 		modes_numg = []
 		for im1 in range(self.gmode_inds.size):
 			mode1 = self.gmode_inds[im1]
-			(indmode1, oms1, As1, Bs1, chis1) = get_guided(mode1)
+			(indmode1, oms1, As1, Bs1, chis1) = self._get_guided(gk, mode1)
 			modes_numg.append(indmode1.size)
 
 			if len(modes_numg) > 1:
@@ -349,7 +365,7 @@ class GuidedModeExp(object):
 
 			for im2 in range(im1, self.gmode_inds.size):
 				mode2 = self.gmode_inds[im2]
-				(indmode2, oms2, As2, Bs2, chis2) = get_guided(mode2)
+				(indmode2, oms2, As2, Bs2, chis2) = self._get_guided(gk, mode2)
 
 				if mode1%2 + mode2%2 == 0:
 					mat_block = self.mat_te_te(k, indmode1, oms1,
@@ -402,11 +418,35 @@ class GuidedModeExp(object):
 
 		return mat
 
+	def compute_rad(self, kinds, freq, evec):
+		'''
+		Compute the radiation losses of the eigenmodes after the dispersion
+		has been computed.
+		Output
+			freqs_im		: imaginary part of the frequencies 
+		'''
+		if self.freqs == []:
+			raise RuntimeError("Run the GME computation first!")
+		
+		# G + k vectors
+		gkx = self.gvec[0, :] + k[0]
+		gky = self.gvec[1, :] + k[1]
+		gk = np.sqrt(np.square(gkx + 1e-20) + np.square(gky))
 
-	'''===========MATRIX ELEMENTS BETWEEN GUIDED MODES BELOW============'''
-	'''
-	Notation is following Andreani and Gerace PRB 2006
-	'''
+		# Reciprocal vedctors within the radiative cone of the lower cladding
+		gk_indl = np.argwhere(gk**2 < self.phc.claddings[0].eps_avg*freq) \
+						.ravel()
+
+		# Wave-vectors of the modes radiating in the lower cladding
+		gkl = gk[gk_indl]
+		# q1l = sqrt(eps1 * Ek0^2 - Gkl.^2);
+		# q2l = sqrt(eps2 * Ek0^2 - Gkl.^2);
+		# q3l = sqrt(eps3 * Ek0^2 - Gkl.^2);
+		# q1l(imag(q1l) > 0) = conj(q1l(imag(q1l) > 0));
+		# q3l(imag(q3l) > 0) = conj(q3l(imag(q3l) > 0));
+
+	'''===========MATRIX ELEMENTS BETWEEN SLAB MODES BELOW============'''
+	# Notation is following Andreani and Gerace PRB 2006
 
 	def mat_te_te(self, k, indmode1, oms1,
 						As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
@@ -545,7 +585,7 @@ class GuidedModeExp(object):
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1])  )
 
 		# Final pre-factor
-		mat = - mat * np.outer(oms1**2, np.ones(oms2.shape)) * qp[indmat]
+		mat = mat * np.outer(oms1**2, np.ones(oms2.shape)) * qp[indmat]
 
 		# raise Exception
 		return mat

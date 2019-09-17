@@ -26,8 +26,8 @@ phc.layers[-1].add_shape(grating)
 gme = pygme.GuidedModeExp(phc, gmax=args.gmax)
 
 if args.overview:
-    phc.plot_overview()
-    # gme.plot_overview_ft()
+    # phc.plot_overview()
+    gme.plot_overview_ft()
 
 path = phc.lattice.bz_path(['G', np.array([np.pi, 0])], [10])
 options = {'gmode_inds': np.arange(0, 8), 'gmode_npts': 500, 'numeig': args.neig, 'verbose': False}
