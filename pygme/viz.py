@@ -18,7 +18,6 @@ def bands(gme, lightcone=True, ax=None):
     ax.set_xlabel('Wave vector')
     ax.set_ylabel('Frequency')
 
-    if ax is None:
-        plt.show(block=False)
+    plt.show(block=False)
 
     return ax
