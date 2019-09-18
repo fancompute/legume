@@ -25,7 +25,7 @@ phc.add_layer(d=args.D, eps_b=args.epsrb)
 # Grating
 phc.add_layer(d=args.H, eps_b=1)
 
-grating = pygme.Poly(eps=args.epsrt, x_edges=[-args.W / 2, -args.W / 2, +args.W / 2, +args.W / 2],
+grating = pygme.Poly(eps=args.epsrt, x_edges=np.array([-args.W / 2, -args.W / 2, +args.W / 2, +args.W / 2]),
                      y_edges=np.array([0.5, -0.5, -0.5, 0.5]) * args.ymax)
 phc.layers[-1].add_shape(grating)
 
