@@ -78,7 +78,7 @@ class Poly(Shape):
 		super().__init__(eps)
 
 	@staticmethod
-	def _check_counterclockwise(x_edges, y_edges):
+	def _check_counterclockwise(x_edges, y_edges, verbose=False):
 		x = x_edges + [x_edges[0]]
 		y = y_edges + [y_edges[0]]
 
@@ -89,8 +89,9 @@ class Poly(Shape):
 
 			count += xt / yt if yt != 0 else 0
 
+		if verbose: print("Polygon area is: %f" % (count/2))
 		# result is 2*Area with +/- depending on clockwise/counter-clockwise
-		return count < 0
+		return count <= 0
 
 	def compute_ft(self, gvec):
 		'''
