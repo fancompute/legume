@@ -9,21 +9,21 @@ Python implementation of the Guided-Mode Expansion method for a multi-layer stru
 - Test multi-layer GME
   - vs. some paper? 
   - vs. COMSOL?
-- Write the Q-factor computation
-- ~~Put various options in `gme.run` into an `options` dictionary
-- Figure out how to store and visualize fields. Storing all the fields for all k-points is usually too much memory. **Note: this can be worked on for PWE already and then just ported to GME!**
-  - Request which modes to store in `options`
-  - Alternatively, request specific fields after the simulation has been run, by re-running the corresponding k-points (but the guided modes and the permittivity matrix are not re-computed)
-  - Add some methods for field visualization including permittivity shapes overlay
+- Write the Q-factor computation for TM modes
+- Write a method to compute the actual fields from the eigenvectors
+- Add some visualization methods:
+    - field visualization including permittivity shapes overlay
+    - band visualization including light cone overlay
+    - Q-factor visualization? 
 - Write some nice tests and examples
 
 For the optimization part:
-- ~~Make sure GME works with the autograd backend
+- Make Q-factor computation compatible with the autograd backend
 - Implement constraints on shapes not crossing
 - Implement topology optimization: pixels -> numerical FFT -> GME 
 
 ## Guided-mode computation options
-`GuidedModeExp.run()` takes an optional dictionary `options`. The default settings for these options are defined in `GuidedModeExp._run_options()`. Keys starting with `gmode_` refer to options in the guided mode computation, where we do the following: 
+`GuidedModeExp.run()` takes a number of optional argument. The default settings for these options are defined in `GuidedModeExp._run_options()`. Keys starting with `gmode_` refer to options in the guided mode computation, where we do the following: 
 
 - Define a grid of g-points with `gmode_npts` number of points on it, from `g = 0` to `g = max(norm(G+k))`, where `G` is a reciprocal lattice vector.
 - For every g-point, write a function `f(omega)` whose roots define the guided-mode frequencies.
