@@ -82,16 +82,14 @@ class Poly(Shape):
 		x = x_edges + [x_edges[0]]
 		y = y_edges + [y_edges[0]]
 
-		count = 0
+		# Compute polygon area based on: http://mathworld.wolfram.com/PolygonArea.html
+		area = 0
 		for i in range(0, len(x_edges) - 1):
-			xt = (x[i + 1] - x[i])
-			yt = (y[i + 1] + y[i])
+			area += 0.5 * (x[i]*y[i+1] - x[i+1]*y[i])
 
-			count += xt / yt if yt != 0 else 0
-
-		if verbose: print("Polygon area is: %f" % (count/2))
-		# result is 2*Area with +/- depending on clockwise/counter-clockwise
-		return count <= 0
+		if verbose: print("Polygon area is: %f" % (area))
+		# The sign of the resulting area is +/- depending on counter-clockwise/clockwise
+		return area > 0
 
 	def compute_ft(self, gvec):
 		'''

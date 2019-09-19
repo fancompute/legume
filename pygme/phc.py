@@ -316,6 +316,10 @@ class Lattice(object):
 		self.ec_area = ec_area	# Elementary cell area
 		self.bz_area = bz_area	# Brillouin zone area
 
+	def __repr__(self):
+		return "Lattice(a1 = [%.4f, %.4f], a2 = [%.4f, %.4f])" % \
+			   (self.a1[0], self.a1[1], self.a2[0], self.a2[1])
+
 	def _parse_input(self, *args):
 		if len(args) == 1:
 			if args[0] == 'square':
