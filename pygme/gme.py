@@ -172,7 +172,8 @@ class GuidedModeExp(object):
 			G2[:, ind1*n2max:(ind1+1)*n2max] = self.gvec[:, [ind1*n2max]] - \
 							self.gvec[:, range(n2max)]
 
-		for layer in self.phc.layers + self.phc.claddings:
+		for layer in [self.phc.claddings[0]] + self.phc.layers + \
+							[self.phc.claddings[1]]:
 			T1 = layer.compute_ft(G1)
 			T2 = layer.compute_ft(G2)
 
