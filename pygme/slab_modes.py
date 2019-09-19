@@ -396,15 +396,22 @@ def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
 		coeffs[:, -1] = S_mat[-1].dot(T_mat[-1].dot(coeffs[:, -2]))
 
 		coeffs = coeffs / coeffs[0, -1] 
+		if pol=='te':
+			c_ind = [0, -1]
+			coeffs = coeffs/np.sqrt(eps_array[c_ind[clad]])
 
 		# Assign correctly based on which cladding the modes radiate to
 		if clad == 0:
-			Xs[:, ig] = np.flip(coeffs[0, :])/np.sqrt(eps_array[0])
-			Ys[:, ig] = np.flip(coeffs[1, :])/np.sqrt(eps_array[0])
+			Xs[:, ig] = np.flip(coeffs[0, :])
+			Ys[:, ig] = np.flip(coeffs[1, :])
 		elif clad == 1:
-			Xs[:, ig] = coeffs[1, :]/np.sqrt(eps_array[-1])
-			Ys[:, ig] = coeffs[0, :]/np.sqrt(eps_array[-1])
-		# if clad==1: raise Exception
+			Xs[:, ig] = coeffs[1, :]
+			Ys[:, ig] = coeffs[0, :]
+
+	'''
+	(Xs, Ys) corresponds to the X, W coefficients for TE radiative modes in 
+	Andreani and Gerace PRB (2006), and to the Z, Y coefficients for TM modes
+	'''
 	return (Xs, Ys)
 
 

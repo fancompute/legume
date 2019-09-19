@@ -229,7 +229,7 @@ class ShapesLayer(Layer):
 				self.eps_avg = self.eps_avg + (shape.eps - self.eps_b) * \
 								shape.area/self.lattice.ec_area
 			else:
-				raise ValueError("Arguments to add_shape must be an instance" \
+				raise ValueError("Arguments to add_shape must be an instance"
 					"of pygme.Shape (e.g pygme.Circle or pygme.Poly)")
 
 	def compute_ft(self, gvec):

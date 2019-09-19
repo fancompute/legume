@@ -62,7 +62,7 @@ defvjp(toeplitz_block_ag, None, vjp_maker_TB_T1, vjp_maker_TB_T2)
 eigh_ag = primitive(np.linalg.eigh)
 
 def vjp_maker_eigh(ans, x, UPLO='L'):
-    """Gradient for eigenvalues and vectors of a symmetric matrix."""
+    """Gradient for eigenvalues and vectors of a hermitian matrix."""
     N = x.shape[-1]
     w, v = ans              # Eigenvalues, eigenvectors.
     vc = np.conj(v)
