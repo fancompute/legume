@@ -163,6 +163,11 @@ class GuidedModeExp(object):
 		G1 = self.gvec - self.gvec[:, [0]]
 		G2 = np.zeros((2, n1max*n2max))
 
+		# Initialize the FT coefficient lists; in the end the length of these 
+		# will be equal to the total number of layers in the PhC
+		self.T1 = []
+		self.T2 = []
+
 		for ind1 in range(n1max):
 			G2[:, ind1*n2max:(ind1+1)*n2max] = self.gvec[:, [ind1*n2max]] - \
 							self.gvec[:, range(n2max)]
@@ -172,8 +177,8 @@ class GuidedModeExp(object):
 			T2 = layer.compute_ft(G2)
 
 			# Store T1 and T2
-			layer.T1 = T1
-			layer.T2 = T2
+			self.T1.append(T1)
+			self.T2.append(T2)
 
 		# Store the g-vectors to which T1 and T2 correspond
 		self.G1 = G1
@@ -335,11 +340,15 @@ class GuidedModeExp(object):
 		'''
 		Construct the inverse FT matrices for the permittivity in each layer
 		'''
-		for layer in self.phc.layers + self.phc.claddings:
+
+		# List of inverse permittivity matrices for every layer
+		self.eps_inv_mat = []
+
+		for it, T1 in enumerate(self.T1):
 			# For now we just use the numpy inversion. Later on we could 
 			# implement the Toeplitz-Block-Toeplitz inversion (faster)
-			eps_mat = bd.toeplitz_block(self.n1g, layer.T1, layer.T2)
-			layer.eps_inv_mat = bd.inv(eps_mat)
+			eps_mat = bd.toeplitz_block(self.n1g, T1, self.T2[it])
+			self.eps_inv_mat.append(bd.inv(eps_mat))
 
 	def construct_mat(self, k):
 		'''
@@ -559,13 +568,13 @@ class GuidedModeExp(object):
 		
 		# Contribution from lower cladding
 		indmat = np.ix_(indmode1, indmode2)
-		mat = self.phc.claddings[0].eps_inv_mat[indmat]* \
+		mat = self.eps_inv_mat[0][indmat]* \
 				self.phc.claddings[0].eps_avg**2 * \
 				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
 				J_alpha(chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
 
 		# Contribution from upper cladding
-		mat = mat + self.phc.claddings[1].eps_inv_mat[indmat]* \
+		mat = mat + self.eps_inv_mat[-1][indmat]* \
 				self.phc.claddings[1].eps_avg**2 * \
 				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
 				J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
@@ -573,7 +582,7 @@ class GuidedModeExp(object):
 		# Contributions from layers
 		# note: self.N_layers = self.phc.layers.shape so without claddings
 		for il in range(1, self.N_layers+1):
-			mat = mat + self.phc.layers[il-1].eps_inv_mat[indmat] *\
+			mat = mat + self.eps_inv_mat[il][indmat] *\
 			self.phc.layers[il-1].eps_avg**2 * ( \
 			np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
@@ -598,14 +607,14 @@ class GuidedModeExp(object):
 		
 		# Contribution from lower cladding
 		indmat = np.ix_(indmode1, indmode2)
-		mat = self.phc.claddings[0].eps_inv_mat[indmat]*(pp[indmat] * \
+		mat = self.eps_inv_mat[0][indmat]*(pp[indmat] * \
 				np.outer(np.conj(chis1[0, :]), chis2[0, :]) + \
 				np.outer(gk[indmode1], gk[indmode2])) * \
 				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
 				J_alpha(chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
 
 		# Contribution from upper cladding
-		mat = mat + self.phc.claddings[1].eps_inv_mat[indmat]*(pp[indmat] * \
+		mat = mat + self.eps_inv_mat[-1][indmat]*(pp[indmat] * \
 				np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) + \
 				np.outer(gk[indmode1], gk[indmode2])) * \
 				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
@@ -614,7 +623,7 @@ class GuidedModeExp(object):
 		# Contributions from layers
 		# note: self.N_layers = self.phc.layers.shape so without claddings
 		for il in range(1, self.N_layers+1):
-			mat = mat + self.phc.layers[il-1].eps_inv_mat[indmat]*( \
+			mat = mat + self.eps_inv_mat[il][indmat]*( \
 			(pp[indmat] * np.outer(np.conj(chis1[il, :]), chis2[il, :]) + \
 				np.outer(gk[indmode1], gk[indmode2])) * ( \
 			np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
@@ -641,13 +650,13 @@ class GuidedModeExp(object):
 		
 		# Contribution from lower cladding
 		indmat = np.ix_(indmode1, indmode2)
-		mat = - self.phc.claddings[0].eps_inv_mat[indmat] * \
+		mat = - self.eps_inv_mat[0][indmat] * \
 				self.phc.claddings[0].eps_avg * chis2[0, :][np.newaxis, :]* \
 				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
 				J_alpha(chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
 
 		# Contribution from upper cladding
-		mat = mat + self.phc.claddings[1].eps_inv_mat[indmat] * \
+		mat = mat + self.eps_inv_mat[-1][indmat] * \
 				self.phc.claddings[1].eps_avg * chis2[-1, :][np.newaxis, :] * \
 				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
 				J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
@@ -655,7 +664,7 @@ class GuidedModeExp(object):
 		# Contributions from layers
 		# note: self.N_layers = self.phc.layers.shape so without claddings
 		for il in range(1, self.N_layers+1):
-			mat = mat + signed_1j * self.phc.layers[il-1].eps_inv_mat[indmat] *\
+			mat = mat + signed_1j * self.eps_inv_mat[il][indmat] *\
 			self.phc.layers[il-1].eps_avg * chis2[il, :][np.newaxis, :] * ( \
 			np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) - \
@@ -680,7 +689,7 @@ class GuidedModeExp(object):
 
 		# Contribution from lower cladding
 		indmat = np.ix_(indmode1, indmoder)
-		mat = self.phc.claddings[0].eps_inv_mat[indmat]* \
+		mat = self.eps_inv_mat[0][indmat]* \
 				self.phc.claddings[0].eps_avg**2 * (\
 				np.outer(np.conj(Bs1[0, :]), Ysr[0, :]) * J_alpha(
 				-np.conj(chis1[0, :][:, np.newaxis])-chisr[np.newaxis, 0])+
@@ -688,7 +697,7 @@ class GuidedModeExp(object):
 				-np.conj(chis1[0, :][:, np.newaxis])+chisr[np.newaxis, 0]))
 
 		# Contribution from upper cladding
-		mat = mat + self.phc.claddings[-1].eps_inv_mat[indmat]* \
+		mat = mat + self.eps_inv_mat[-1][indmat]* \
 				self.phc.claddings[-1].eps_avg**2 * (\
 				np.outer(np.conj(As1[-1, :]), Ysr[-1, :]) * J_alpha(
 				-np.conj(chis1[-1, :][:, np.newaxis])+chisr[np.newaxis, -1])+
@@ -698,7 +707,7 @@ class GuidedModeExp(object):
 		# Contributions from layers
 		# note: self.N_layers = self.phc.layers.shape so without claddings
 		for il in range(1, self.N_layers+1):
-			mat = mat + self.phc.layers[il-1].eps_inv_mat[indmat] *\
+			mat = mat + self.eps_inv_mat[il][indmat] *\
 			self.phc.layers[il-1].eps_avg**2 * ( \
 			np.outer(np.conj(As1[il, :]), Ysr[il, :])*I_alpha(chisr[il, :] -\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
@@ -723,7 +732,7 @@ class GuidedModeExp(object):
 
 		# Contribution from lower cladding
 		indmat = np.ix_(indmode1, indmoder)
-		mat = self.phc.claddings[0].eps_inv_mat[indmat]* \
+		mat = self.eps_inv_mat[0][indmat]* \
 				self.phc.claddings[0].eps_avg * (\
 				np.outer(np.conj(Bs1[0, :]), -chisr[0, :]*Ysr[0, :]) * J_alpha(
 				-np.conj(chis1[0, :][:, np.newaxis])-chisr[np.newaxis, 0])+
@@ -731,8 +740,8 @@ class GuidedModeExp(object):
 				-np.conj(chis1[0, :][:, np.newaxis])+chisr[np.newaxis, 0]))
 
 		# Contribution from upper cladding
-		mat = mat + self.phc.claddings[-1].eps_inv_mat[indmat]* \
-			self.phc.claddings[-1].eps_avg * (\
+		mat = mat + self.eps_inv_mat[-1][indmat]* \
+			self.phc.claddings[1].eps_avg * (\
 			np.outer(np.conj(As1[-1, :]), -chisr[-1, :]*Ysr[-1, :]) * J_alpha(
 				-np.conj(chis1[-1, :][:, np.newaxis])-chisr[np.newaxis, -1])+
 			np.outer(np.conj(As1[-1, :]), chisr[-1, :]*Xsr[-1, :]) * J_alpha(
@@ -741,7 +750,7 @@ class GuidedModeExp(object):
 		# Contributions from layers
 		# note: self.N_layers = self.phc.layers.shape so without claddings
 		for il in range(1, self.N_layers+1):
-			mat = mat + self.phc.layers[il-1].eps_inv_mat[indmat] *\
+			mat = mat + self.eps_inv_mat[il][indmat] *\
 			self.phc.layers[il-1].eps_avg * chisr[il, :][np.newaxis, :] * ( -\
 			np.outer(np.conj(As1[il, :]), Ysr[il, :])*I_alpha(chisr[il, :] -\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
