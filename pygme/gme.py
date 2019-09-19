@@ -195,8 +195,10 @@ class GuidedModeExp(object):
 		if cladding:
 			all_layers = [self.phc.claddings[0]] + self.phc.layers + \
 							[self.phc.claddings[1]]
+			(T1, T2) = (self.T1, self.T2)
 		else:
 			all_layers = self.phc.layers
+			(T1, T2) = (self.T1[1:-1], self.T2[1:-1])
 		N_layers = len(all_layers)
 
 		fig, ax = plt.subplots(1, N_layers, constrained_layout=True)
@@ -205,8 +207,8 @@ class GuidedModeExp(object):
 		(eps_min, eps_max) = (all_layers[0].eps_b, all_layers[0].eps_b)
 		ims = []
 		for (indl, layer) in enumerate(all_layers):
-			ft_coeffs = np.hstack((layer.T1, layer.T2, 
-								np.conj(layer.T1), np.conj(layer.T2)))
+			ft_coeffs = np.hstack((T1[indl], T2[indl], 
+								np.conj(T1[indl]), np.conj(T2[indl])))
 			gvec = np.hstack((self.G1, self.G2, 
 								-self.G1, -self.G2))
 
