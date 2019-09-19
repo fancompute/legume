@@ -19,7 +19,7 @@ class TestGME(unittest.TestCase):
 		# Find the modes of the structure and compare to the saved .mat file
 		gme = GuidedModeExp(phc, gmax=4)
 		options = {'gmode_inds': [0, 1, 2, 3], 'numeig': 10, 'verbose': False}
-		gme.run(kpoints=np.array([[0.1], [0]]), options=options)
+		gme.run(kpoints=np.array([[0.1], [0]]), **options)
 
 		dat = scipy.io.loadmat('./tests/data/gme_freqs.mat')
 		diff = np.sum(np.abs(gme.freqs - dat['Ek']/2/np.pi))

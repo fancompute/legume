@@ -38,7 +38,7 @@ if args.overview:
 path = phc.lattice.bz_path(['G', np.array([np.pi, 0])], [35])
 options = {'gmode_inds': np.arange(0, 8), 'gmode_npts': 500, 'numeig': args.neig, 'verbose': False}
 
-gme.run(kpoints=path.kpoints, options=options)
+gme.run(kpoints=path.kpoints, **options)
 
 ax = pygme.viz.bands(gme)
 data = np.loadtxt('./examples/filtered_symmetric_H0.25_W0.50.csv', comments='%', delimiter=',')

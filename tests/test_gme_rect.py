@@ -13,12 +13,14 @@ if __name__ == '__main__':
     # unittest.main()
 	# Initialize a rectangular-lattice PhC with asymmetric cladding
 	lattice = Lattice([1., 0], [0., .5])
-	phc = PhotCryst(lattice, eps_u=5.)
+	phc = PhotCryst(lattice, eps_u=1.)
 	phc.add_layer(d=0.5, eps_b=12.)
 	phc.add_shape(Circle(r=0.2, x_cent=0.1))
 
 	gme = GuidedModeExp(phc, gmax=3)
 	# gme.plot_overview_ft(cladding=True)
-	options = {'gmode_inds': [0, 1, 2, 3], 'numeig': 10, 'verbose': True}
-	gme.run(kpoints=np.array([[0.1], [0]]), options=options)
+	options = {'gmode_inds': [0], 'numeig': 10, 'verbose': True}
+	gme.run(kpoints=np.array([[0.1], [0]]), **options)
 	print(gme.freqs)
+	freqs_im = gme.compute_rad(kind=0, minds=[1])
+	print(freqs_im)

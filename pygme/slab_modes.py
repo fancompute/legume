@@ -3,7 +3,7 @@ from scipy.optimize import brentq
 from pygme.utils import RedhefferStar, I_alpha, J_alpha
 
 def guided_modes(g_array, eps_array, d_array, n_modes=1, 
-			step=1e-3, tol=1e-4, mode='TE'):
+			step=1e-3, tol=1e-4, pol='TE'):
 	''' 
 	Function to compute the guided modes of a multi-layer structure
 	Input
@@ -19,7 +19,7 @@ def guided_modes(g_array, eps_array, d_array, n_modes=1,
 	step			: step size for root finding (should be smaller than the 
 						minimum expected separation between modes)
 	tol 			: tolerance in the omega boundaries for the root finding 
-	mode			: polarization, 'te' or 'tm' (maybe change to "pol")
+	pol 			: polarization, 'te' or 'tm'
 	Output
 	om_guided   	: array of size n_modes x length(g_array) with the guided 
 					  mode frequencies
@@ -40,14 +40,14 @@ def guided_modes(g_array, eps_array, d_array, n_modes=1,
 
 		(omegas, coeffs) = guided_mode_given_g(g=g, eps_array=eps_array, 
 			d_array=d_array, n_modes=n_modes, omega_lb=om_lb, omega_ub=om_ub,
-			step=step, tol=tol, mode=mode)
+			step=step, tol=tol, pol=pol)
 		om_guided.append(omegas)
 		coeffs_guided.append(coeffs)
 	return (om_guided, coeffs_guided)
 
 def guided_mode_given_g(g, eps_array, d_array, n_modes=1, 
 				omega_lb=None, omega_ub=None,
-				step=1e-2, tol=1e-2, mode='TE'):
+				step=1e-2, tol=1e-2, pol='TE'):
 	'''
 	Currently, we do 'bisection' in all the regions of interest until n_modes 
 	target is met. For alternative variations, see guided_modes_draft.py
@@ -57,14 +57,14 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 	if omega_ub is None:
 		omega_ub = g/np.sqrt(max(eps_array[0],eps_array[-1]))
 
-	if mode.lower()=='te':
+	if pol.lower()=='te':
 		D22real = lambda x,*args: D22_TE(x,*args).real
-		D22test = lambda x,*args: D22s_vec(x,*args,mode='TE').real
-	elif mode.lower()=='tm':
+		D22test = lambda x,*args: D22s_vec(x,*args,pol='TE').real
+	elif pol.lower()=='tm':
 		D22real = lambda x,*args: D22_TM(x,*args).real
-		D22test = lambda x,*args: D22s_vec(x,*args,mode='TM').real
+		D22test = lambda x,*args: D22s_vec(x,*args,pol='TM').real
 	else:
-		raise ValueError("Mode should be 'TE' or 'TM'.")
+		raise ValueError("Polarization should be 'TE' or 'TM'.")
 
 	# Making sure the bounds go all the way to om_ub - tol
 	omega_bounds = np.append(np.arange(omega_lb + tol, omega_ub - tol, step), 
@@ -85,16 +85,16 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 		omega = brentq(D22real,lb,ub,args=(g,eps_array,d_array))
 		omega_solutions.append(omega)
 		chi_array = chi(omega, g, eps_array)
-		if mode.lower()=='te' or mode.lower()=='tm':				
+		if pol.lower()=='te' or pol.lower()=='tm':				
 			AB = AB_matrices(omega, g, eps_array, d_array, 
-								chi_array, mode)
+								chi_array, pol)
 			norm = normalization_coeff(omega, g, eps_array, d_array, 
-								AB, mode)
+								AB, pol)
 			# print(norm)
  
 			coeffs.append(AB / np.sqrt(norm))
 		else:
-			raise ValueError("Mode should be 'TE' or 'TM'")
+			raise ValueError("Polarization should be 'TE' or 'TM'")
 
 	return (omega_solutions, coeffs)
 
@@ -196,7 +196,7 @@ def D22_TE(omega, g, eps_array, d_array):
 		D = S.dot(T.dot(T.dot(D)))
 	return D[1,1]
 
-def D22s_vec(omegas, g, eps_array, d_array, mode='TM'):
+def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
 	'''
 	Vectorized function to compute the matrix element D22 that needs to be zero
 	Input
@@ -204,7 +204,7 @@ def D22s_vec(omegas, g, eps_array, d_array, mode='TM'):
 		g   			: wave vector along propagation direction (ß_x)
 		eps_array		: shape[M+1,1], slab permittivities
 		d_array			: thicknesses of each layer
-		mode 	 		: 'TE'/'TM'
+		pol 	 		: 'TE'/'TM'
 	Output
 		D_22 	  		: list of the D22 matrix elements corresponding to each 
 							omega
@@ -219,12 +219,12 @@ def D22s_vec(omegas, g, eps_array, d_array, mode='TM'):
 	def S_TE(eps1, eps2, chis1, chis2):
 		# print((np.real(chis1) + np.imag(chis1)) / chis1)
 		S11 = 0.5 / chis2 * (chis1 + chis2)
-		S12 = 0.5 / chis2 * (chis1 - chis2)
+		S12 = 0.5 / chis2 * (-chis1 + chis2)
 		return (S11, S12, S12, S11)
 
 	def S_TM(eps1, eps2, chis1, chis2):
-		S11 = 0.5 / eps2 / chis1 * (eps2*chis1 + eps1*chis2)
-		S12 = 0.5 / eps2 / chis1 * (eps2*chis1 - eps1*chis2)
+		S11 = 0.5 / (chis2/eps2) * (chis1/eps1 + chis2/eps2)
+		S12 = 0.5 / (chis2/eps2) * (-chis1/eps1 + chis2/eps2)
 		return (S11, S12, S12, S11)
 
 	def S_T_prod(mats, omegas, g, eps1, eps2, d):
@@ -236,9 +236,9 @@ def D22s_vec(omegas, g, eps_array, d_array, mode='TM'):
 		chis1 = chi_vec(omegas, g, eps1)
 		chis2 = chi_vec(omegas, g, eps2)
 
-		if mode.lower() == 'te':
+		if pol.lower() == 'te':
 			(S11, S12, S21, S22) = S_TE(eps1, eps2, chis1, chis2)
-		elif mode.lower() == 'tm':
+		elif pol.lower() == 'tm':
 			(S11, S12, S21, S22) = S_TM(eps1, eps2, chis1, chis2)
 		
 		T11 = np.exp(1j*chis1*d)
@@ -261,9 +261,9 @@ def D22s_vec(omegas, g, eps_array, d_array, mode='TM'):
 	chis1 = chi_vec(omegas, g, eps1)
 	chis2 = chi_vec(omegas, g, eps2)
 
-	if mode.lower() == 'te':
+	if pol.lower() == 'te':
 		(S11, S12, S21, S22) = S_TE(eps1, eps2, chis1, chis2)
-	elif mode.lower() == 'tm':
+	elif pol.lower() == 'tm':
 		(S11, S12, S21, S22) = S_TM(eps1, eps2, chis1, chis2)
 
 	mats = np.zeros((2*N_oms, 2), dtype=np.complex)
@@ -279,7 +279,7 @@ def D22s_vec(omegas, g, eps_array, d_array, mode='TM'):
 	D22s = mats[1::2, 1]
 	return D22s
 
-def AB_matrices(omega, g, eps_array, d_array, chi_array=None, mode='TE'):
+def AB_matrices(omega, g, eps_array, d_array, chi_array=None, pol='TE'):
 	'''
 	Function to calculate A,B coeff
 	Output: array of shape [M+1,2]
@@ -289,14 +289,14 @@ def AB_matrices(omega, g, eps_array, d_array, chi_array=None, mode='TE'):
 	if chi_array is None:
 		chi_array = chi(omega, g, eps_array)
 
-	if mode.lower()=='te':
+	if pol.lower()=='te':
 		S_matrices, T_matrices = \
 				S_T_matrices_TE(omega, g, eps_array, d_array)
-	elif mode.lower()=='tm':
+	elif pol.lower()=='tm':
 		S_matrices, T_matrices = \
 				S_T_matrices_TM(omega, g, eps_array, d_array)
 	else:
-		raise Exception("Mode should be 'TE' or 'TM'.")
+		raise Exception("Polarization should be 'TE' or 'TM'.")
 	A0 = 0
 	B0 = 1 
 	AB0 = np.array([A0, B0]).reshape(-1,1)
@@ -309,7 +309,7 @@ def AB_matrices(omega, g, eps_array, d_array, chi_array=None, mode='TE'):
 		ABs.append(term)
 	return np.array(ABs)
 
-def normalization_coeff(omega, g, eps_array, d_array, ABref, mode='TE'):
+def normalization_coeff(omega, g, eps_array, d_array, ABref, pol='TE'):
 	'''
 	Normalization of the guided modes (i.e. the A and B coeffs)
 	'''
@@ -318,7 +318,7 @@ def normalization_coeff(omega, g, eps_array, d_array, ABref, mode='TE'):
 	chi_array = chi(omega, g, eps_array)
 	As = ABref[:, 0].ravel()
 	Bs = ABref[:, 1].ravel()
-	if mode == 'TM': 
+	if pol == 'TM': 
 		term1 = (np.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
 		term2 = (np.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
 		term3 = (
@@ -332,7 +332,7 @@ def normalization_coeff(omega, g, eps_array, d_array, ABref, mode='TE'):
 				I_alpha(chi_array[1:-1]+chi_array[1:-1].conj(),d_array)
 				)
 		return term1 + term2 + np.sum(term3)
-	elif mode == 'TE':
+	elif pol == 'TE':
 		term1 = (np.abs(chi_array[0])**2 + g**2) * \
 			(np.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
 		term2 = (np.abs(chi_array[-1])**2 + g**2) * \
@@ -351,12 +351,10 @@ def normalization_coeff(omega, g, eps_array, d_array, ABref, mode='TE'):
 				)
 		return term1 + term2 + np.sum(term3)
 	else:
-		raise Exception('Mode should be TE or TM. What is {} ?'.format(mode))
+		raise Exception('Polarization should be TE or TM.')
 
 
-
-def leaky_modes(g_array, eps_array, d_array, n_modes=1, 
-			step=1e-3, tol=1e-4, mode='TE'):
+def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
 	''' 
 	Function to compute the leaky modes of a multi-layer structure
 	Input
@@ -365,7 +363,49 @@ def leaky_modes(g_array, eps_array, d_array, n_modes=1,
 					  cladding and ending with upper cladding
 
 	d_array			: thicknesses of each layer
+	omega			: frequency of the radiative mode
+	pol 			: polarization, 'te' or 'tm'
+	clad 			: cladding index, 0 (lower) or 1 (upper)
 	Output
-	coeffs_leaky	: X, Y coefficients of the modes in every layer
+	Xs, Ys 			: X, Y coefficients of the modes in every layer
 	'''
-	pass
+
+	Xs = np.zeros((eps_array.size, g_array.size), dtype=np.complex128)
+	Ys = np.zeros((eps_array.size, g_array.size), dtype=np.complex128)
+	for ig, g in enumerate(g_array):
+		# Get the scattering and transfer matrices
+		if pol.lower()=='te' and clad==0:
+			S_mat, T_mat = S_T_matrices_TE(omega, g, np.flip(eps_array), 
+							np.flip(d_array))
+		elif pol.lower()=='te' and clad==1:
+			S_mat, T_mat = S_T_matrices_TE(omega, g, eps_array, d_array)
+		elif pol.lower()=='tm' and clad==0:
+			S_mat, T_mat = S_T_matrices_TM(omega, g, np.flip(eps_array), 
+							np.flip(d_array))
+		elif pol.lower()=='tm' and clad==1:
+			S_mat, T_mat = S_T_matrices_TM(omega, g, eps_array, d_array)
+		
+		# Compute the transfer matrix coefficients
+		coeffs = np.zeros((2, eps_array.size), dtype=np.complex128)
+		coeffs[:, 0] = [1, 0]
+		coeffs[:, 1] = T_mat[0].dot(S_mat[0].dot(coeffs[:, 0]))
+		for i, S in enumerate(S_mat[1:-1]):
+			T2 = T_mat[i+1]
+			T1 = T_mat[i]
+			coeffs[:, i+2] = T2.dot(S.dot(T1.dot(coeffs[:, i+1])))
+		coeffs[:, -1] = S_mat[-1].dot(T_mat[-1].dot(coeffs[:, -2]))
+
+		coeffs = coeffs / coeffs[0, -1] 
+
+		# Assign correctly based on which cladding the modes radiate to
+		if clad == 0:
+			Xs[:, ig] = np.flip(coeffs[0, :])/np.sqrt(eps_array[0])
+			Ys[:, ig] = np.flip(coeffs[1, :])/np.sqrt(eps_array[0])
+		elif clad == 1:
+			Xs[:, ig] = coeffs[1, :]/np.sqrt(eps_array[-1])
+			Ys[:, ig] = coeffs[0, :]/np.sqrt(eps_array[-1])
+		# if clad==1: raise Exception
+	return (Xs, Ys)
+
+
+

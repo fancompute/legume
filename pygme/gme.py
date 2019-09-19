@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pygme.utils as utils
-from .slab_modes import guided_modes
+from .slab_modes import guided_modes, rad_modes
 from .backend import backend as bd
 import time
 from itertools import zip_longest
@@ -139,6 +139,21 @@ class GuidedModeExp(object):
 						mode//2, self.omegas_tm, self.coeffs_tm)
 		return (indmode, oms, As, Bs, chis)
 
+	def _get_rad(self, gkr, omr, pol, clad):
+		'''
+		Get all the radiative mode parameters over 'gkr' at frequency 'omr' with
+		polarization 'pol' and out-going in cladding 'clad'
+		'''
+		chis = np.zeros((self.N_layers + 2, gkr.size), dtype=np.complex128)
+		for il in range(self.N_layers + 2):
+			chis[il, :] = np.sqrt(self.eps_array[il]*omr**2 - 
+							gkr**2, dtype=np.complex128).ravel()
+		(Xs, Ys) = rad_modes(omr, gkr, self.eps_array, self.d_array, pol, clad)
+
+		# raise Exception
+		
+		return (Xs, Ys, chis)
+
 	def compute_ft(self):
 		'''
 		Compute the unique FT coefficients of the permittivity, eps(g-g') for
@@ -258,7 +273,7 @@ class GuidedModeExp(object):
 		if self.gmode_te.size > 0:
 			(omegas_te, coeffs_te) = guided_modes(g_array, eps_array, d_array, 
 					step=self.gmode_step, n_modes=1 + np.amax(self.gmode_te)//2, 
-					tol=self.gmode_tol, mode='TE')
+					tol=self.gmode_tol, pol='TE')
 			self.omegas_te = reshape_list(omegas_te)
 			self.coeffs_te = reshape_list(coeffs_te)
 		else:
@@ -268,7 +283,7 @@ class GuidedModeExp(object):
 		if self.gmode_tm.size > 0:
 			(omegas_tm, coeffs_tm) = guided_modes(g_array, eps_array, d_array, 
 					step=self.gmode_step, n_modes=1 + np.amax(self.gmode_tm)//2, 
-					tol=self.gmode_tol, mode='TM')
+					tol=self.gmode_tol, pol='TM')
 			self.omegas_tm = reshape_list(omegas_tm)
 			self.coeffs_tm = reshape_list(coeffs_tm)
 		else:
@@ -306,7 +321,7 @@ class GuidedModeExp(object):
 			freq = bd.sort(bd.sqrt(bd.abs(freq2[:self.numeig]
 						- bd.ones(self.numeig))))
 			freqs.append(freq)
-			eigvecs.append(evec[:, self.numeig])
+			eigvecs.append(evec[:, :self.numeig])
 			# raise Exception
 
 		# Store the eigenfrequencies taking the standard reduced frequency 
@@ -368,21 +383,21 @@ class GuidedModeExp(object):
 				(indmode2, oms2, As2, Bs2, chis2) = self._get_guided(gk, mode2)
 
 				if mode1%2 + mode2%2 == 0:
-					mat_block = self.mat_te_te(k, indmode1, oms1,
+					mat_block = self.mat_te_te(indmode1, oms1,
 									As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 									chis2, qq)
 				elif mode1%2 + mode2%2 == 2:
-					mat_block = self.mat_tm_tm(k, gk, indmode1, oms1,
+					mat_block = self.mat_tm_tm(gk, indmode1, oms1,
 									As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 									chis2, pp)
 				elif mode1%2==0 and mode2%2==1:
-					mat_block = self.mat_te_tm(k, indmode1, oms1,
+					mat_block = self.mat_te_tm(indmode1, oms1,
 									As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 									chis2, pq.transpose(), 1j)
 				elif mode1%2==1 and mode2%2==0:
 					# Note: TM-TE is just hermitian conjugate of TE-TM
 					# with switched indexes 1 <-> 2
-					mat_block = self.mat_te_tm(k, indmode2, oms2,
+					mat_block = self.mat_te_tm(indmode2, oms2,
 									As2, Bs2, chis2, indmode1, oms1, As1, Bs1, 
 									chis1, pq, -1j) 
 					mat_block = np.conj(np.transpose(mat_block))
@@ -418,37 +433,105 @@ class GuidedModeExp(object):
 
 		return mat
 
-	def compute_rad(self, kinds, freq, evec):
+	def compute_rad(self, kind, minds=[0]):
 		'''
 		Compute the radiation losses of the eigenmodes after the dispersion
 		has been computed.
+		Input
+			kind 		    : index of the k-point for the computation
+			minds           : indexes of which modes to be computed 
+							  (max value must be smaller than self.numeig)
 		Output
 			freqs_im		: imaginary part of the frequencies 
 		'''
 		if self.freqs == []:
 			raise RuntimeError("Run the GME computation first!")
+		if np.max(np.array(minds)) > self.numeig - 1:
+			raise ValueError("Requested mode index out of range for the %d "
+				"stored eigenmodes" % self.numeig)
 		
 		# G + k vectors
-		gkx = self.gvec[0, :] + k[0]
-		gky = self.gvec[1, :] + k[1]
+		gkx = self.gvec[0, :] + self.kpoints[0, kind]
+		gky = self.gvec[1, :] + self.kpoints[1, kind]
 		gk = np.sqrt(np.square(gkx + 1e-20) + np.square(gky))
 
-		# Reciprocal vedctors within the radiative cone of the lower cladding
-		gk_indl = np.argwhere(gk**2 < self.phc.claddings[0].eps_avg*freq) \
-						.ravel()
+		# Iterate over all the modes to be computed
+		rad_tot = []
+		(coup_l, coup_u) = ([], [])
+		for im in minds:
+			omr = 2*np.pi*self.freqs[kind, im]
+			evec = self.eigvecs[kind][:, im]
 
-		# Wave-vectors of the modes radiating in the lower cladding
-		gkl = gk[gk_indl]
-		# q1l = sqrt(eps1 * Ek0^2 - Gkl.^2);
-		# q2l = sqrt(eps2 * Ek0^2 - Gkl.^2);
-		# q3l = sqrt(eps3 * Ek0^2 - Gkl.^2);
-		# q1l(imag(q1l) > 0) = conj(q1l(imag(q1l) > 0));
-		# q3l(imag(q3l) > 0) = conj(q3l(imag(q3l) > 0));
+			# Reciprocal vedctors within the radiative cone for the claddings
+			indmoder = [np.argwhere(gk**2 <= \
+					self.phc.claddings[0].eps_avg*omr**2).ravel(), 
+						np.argwhere(gk**2 <= \
+					self.phc.claddings[1].eps_avg*omr**2).ravel()
+						]
+			gkr = [gk[indmode] for indmode in indmoder]
+			rad_coup = {'te': [np.zeros((indmode.size, ), dtype=np.complex128) 
+							for indmode in indmoder],
+						'tm': [np.zeros((indmode.size, ), dtype=np.complex128) 
+							for indmode in indmoder]}
+
+			[Xs, Ys, chis] = [{'te': [], 'tm': []} for i in range(3)]
+			for clad_ind in [0, 1]:
+				for pol in ['te', 'tm']:
+					(X, Y, chi) = self._get_rad(gkr[clad_ind], omr, 
+							pol=pol, clad=clad_ind)
+					Xs[pol].append(X)
+					Ys[pol].append(Y)
+					chis[pol].append(chi)
+			# Iterate over the 'gmode_inds' basis of the PhC mode
+			count = 0
+			for im1 in range(self.gmode_inds.size):
+				mode1 = self.gmode_inds[im1]
+				(indmode1, oms1, As1, Bs1, chis1) = self._get_guided(gk, mode1)
+				# Iterate over lower cladding (0) and upper cladding (1)
+				for clad_ind in [0, 1]:			
+					# Radiation to TE-polarized states
+					if mode1%2 == 0:
+						rad = self.rad_te_te(indmode1, oms1, As1, Bs1, chis1, 
+							indmoder[clad_ind], omr, Xs['te'][clad_ind], 
+							Ys['te'][clad_ind], chis['te'][clad_ind])
+						raise Exception
+						rad = rad*evec[count:count+self.modes_numg[kind][im1]][
+									:, np.newaxis]
+					else:
+						rad = self.rad_tm_te(indmode1, oms1, As1, Bs1, chis1, 
+							indmoder[clad_ind], omr, Xs['te'][clad_ind], 
+							Ys['te'][clad_ind], chis['te'][clad_ind])
+						rad = rad*evec[count:count+self.modes_numg[kind][im1]][
+									:, np.newaxis]
+					rad_coup['te'][clad_ind] += bd.sum(rad, axis=0)
+
+
+				count += self.modes_numg[kind][im1]
+				
+				rad_dos = [1/bd.sqrt(self.phc.claddings[i].eps_avg*omr**2 
+							- gkr[i]**2) for i in [0, 1]]
+				(c_l, c_u) = ({}, {})
+				rad_t = 0
+				for pol in ['te', 'tm']:
+					c_l[pol] = rad_dos[0] * rad_coup[pol][0]
+					c_u[pol] = rad_dos[1] * rad_coup[pol][1]
+					rad_t = rad_t + np.pi*bd.sum(bd.square(bd.abs(c_l[pol])))+\
+								np.pi*bd.sum(bd.square(bd.abs(c_u[pol])))
+				rad_tot.append(bd.imag(bd.sqrt(omr**2 + 1j*rad_t)))
+
+				# NB: think about the normalization of the couplings!
+				coup_l.append(c_l)
+				coup_u.append(c_u)
+
+		# Finally compute radiation rate in units of frequency	
+		freqs_im = bd.array(rad_tot)/2/np.pi
+		return (freqs_im, coup_l, coup_u)
+
 
 	'''===========MATRIX ELEMENTS BETWEEN SLAB MODES BELOW============'''
 	# Notation is following Andreani and Gerace PRB 2006
 
-	def mat_te_te(self, k, indmode1, oms1,
+	def mat_te_te(self, indmode1, oms1,
 						As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 						chis2, qq):
 		'''
@@ -458,29 +541,23 @@ class GuidedModeExp(object):
 		# Contribution from lower cladding
 		indmat = np.ix_(indmode1, indmode2)
 		mat = self.phc.claddings[0].eps_inv_mat[indmat]* \
-				self.phc.claddings[0].eps_avg**2 / \
-				np.outer(np.conj(chis1[0, :]), chis2[0, :]) * \
+				self.phc.claddings[0].eps_avg**2 * \
 				np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
 				J_alpha(chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
-		mat = mat*np.outer(np.conj(chis1[0, :]), chis2[0, :]) 
 		# raise Exception 
 
 		# Contribution from upper cladding
-		term = self.phc.claddings[1].eps_inv_mat[indmat]* \
-				self.phc.claddings[1].eps_avg**2 / \
-				np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) * \
+		mat = mat + self.phc.claddings[1].eps_inv_mat[indmat]* \
+				self.phc.claddings[1].eps_avg**2 * \
 				np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
 				J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
-
-		mat = mat + term * np.outer(np.conj(chis1[-1, :]), chis2[-1, :]) 
 		# raise Exception
 
 		# Contributions from layers
 		# note: self.N_layers = self.phc.layers.shape so without claddings
 		for il in range(1, self.N_layers+1):
-			term = self.phc.layers[il-1].eps_inv_mat[indmat] *\
-			self.phc.layers[il-1].eps_avg**2 / \
-			np.outer(np.conj(chis1[il, :]), chis2[il, :]) * ( \
+			mat = mat + self.phc.layers[il-1].eps_inv_mat[indmat] *\
+			self.phc.layers[il-1].eps_avg**2 * ( \
 			np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
 			np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +\
@@ -490,14 +567,13 @@ class GuidedModeExp(object):
 			np.outer(np.conj(Bs1[il, :]), As2[il, :])*I_alpha(chis2[il, :] +\
 				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1])  )
 
-			mat = mat + term * np.outer(np.conj(chis1[il, :]), chis2[il, :]) 
 		# Final pre-factor		
 		mat = mat * np.outer(oms1**2, oms2**2) * (qq[indmat])
 
 		# raise Exception
 		return mat
 
-	def mat_tm_tm(self, k, gk, indmode1, oms1,
+	def mat_tm_tm(self, gk, indmode1, oms1,
 						As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 						chis2, pp):
 		'''
@@ -547,7 +623,7 @@ class GuidedModeExp(object):
 		# raise Exception
 		return mat
 
-	def mat_te_tm(self, k, indmode1, oms1,
+	def mat_te_tm(self, indmode1, oms1,
 						As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
 						chis2, qp, signed_1j):
 		'''
@@ -588,4 +664,47 @@ class GuidedModeExp(object):
 		mat = mat * np.outer(oms1**2, np.ones(oms2.shape)) * qp[indmat]
 
 		# raise Exception
+		return mat
+
+	def rad_te_te(self, indmode1, oms1,
+				As1, Bs1, chis1, indmoder, omr, Xsr, Ysr, 
+				chisr, qq):
+		'''
+		Coupling of TE guided modes to TE radiative modes
+		'''
+
+		# Contribution from lower cladding
+		indmat = np.ix_(indmode1, indmoder)
+		mat = self.phc.claddings[0].eps_inv_mat[indmat]* \
+				self.phc.claddings[0].eps_avg**2 * (\
+				np.outer(np.conj(Bs1[0, :]), Ysr[0, :]) * J_alpha(
+				-np.conj(chis1[0, :][:, np.newaxis])-chisr[np.newaxis, 0])+
+				np.outer(np.conj(Bs1[0, :]), Xsr[0, :]) * J_alpha(
+				-np.conj(chis1[0, :][:, np.newaxis])+chisr[np.newaxis, 0]))
+
+		# Contribution from upper cladding
+		mat = mat + self.phc.claddings[-1].eps_inv_mat[indmat]* \
+				self.phc.claddings[-1].eps_avg**2 * (\
+				np.outer(np.conj(As1[-1, :]), Ysr[-1, :]) * J_alpha(
+				-np.conj(chis1[-1, :][:, np.newaxis])+chisr[np.newaxis, -1])+
+				np.outer(np.conj(As1[-1, :]), Xsr[-1, :]) * J_alpha(
+				-np.conj(chis1[-1, :][:, np.newaxis])-chisr[np.newaxis, -1]))
+
+		# Contributions from layers
+		# note: self.N_layers = self.phc.layers.shape so without claddings
+		for il in range(1, self.N_layers+1):
+			term = self.phc.layers[il-1].eps_inv_mat[indmat] *\
+			self.phc.layers[il-1].eps_avg**2 * ( \
+			np.outer(np.conj(As1[il, :]), Ysr[il, :])*I_alpha(chis2[il, :] -\
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
+			np.outer(np.conj(Bs1[il, :]), Xsr[il, :])*I_alpha(-chis2[il, :] +\
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) + \
+			np.outer(np.conj(As1[il, :]), Xsr[il, :])*I_alpha(-chis2[il, :] -\
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1]) +
+			np.outer(np.conj(Bs1[il, :]), Ysr[il, :])*I_alpha(chis2[il, :] +\
+				np.conj(chis1[il, :][:, np.newaxis]), self.d_array[il-1])  )
+
+		# Final pre-factor		
+		mat = mat * np.outer(oms1**2, omr*np.ones(oms2.shape)) * (qq[indmat])
+
 		return mat

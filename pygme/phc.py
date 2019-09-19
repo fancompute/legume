@@ -198,7 +198,8 @@ class Layer(object):
 		'''
 		Compute fourier transform over gvec: [2 x Ng] numpy array
 		'''
-		raise NotImplementedError("compute_ft() needs to be implemented by Layer subclasses")
+		raise NotImplementedError("compute_ft() needs to be implemented by"
+			"Layer subclasses")
 
 class ShapesLayer(Layer):
 	'''
@@ -244,7 +245,7 @@ class ShapesLayer(Layer):
 		# Apply some final coefficients
 		# Note the hacky way to set the zero element so as to work with
 		# 'autograd' backend
-		ind0 = bd.arange(FT.size) < 1  
+		ind0 = bd.abs(gvec[0, :]) + bd.abs(gvec[1, :]) < 1e-10  
 		FT = FT / self.lattice.ec_area
 		FT = FT*(1-ind0) + self.eps_avg*ind0
 
