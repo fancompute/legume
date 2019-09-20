@@ -279,7 +279,8 @@ class FreeformLayer(Layer):
 		'''
 		Compute fourier transform over gvec: [2 x Ng] numpy array
 		'''
-		pass
+		raise NotImplementedError("compute_ft() is not yet imlemented for"
+			"the free form layer")
 
 ''' ======================== Lattice ======================== '''
 		
