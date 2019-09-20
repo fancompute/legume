@@ -1,15 +1,17 @@
-# pyGME
+# legume
 
-Python implementation of the Guided-Mode Expansion method for a multi-layer structure, with `autograd` backend support.  
+legume (le GUided Mode Expansion) is a python implementation of the GME method for photonic crystal slabs, including support for multi-layer structures. Plane-wave expansion for purely 2D structures is also included. 
+
+There is also an `autograd` backend (work in progress) that can be used to automatically compute the gradient of the eigenmodes and eigenfrequencies with respect to any input parameters!
 
 ## Install
 
 Eventually this should be `pip` installable from PyPi, but for now hopefully this will work for you:
 
 ```
-git clone https://github.com/fancompute/pyGME.git
-pip install -e pyGME
-pip install -r pyGME/requirements.txt
+git clone https://github.com/fancompute/legume.git
+pip install -e legume
+pip install -r legume/requirements.txt
 ```
 
 Alternatively just download and make sure you have all the requirements installed. 
