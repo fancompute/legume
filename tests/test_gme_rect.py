@@ -19,7 +19,7 @@ if __name__ == '__main__':
 
 	gme = GuidedModeExp(phc, gmax=3)
 	# gme.plot_overview_ft(cladding=True)
-	options = {'gmode_inds': [0], 'numeig': 10, 'verbose': True}
+	options = {'gmode_inds': [0, 2], 'numeig': 10, 'verbose': True}
 	gme.run(kpoints=np.array([[0.1], [0.2]]), **options)
 	print(gme.freqs)
 	(freqs_im, coup_l, coup_u) = gme.compute_rad(kind=0, minds=[1, 2])

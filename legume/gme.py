@@ -512,10 +512,8 @@ class GuidedModeExp(object):
 							indmoder[clad_ind], omr, Xs['te'][clad_ind], 
 							Ys['te'][clad_ind], chis['te'][clad_ind], qq)
 					else:
-						rad = self.rad_tm_te(indmode1, oms1, As1, Bs1, chis1, 
-							indmoder[clad_ind], omr, Xs['te'][clad_ind], 
-							Ys['te'][clad_ind], chis['te'][clad_ind])
-					# raise Exception
+						raise NotImplementedError("Radiative loss rates only "
+							"implemented for TE slab modes (even 'gmode_inds')")
 					rad = rad*bd.conj(evec[count:
 						count+self.modes_numg[kind][im1]][:, np.newaxis])
 					rad_coup['te'][clad_ind] += bd.sum(rad, axis=0)
@@ -529,32 +527,31 @@ class GuidedModeExp(object):
 							indmoder[clad_ind], omr, Xs['tm'][clad_ind], 
 							Ys['tm'][clad_ind], chis['tm'][clad_ind], qp)
 					else:
-						rad = self.rad_tm_tm(indmode1, oms1, As1, Bs1, chis1, 
-							indmoder[clad_ind], omr, Xs['te'][clad_ind], 
-							Ys['te'][clad_ind], chis['te'][clad_ind])
+						NotImplementedError("Radiative loss rates only "
+							"implemented for TE slab modes (even 'gmode_inds')")
 					
 					rad = rad*bd.conj(evec[count:
 						count+self.modes_numg[kind][im1]][:, np.newaxis])
 					rad_coup['tm'][clad_ind] += bd.sum(rad, axis=0)
 				count += self.modes_numg[kind][im1]
 				
-				rad_dos = [self.phc.claddings[i].eps_avg/bd.sqrt(
-						self.phc.claddings[i].eps_avg*omr**2 - gkr[i]**2) / \
-						4 / np.pi for i in [0, 1]]
-				# raise Exception
-				rad_t = 0
-				(c_l, c_u) = ({}, {})
-				for pol in ['te', 'tm']:
-					c_l[pol] = rad_coup[pol][0]
-					c_u[pol] = rad_coup[pol][1]
-					rad_t = rad_t + \
-						np.pi*bd.sum(bd.square(bd.abs(c_l[pol]))*rad_dos[0]) + \
-						np.pi*bd.sum(bd.square(bd.abs(c_u[pol]))*rad_dos[1])
-				rad_tot.append(bd.imag(bd.sqrt(omr**2 + 1j*rad_t)))
-				# raise Exception
-				# NB: think about the normalization of the couplings!
-				coup_l.append(c_l)
-				coup_u.append(c_u)
+			rad_dos = [self.phc.claddings[i].eps_avg/bd.sqrt(
+					self.phc.claddings[i].eps_avg*omr**2 - gkr[i]**2) / \
+					4 / np.pi for i in [0, 1]]
+			# raise Exception
+			rad_t = 0
+			(c_l, c_u) = ({}, {})
+			for pol in ['te', 'tm']:
+				c_l[pol] = rad_coup[pol][0]
+				c_u[pol] = rad_coup[pol][1]
+				rad_t = rad_t + \
+					np.pi*bd.sum(bd.square(bd.abs(c_l[pol]))*rad_dos[0]) + \
+					np.pi*bd.sum(bd.square(bd.abs(c_u[pol]))*rad_dos[1])
+			rad_tot.append(bd.imag(bd.sqrt(omr**2 + 1j*rad_t)))
+			# raise Exception
+			# NB: think about the normalization of the couplings!
+			coup_l.append(c_l)
+			coup_u.append(c_u)
 				
 		# Finally compute radiation rate in units of frequency	
 		freqs_im = bd.array(rad_tot)/2/np.pi
