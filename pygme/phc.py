@@ -58,8 +58,9 @@ class PhotCryst(object):
 		Add a shape to layer number layer_ind
 		'''
 		cladding = kwargs.get('cladding', None)
+		print(cladding)
 		layer = kwargs.get('layer', -1)
-		if cladding:
+		if cladding is not None:
 			if cladding==0 or cladding.lower()=='l':
 				lay = self.claddings[0]
 			elif cladding==1 or cladding.lower()=='u':
