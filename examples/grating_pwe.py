@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-import pygme
+import legume
 
 y_max = 1.0
 gmax = 7
@@ -13,16 +13,16 @@ D = 0.1
 epsr_bot = 1.07
 epsr_top = 11.25
 
-lattice = pygme.Lattice([1, 0], [0, 3])
-# lattice = pygme.Lattice('square')
-layer = pygme.Layer(lattice)
+lattice = legume.Lattice([1, 0], [0, 3])
+# lattice = legume.Lattice('square')
+layer = legume.Layer(lattice)
 
-grating_bot = pygme.Poly(eps=epsr_bot, x_edges=[-0.5, -0.5, +0.5, +0.5], y_edges=[0, -D, -D, 0])
-grating_top = pygme.Poly(eps=epsr_top, x_edges=[-W / 2, -W / 2, +W / 2, +W / 2], y_edges=[H, 0, 0, H])
+grating_bot = legume.Poly(eps=epsr_bot, x_edges=[-0.5, -0.5, +0.5, +0.5], y_edges=[0, -D, -D, 0])
+grating_top = legume.Poly(eps=epsr_top, x_edges=[-W / 2, -W / 2, +W / 2, +W / 2], y_edges=[H, 0, 0, H])
 
 layer.add_shape(grating_top, grating_bot)
 
-pwe = pygme.PlaneWaveExp(layer, gmax=gmax)
+pwe = legume.PlaneWaveExp(layer, gmax=gmax)
 
 # path = layer.lattice.bz_path(['G', 'X'], [20])
 path = layer.lattice.bz_path([np.array([0.0, 0.0]), np.array([np.pi, 0])], [9])

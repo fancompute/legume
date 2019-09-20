@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from pygme.guided_modes_new import guided_modes
+from legume.guided_modes_new import guided_modes
 
 g_array = np.linspace(0.1, 13, 30)
 eps_array = np.array([1.0, 12, 1.0, 12, 1.0])

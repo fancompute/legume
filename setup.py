@@ -11,14 +11,14 @@ dependencies = [
 ]
 
 setup(
-    name='pyGME',
+    name='legume',
     version='0.0.1',
     description='GuidedModeExpansion',
     long_description=readme,
     long_description_content_type="text/markdown",
     author='Momchil Minkov',
     author_email='momchilmm@gmail.com',
-    url='https://github.com/fancompute/pyGME',
+    url='https://github.com/fancompute/legume',
     packages=find_packages(),
     install_requires=dependencies,
     classifiers=[

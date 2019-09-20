@@ -1,12 +1,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import pygme.utils as utils
+import legume.utils as utils
 from .guided_modes_new import guided_modes
 from .backend import backend as bd
 import time
 from itertools import zip_longest
 from functools import reduce
-from pygme.utils import I_alpha, J_alpha, get_value
+from legume.utils import I_alpha, J_alpha, get_value
 
 class GuidedModeExp(object):
 	'''

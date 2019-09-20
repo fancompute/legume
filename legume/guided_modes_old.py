@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import brentq
-from pygme.utils import RedhefferStar, I_alpha, J_alpha
+from legume.utils import RedhefferStar, I_alpha, J_alpha
 ''' 
 Function to compute the guided modes of a multi-layer structure
 Input

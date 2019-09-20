@@ -5,8 +5,8 @@ import numpy as np
 import autograd.numpy as npa
 from autograd import grad
 
-import pygme
-from pygme import GuidedModeExp, Circle, PhotCryst, Lattice
+import legume
+from legume import GuidedModeExp, Circle, PhotCryst, Lattice
 
 @profile
 def W1(ra):
@@ -44,7 +44,7 @@ if __name__ == '__main__':
 	parser.add_argument('-ra', default=0.3, type=float)
 	args = parser.parse_args()
 
-	pygme.set_backend(args.backend)
+	legume.set_backend(args.backend)
 
 	W1(args.ra)
 

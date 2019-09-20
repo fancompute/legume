@@ -3,8 +3,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-import pygme.utils as utils
-import pygme.backend as bd
+import legume.utils as utils
+import legume.backend as bd
 from .shapes import Shape, Circle, Poly, Square
 from .backend import backend as bd
 
@@ -231,7 +231,7 @@ class ShapesLayer(Layer):
 								shape.area/self.lattice.ec_area
 			else:
 				raise ValueError("Arguments to add_shape must be an instance"
-					"of pygme.Shape (e.g pygme.Circle or pygme.Poly)")
+					"of legume.Shape (e.g legume.Circle or legume.Poly)")
 
 	def compute_ft(self, gvec):
 		'''

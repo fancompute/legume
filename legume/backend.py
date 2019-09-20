@@ -3,8 +3,8 @@ Backend for the simulations. Available backends:
  - numpy [default]
  - autograd
 A backend can be set with the 'set_backend'
-	import pygme
-	pygme.set_backend("autograd")
+	import legume
+	legume.set_backend("autograd")
 
 Numpy is still used with some functionalities; if autograd backend is set, 
 it is used when needed only so as not to slow down everything

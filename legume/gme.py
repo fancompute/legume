@@ -5,10 +5,10 @@ import time
 from itertools import zip_longest
 from functools import reduce
 
-import pygme.utils as utils
+import legume.utils as utils
 from .slab_modes import guided_modes, rad_modes
 from .backend import backend as bd
-from pygme.utils import I_alpha, J_alpha, get_value
+from legume.utils import I_alpha, J_alpha, get_value
 
 class GuidedModeExp(object):
 	'''

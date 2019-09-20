@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from pygme import GuidedModeExp, Circle, PhotCryst, Lattice
+from legume import GuidedModeExp, Circle, PhotCryst, Lattice
 import matplotlib.pyplot as plt
 from itertools import zip_longest
 import scipy.io
