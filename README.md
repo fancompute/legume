@@ -1,6 +1,18 @@
 # pyGME
 
-Python implementation of the Guided-Mode Expansion method for a multi-layer structure, with `autograd` backend support. 
+Python implementation of the Guided-Mode Expansion method for a multi-layer structure, with `autograd` backend support.  
+
+## Install
+
+Eventually this should be `pip` installable from PyPi, but for now hopefully this will work for you:
+
+```
+git clone https://github.com/fancompute/pyGME.git
+pip install -e pyGME
+pip install -r pyGME/requirements.txt
+```
+
+Alternatively just download and make sure you have all the requirements installed. 
 
 ## To do
 (I've put some non-urgent things as Issues. Below are the things that have to be taken care of to have the minimum needed for what can be considered a functioning package)
