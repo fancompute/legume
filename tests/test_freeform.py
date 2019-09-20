@@ -1,5 +1,5 @@
 
-import pygme
+import legume
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -17,19 +17,19 @@ def generate_grid(lattice, Npts):
 
 # Variables
 radius = 0.4
-lattice = pygme.Lattice([1, 0], [0, 1])
-# lattice = pygme.Lattice([0.5, 0.8660254], [ 0.5, -0.8660254])
+lattice = legume.Lattice([1, 0], [0, 1])
+# lattice = legume.Lattice([0.5, 0.8660254], [ 0.5, -0.8660254])
 
 gmaxs = [5, 10, 15, 20, 25, 30]
 gmaxs = [10]
 err = []
 
 for i, gmax in enumerate(gmaxs):
-	phc = pygme.PhotCryst(lattice)
+	phc = legume.PhotCryst(lattice)
 	phc.add_layer(d=0.5, eps_b=0)
-	circ = pygme.Circle(eps=1, x_cent=0, y_cent=0, r=radius)
+	circ = legume.Circle(eps=1, x_cent=0, y_cent=0, r=radius)
 	phc.layers[-1].add_shape(circ)
-	gme = pygme.GuidedModeExp(phc, gmax=gmax)
+	gme = legume.GuidedModeExp(phc, gmax=gmax)
 
 	gvec = gme.gvec
 	Npts = int(np.sqrt(gvec.shape[1]))
@@ -66,7 +66,7 @@ plt.show()
 
 (xgrid, ygrid) = lattice.xy_grid()
 ft_gme_fmt = np.fft.ifftshift(ft).reshape(-1,order="F")
-out  = pygme.utils.ftinv(ft.reshape(-1,order="F"), gvec, xgrid, ygrid)
+out  = legume.utils.ftinv(ft.reshape(-1,order="F"), gvec, xgrid, ygrid)
 
 plt.figure()
 plt.imshow(np.real(out))
