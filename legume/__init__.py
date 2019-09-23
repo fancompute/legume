@@ -5,7 +5,9 @@ package at github.com/flaport/fdtd
 '''
 
 from . import viz
-from .phc import PhotCryst, ShapesLayer, FreeformLayer, Lattice
+from .phc import PhotCryst
+from .layer import ShapesLayer, FreeformLayer
+from .lattice import Lattice
 from .pwe import PlaneWaveExp
 from .gme import GuidedModeExp
 from .shapes import Shape, Circle, Poly, Square, Hexagon
