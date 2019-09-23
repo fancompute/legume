@@ -73,6 +73,7 @@ class NumpyBackend(Backend):
 	eigh = staticmethod(np.linalg.eigh)
 	outer = staticmethod(np.outer)
 	conj = staticmethod(np.conj)
+	var = staticmethod(np.var)
 
 	def is_array(self, arr):
 		""" check if an object is an array """
@@ -121,6 +122,7 @@ class AutogradBackend(Backend):
 	eigh = staticmethod(eigh_ag)
 	outer = staticmethod(npa.outer)
 	conj = staticmethod(npa.conj)
+	var = staticmethod(npa.var)
 
 	# constructors
 	array = staticmethod(npa.array)
