@@ -3,13 +3,12 @@
 
 import argparse
 
-# import numpy as np
-import autograd.numpy as np
+import numpy as np
 from autograd import grad
 
 import legume
-
-legume.set_backend('autograd')
+from legume.backend import backend as bd
+from legume.optimizers import adam_optimize
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-gmax', default=5, type=int)
@@ -23,11 +22,18 @@ args = parser.parse_args()
 
 
 def projection(rho, eta=0.5, beta=100):
-	return np.divide((np.tanh(beta * eta) + np.tanh(beta * (rho - eta))), (
-			np.tanh(beta * eta) + np.tanh(beta * (1 - eta))))
+	return bd.divide(bd.tanh(beta * eta) + bd.tanh(beta * (rho - eta)), bd.tanh(beta * eta) + bd.tanh(beta * (1 - eta)))
 
 
-def make_grating(layer, rho, eta=0.5, beta=100):
+def make_grating():
+	lattice = legume.Lattice([1, 0], [0, args.ymax])
+	phc = legume.PhotCryst(lattice)
+	phc.add_layer(d=args.D, eps_b=args.eps)
+	phc.add_layer(d=args.H, eps_b=1)
+	return legume.GuidedModeExp(phc, gmax=float(args.gmax))
+
+
+def parameterize_density_layer(layer, rho, eta=0.5, beta=100):
 	N = len(rho)
 	X = np.linspace(-0.5, 0.5, N + 1)
 	rho_proj = projection(rho, eta, beta)
@@ -40,29 +46,46 @@ def make_grating(layer, rho, eta=0.5, beta=100):
 		layer.add_shape(grating)
 
 
+gme = make_grating()
+path = gme.phc.lattice.bz_path(['G', np.array([np.pi, 0])], [35])
+options = {'gmode_inds': np.arange(0, 8), 'gmode_npts': 500, 'numeig': args.neig, 'verbose': False}
+
+
 def objective(rho):
-	lattice = legume.Lattice([1, 0], [0, args.ymax])
-	phc = legume.PhotCryst(lattice)
-	phc.add_layer(d=args.D, eps_b=args.eps)
-	phc.add_layer(d=args.H, eps_b=1)
-
-	make_grating(phc.layers[-1], rho, eta=0.5, beta=100)
-
-	gme = legume.GuidedModeExp(phc, gmax=float(args.gmax))
-	path = phc.lattice.bz_path(['G', np.array([np.pi, 0])], [35])
-	options = {'gmode_inds': np.arange(0, 8), 'gmode_npts': 500, 'numeig': args.neig, 'verbose': False}
+	parameterize_density_layer(gme.phc.layers[-1], rho, eta=0.5, beta=100)
 	gme.run(kpoints=path.kpoints, **options)
 	tgt_freqs = gme.freqs[1:10, 2]
-
-	return np.sqrt(np.var(tgt_freqs))
+	return bd.sqrt(bd.var(tgt_freqs))
 
 
 objective_grad = grad(objective)
 
-from legume.optimizers import adam_optimize
+rho_0 = np.zeros((args.N,))
+rho_0[int(0.25 * len(rho_0)):int(0.75 * len(rho_0))] = 1.0
 
-rho_0 = np.zeros((args.N, 1))
-rho_0[8:12] = 1
+legume.set_backend('numpy')
+gme = make_grating()
+path = gme.phc.lattice.bz_path(['G', np.array([np.pi, 0])], [35])
+options = {'gmode_inds': np.arange(0, 8), 'gmode_npts': 500, 'numeig': args.neig, 'verbose': False}
+parameterize_density_layer(gme.phc.layers[-1], rho_0, eta=0.5, beta=100)
+gme.run(kpoints=path.kpoints, **options)
 
-(p_opt, ofs) = adam_optimize(objective, rho_0, objective_grad, step_size=1e-2, Nsteps=10,
-							 options={'direction': 'min', 'disp': ['of', 'params']})
+gme.phc.plot_overview()
+legume.viz.bands(gme)
+
+###
+
+legume.set_backend('autograd')
+(rho_opt, ofs) = adam_optimize(objective, rho_0, objective_grad, step_size=1e-1, Nsteps=10,
+							   options={'direction': 'min', 'disp': ['of', 'params']})
+legume.set_backend('numpy')
+##
+
+gme = make_grating()
+path = gme.phc.lattice.bz_path(['G', np.array([np.pi, 0])], [35])
+options = {'gmode_inds': np.arange(0, 8), 'gmode_npts': 500, 'numeig': args.neig, 'verbose': False}
+parameterize_density_layer(gme.phc.layers[-1], rho_0, eta=0.5, beta=100)
+gme.run(kpoints=path.kpoints, **options)
+
+gme.phc.plot_overview()
+legume.viz.bands(gme)
