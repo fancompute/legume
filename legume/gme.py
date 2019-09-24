@@ -414,7 +414,7 @@ class GuidedModeExp(object):
 					mat_block = self.mat_te_tm(indmode2, oms2,
 									As2, Bs2, chis2, indmode1, oms1, As1, Bs1, 
 									chis1, pq, -1j) 
-					mat_block = np.conj(np.transpose(mat_block))
+					mat_block = bd.conj(bd.transpose(mat_block))
 
 				mat_blocks[im1].append(mat_block)
 
