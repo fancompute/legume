@@ -4,6 +4,7 @@
 import argparse
 
 import numpy as np
+import autograd
 from autograd import grad
 
 import legume
@@ -75,6 +76,14 @@ legume.set_backend('autograd')
 (rho_opt, ofs) = adam_optimize(objective, rho_0, objective_grad, step_size=1e-1, Nsteps=10,
 							   options={'direction': 'min', 'disp': ['of', 'params']})
 legume.set_backend('numpy')
+
+of_value = [of._value if type(of) is autograd.numpy.numpy_boxes.ArrayBox else of for of in ofs]
+
+plt.figure(figsize=(4,3), constrained_layout=True)
+plt.plot(of_value, "o-")
+plt.xlabel("Epoch")
+plt.ylabel("Cost function")
+plt.show()
 
 ## Display results (recompute at optimal structure)
 gme = make_grating()
