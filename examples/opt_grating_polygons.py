@@ -22,7 +22,8 @@ args = parser.parse_args()
 
 
 def projection(rho, eta=0.5, beta=100):
-	return bd.divide(bd.tanh(beta * eta) + bd.tanh(beta * (rho - eta)), bd.tanh(beta * eta) + bd.tanh(beta * (1 - eta)))
+	return bd.abs(rho)
+	# return bd.divide(bd.tanh(beta * eta) + bd.tanh(beta * (rho - eta)), bd.tanh(beta * eta) + bd.tanh(beta * (1 - eta)))
 
 
 def make_grating():
@@ -46,11 +47,6 @@ def parameterize_density_layer(layer, rho, eta=0.5, beta=100):
 		layer.add_shape(grating)
 
 
-gme = make_grating()
-path = gme.phc.lattice.bz_path(['G', np.array([np.pi, 0])], [35])
-options = {'gmode_inds': np.arange(0, 8), 'gmode_npts': 500, 'numeig': args.neig, 'verbose': False}
-
-
 def objective(rho):
 	parameterize_density_layer(gme.phc.layers[-1], rho, eta=0.5, beta=100)
 	gme.run(kpoints=path.kpoints, **options)
@@ -60,31 +56,31 @@ def objective(rho):
 
 objective_grad = grad(objective)
 
-rho_0 = np.zeros((args.N,))
+# Initialize
+rho_0 = np.zeros((args.N,)) + 0.1
 rho_0[int(0.25 * len(rho_0)):int(0.75 * len(rho_0))] = 1.0
 
+# Compute initial results
 legume.set_backend('numpy')
 gme = make_grating()
 path = gme.phc.lattice.bz_path(['G', np.array([np.pi, 0])], [35])
 options = {'gmode_inds': np.arange(0, 8), 'gmode_npts': 500, 'numeig': args.neig, 'verbose': False}
 parameterize_density_layer(gme.phc.layers[-1], rho_0, eta=0.5, beta=100)
 gme.run(kpoints=path.kpoints, **options)
-
 gme.phc.plot_overview()
 legume.viz.bands(gme)
 
-###
-
+## Optimize
 legume.set_backend('autograd')
 (rho_opt, ofs) = adam_optimize(objective, rho_0, objective_grad, step_size=1e-1, Nsteps=10,
 							   options={'direction': 'min', 'disp': ['of', 'params']})
 legume.set_backend('numpy')
-##
 
+## Display results (recompute at optimal structure)
 gme = make_grating()
 path = gme.phc.lattice.bz_path(['G', np.array([np.pi, 0])], [35])
 options = {'gmode_inds': np.arange(0, 8), 'gmode_npts': 500, 'numeig': args.neig, 'verbose': False}
-parameterize_density_layer(gme.phc.layers[-1], rho_0, eta=0.5, beta=100)
+parameterize_density_layer(gme.phc.layers[-1], rho_opt, eta=0.5, beta=100)
 gme.run(kpoints=path.kpoints, **options)
 
 gme.phc.plot_overview()
