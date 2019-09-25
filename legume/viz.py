@@ -14,7 +14,7 @@ def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o'):
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
 
-    plt.plot(X, gme.freqs, ls, c="#1f77b4", label="", ms=4, mew=1)
+    ax.plot(X, gme.freqs, ls, c="#1f77b4", label="", ms=4, mew=1)
 
     if lightcone:
         vec_LL = np.sqrt(np.square(gme.kpoints[0, :]) + np.square(gme.kpoints[1, :])) / np.pi
