@@ -262,7 +262,7 @@ class GuidedModeExp(object):
 		Gmax = np.amax(np.sqrt(np.square(self.gvec[0, :]) +
 							np.square(self.gvec[1, :])))
 		# Array of g-points over which the guided modes will be computed
-		g_array = np.linspace(1e-3, Gmax + kmax, self.gmode_npts)
+		g_array = np.linspace(0, Gmax + kmax, self.gmode_npts)
 		# Array of average permittivity of every layer (including claddings)
 		eps_array = np.array(list(get_value(layer.eps_avg) for layer in \
 			[self.phc.claddings[0]] + self.phc.layers + 
