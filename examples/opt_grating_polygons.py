@@ -10,6 +10,7 @@ from autograd import grad
 import legume
 from legume.backend import backend as bd
 from legume.optimizers import adam_optimize
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-gmax', default=5, type=int)
@@ -51,21 +52,20 @@ def parameterize_density_layer(layer, rho, eta=0.5, beta=100):
 def objective(rho):
 	parameterize_density_layer(gme.phc.layers[-1], rho, eta=0.5, beta=100)
 	gme.run(kpoints=path.kpoints, **options)
-	tgt_freqs = gme.freqs[1:10, 2]
+	tgt_freqs = gme.freqs[1:10, 1]
 	return bd.sqrt(bd.var(tgt_freqs))
 
-
-objective_grad = grad(objective)
 
 # Initialize
 rho_0 = np.zeros((args.N,)) + 0.1
 rho_0[int(0.25 * len(rho_0)):int(0.75 * len(rho_0))] = 1.0
 
 # Compute initial results
-legume.set_backend('numpy')
+legume.set_backend('autograd')
+objective_grad = grad(objective)
 gme = make_grating()
 path = gme.phc.lattice.bz_path(['G', np.array([np.pi, 0])], [35])
-options = {'gmode_inds': np.arange(0, 8), 'gmode_npts': 500, 'numeig': args.neig, 'verbose': False}
+options = {'gmode_inds': np.arange(0, 8, 2), 'gmode_npts': 500, 'numeig': args.neig, 'verbose': False}
 parameterize_density_layer(gme.phc.layers[-1], rho_0, eta=0.5, beta=100)
 gme.run(kpoints=path.kpoints, **options)
 gme.phc.plot_overview()
@@ -73,7 +73,7 @@ legume.viz.bands(gme)
 
 ## Optimize
 legume.set_backend('autograd')
-(rho_opt, ofs) = adam_optimize(objective, rho_0, objective_grad, step_size=1e-1, Nsteps=10,
+(rho_opt, ofs) = adam_optimize(objective, rho_0, objective_grad, step_size=1e-2, Nsteps=10,
 							   options={'direction': 'min', 'disp': ['of', 'params']})
 legume.set_backend('numpy')
 
@@ -88,7 +88,6 @@ plt.show()
 ## Display results (recompute at optimal structure)
 gme = make_grating()
 path = gme.phc.lattice.bz_path(['G', np.array([np.pi, 0])], [35])
-options = {'gmode_inds': np.arange(0, 8), 'gmode_npts': 500, 'numeig': args.neig, 'verbose': False}
 parameterize_density_layer(gme.phc.layers[-1], rho_opt, eta=0.5, beta=100)
 gme.run(kpoints=path.kpoints, **options)
 

@@ -3,7 +3,7 @@ import numpy as np
 
 
 # TODO: Make this more general
-def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o-'):
+def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o'):
 
     if np.all(gme.kpoints[0,:]==0) and not np.all(gme.kpoints[1,:]==0) \
         or np.all(gme.kpoints[1,:]==0) and not np.all(gme.kpoints[0,:]==0):

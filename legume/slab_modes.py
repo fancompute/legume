@@ -38,9 +38,23 @@ def guided_modes(g_array, eps_array, d_array, n_modes=1,
 				om_ub = min(om_ub, 
 					omegas[-1] + step + (g_array[ig] - g_array[ig-1]))
 
-		(omegas, coeffs) = guided_mode_given_g(g=g, eps_array=eps_array, 
-			d_array=d_array, n_modes=n_modes, omega_lb=om_lb, omega_ub=om_ub,
-			step=step, tol=tol, pol=pol)
+		if g >= 1e-3:
+			(omegas, coeffs) = guided_mode_given_g(g=g, eps_array=eps_array, 
+				d_array=d_array, n_modes=n_modes,
+				omega_lb=om_lb, omega_ub=om_ub, step=step, tol=tol, pol=pol)
+		else:
+			g_val = 1e-3
+			omega = g_val/np.sqrt(max(eps_array[0], eps_array[-1])) - tol
+			chis = chi(omega, g_val, eps_array)
+			chis[0] += 1j*1e-10
+			chis[-1] += 1j*1e-10
+			AB = AB_matrices(omega, g_val, eps_array, d_array, 
+								chis, pol)
+			norm = normalization_coeff(omega, g_val, eps_array, d_array, 
+								AB, pol)
+			coeffs = [AB / np.sqrt(norm)]
+			omegas = [omega]
+
 		om_guided.append(omegas)
 		coeffs_guided.append(coeffs)
 	return (om_guided, coeffs_guided)
