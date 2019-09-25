@@ -24,9 +24,9 @@ path = lattice.bz_path(['G', np.array([np.pi, 0])], [25])
 box = legume.Poly(eps=args.epsr, x_edges=[-args.W / 2, -args.W / 2, +args.W / 2, +args.W / 2],
                      y_edges=np.array([0.5, -0.5, -0.5, 0.5]) * args.ymax)
 
-data_ce = np.loadtxt('./examples/filtered_complete_etch_H0.25_W0.50.csv', comments='%', delimiter=',')
-data_pe = np.loadtxt('./examples/filtered_partial_etch_H0.25_W0.50_D0.25.csv', comments='%', delimiter=',')
-data_spe = np.loadtxt('./examples/filtered_symmetric_partial_etch_H0.25_W0.50_D0.25.csv', comments='%', delimiter=',')
+data_ce = np.loadtxt('./examples/data/filtered_complete_etch_H0.25_W0.50.csv', comments='%', delimiter=',')
+data_pe = np.loadtxt('./examples/data/filtered_partial_etch_H0.25_W0.50_D0.25.csv', comments='%', delimiter=',')
+data_spe = np.loadtxt('./examples/data/filtered_symmetric_partial_etch_H0.25_W0.50_D0.25.csv', comments='%', delimiter=',')
 
 # Complete etch
 print("Running complete etch...")
