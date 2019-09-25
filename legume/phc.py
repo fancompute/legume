@@ -2,6 +2,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
 
 import legume.utils as utils
 import legume.backend as bd
@@ -144,19 +145,12 @@ class PhotCryst(object):
 		else:
 			raise ValueError("Cross-section must be in {'xy', 'yz', 'xz'}")
 
-	def plot_overview(self, Nx=100, Ny=100, Nz=50, cladding=False):
+	def plot_overview(self, Nx=100, Ny=100, Nz=50, cladding=False, figsize=(4,8), cmap='Greys'):
 		'''
 		Plot an overview of PhC cross-sections
 		'''
 
 		(eps_min, eps_max) = self.get_eps_bounds()
-		fig, ax = plt.subplots(1, 2, constrained_layout=True)
-		utils.plot_xz(self, ax=ax[0], Nx=Nx, Nz=Nz,
-					clim=[eps_min, eps_max], cbar=False)
-		ax[0].set_title("xz at y = 0")
-		utils.plot_yz(self, ax=ax[1], Ny=Ny, Nz=Nz,
-					clim=[eps_min, eps_max], cbar=True)
-		ax[1].set_title("yz at x = 0")
 
 		if cladding:
 			all_layers = [self.claddings[0]] + self.layers + [self.claddings[1]]
@@ -164,13 +158,25 @@ class PhotCryst(object):
 			all_layers = self.layers
 		N_layers = len(all_layers)
 
-		fig, ax = plt.subplots(1, N_layers, constrained_layout=True)
-		if N_layers==1: ax=[ax]
+		fig = plt.figure(constrained_layout=True, figsize=figsize)
+		gs = GridSpec(N_layers+1, 2, figure=fig)
+		ax1 = fig.add_subplot(gs[0, 0])
+		ax2 = fig.add_subplot(gs[0, 1])
+		ax = []
+		for i in range(N_layers):
+			ax.append(fig.add_subplot(gs[1+i, :]))
+
+		utils.plot_xz(self, ax=ax1, Nx=Nx, Nz=Nz,
+					clim=[eps_min, eps_max], cbar=False, cmap=cmap)
+		ax1.set_title("xz at y = 0")
+		utils.plot_yz(self, ax=ax2, Ny=Ny, Nz=Nz,
+					clim=[eps_min, eps_max], cbar=True, cmap=cmap)
+		ax2.set_title("yz at x = 0")
 
 		for indl in range(N_layers):
 			zpos = (all_layers[indl].z_max + all_layers[indl].z_min)/2
 			utils.plot_xy(self, z=zpos, ax=ax[indl], Nx=Nx, Ny=Ny,
-					clim=[eps_min, eps_max], cbar=indl==N_layers-1)
+					clim=[eps_min, eps_max], cbar=False, cmap=cmap)
 			if cladding:
 				if indl > 0 and indl < N_layers-1:
 					ax[indl].set_title("xy in layer %d" % indl)
