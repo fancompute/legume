@@ -7,7 +7,7 @@ import numpy as np
 from scipy.linalg import toeplitz
 import matplotlib.pyplot as plt
 
-def plot_eps(eps_r, clim=None, ax=None, extent=None, cmap="Greys", cbar=False):
+def plot_eps(eps_r, clim=None, ax=None, extent=None, cmap='Greys', cbar=False):
 
 	if ax is None:
 		fig, ax = plt.subplots(1, constrained_layout=True)
@@ -21,7 +21,7 @@ def plot_eps(eps_r, clim=None, ax=None, extent=None, cmap="Greys", cbar=False):
 		
 	return im
 
-def plot_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None, cbar=False):
+def plot_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None, cbar=False, cmap='Greys'):
 	'''
 	Plot an xz-cross section showing all the layers and shapes
 	'''
@@ -33,10 +33,10 @@ def plot_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None, cbar=False):
 	eps_r = phc.get_eps((xmesh, ymesh, zmesh))
 	extent = [xgrid[0], xgrid[-1], zgrid[0], zgrid[-1]]
 
-	plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar)
+	plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
 
-def plot_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None, cbar=False):
+def plot_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None, cbar=False, cmap='Greys'):
 	'''
 	Plot an xy-cross section showing all the layers and shapes
 	'''
@@ -47,10 +47,10 @@ def plot_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None, cbar=False):
 	eps_r = phc.get_eps((xmesh, ymesh, zmesh))
 	extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
 
-	plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar)
+	plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
 
-def plot_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None, cbar=False):
+def plot_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None, cbar=False, cmap='Greys'):
 	'''
 	Plot a yz-cross section showing all the layers and shapes
 	'''
@@ -61,7 +61,7 @@ def plot_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None, cbar=False):
 	eps_r = phc.get_eps((xmesh, ymesh, zmesh))
 	extent = [ygrid[0], ygrid[-1], zgrid[0], zgrid[-1]]
 
-	plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar)
+	plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
 
 def plot_reciprocal(gme):
