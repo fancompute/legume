@@ -34,6 +34,7 @@ print("Running complete etch...")
 phc_ce = legume.PhotCryst(lattice)
 phc_ce.add_layer(d=args.H, eps_b=1)
 phc_ce.layers[-1].add_shape(box)
+# phc_ce.plot_overview()
 gme_ce = legume.GuidedModeExp(phc_ce, gmax=args.gmax)
 gme_ce.run(kpoints=path.kpoints, **options)
 
@@ -44,6 +45,7 @@ phc_pe = legume.PhotCryst(lattice)
 phc_pe.add_layer(d=args.D, eps_b=args.epsr)
 phc_pe.add_layer(d=args.H, eps_b=1)
 phc_pe.layers[-1].add_shape(box)
+# phc_pe.plot_overview()
 gme_pe = legume.GuidedModeExp(phc_pe, gmax=args.gmax)
 gme_pe.run(kpoints=path.kpoints, **options)
 
@@ -56,11 +58,11 @@ phc_spe.layers[-1].add_shape(box)
 phc_spe.add_layer(d=args.D, eps_b=args.epsr)
 phc_spe.add_layer(d=args.H, eps_b=1)
 phc_spe.layers[-1].add_shape(box)
+# phc_spe.plot_overview()
 gme_spe = legume.GuidedModeExp(phc_spe, gmax=args.gmax)
 gme_spe.run(kpoints=path.kpoints, **options)
 
 # Plot
-
 fig, axs = plt.subplots(1,3,constrained_layout=True)
 legume.viz.bands(gme_ce, ls='-', ax=axs[0])
 axs[0].plot(data_ce[:,0], data_ce[:, 1:], 'o', markeredgecolor='k', color='none', label="COMSOL")
