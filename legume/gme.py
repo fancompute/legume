@@ -360,9 +360,6 @@ class GuidedModeExp(object):
 		Construct the Hermitian matrix for diagonalization for a given k
 		'''
 
-		# We will construct the matrix block by block
-		mat_blocks = [[] for i in range(self.gmode_inds.size)]
-
 		# G + k vectors
 		gkx = self.gvec[0, :] + k[0]
 		gky = self.gvec[1, :] + k[1]
@@ -383,8 +380,21 @@ class GuidedModeExp(object):
 
 		# Loop over modes and build the matrix block-by-block
 		modes_numg = []
-		for im1 in range(self.gmode_inds.size):
-			mode1 = self.gmode_inds[im1]
+
+		# Find the gmode_inds that actually enter the computation (due to the 
+		# gmax cutoff, only a finite number of mode indexes can enter)
+		gmode_include = []
+		for mode in self.gmode_inds:
+			if (mode%2==0 and len(self.omegas_te) >= mode//2) \
+				or (mode%2==1 and len(self.omegas_tm) >= mode//2):
+				gmode_include.append(mode)
+		self.gmode_include = np.array(gmode_include)
+
+		# We now construct the matrix block by block
+		mat_blocks = [[] for i in range(self.gmode_include.size)]
+
+		for im1 in range(self.gmode_include.size):
+			mode1 = self.gmode_include[im1]
 			(indmode1, oms1, As1, Bs1, chis1) = self._get_guided(gk, mode1)
 			modes_numg.append(indmode1.size)
 
@@ -392,8 +402,8 @@ class GuidedModeExp(object):
 				mat_blocks[im1].append(bd.zeros((modes_numg[-1], 
 					bd.sum(modes_numg[:-1]))))
 
-			for im2 in range(im1, self.gmode_inds.size):
-				mode2 = self.gmode_inds[im2]
+			for im2 in range(im1, self.gmode_include.size):
+				mode2 = self.gmode_include[im2]
 				(indmode2, oms2, As2, Bs2, chis2) = self._get_guided(gk, mode2)
 
 				if mode1%2 + mode2%2 == 0:
@@ -496,10 +506,10 @@ class GuidedModeExp(object):
 					Xs[pol].append(X)
 					Ys[pol].append(Y)
 					chis[pol].append(chi)
-			# Iterate over the 'gmode_inds' basis of the PhC mode
+			# Iterate over the 'gmode_include' basis of the PhC mode
 			count = 0
-			for im1 in range(self.gmode_inds.size):
-				mode1 = self.gmode_inds[im1]
+			for im1 in range(self.gmode_include.size):
+				mode1 = self.gmode_include[im1]
 				(indmode1, oms1, As1, Bs1, chis1) = self._get_guided(gk, mode1)
 				# Iterate over lower cladding (0) and upper cladding (1)
 				for clad_ind in [0, 1]:			
