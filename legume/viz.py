@@ -7,7 +7,7 @@ def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o'):
 
     if np.all(gme.kpoints[0,:]==0) and not np.all(gme.kpoints[1,:]==0) \
         or np.all(gme.kpoints[1,:]==0) and not np.all(gme.kpoints[0,:]==0):
-        X = np.sqrt(np.square(gme.kpoints[0,:]) + np.square(gme.kpoints[1,:])) / np.pi
+        X = np.sqrt(np.square(gme.kpoints[0,:]) + np.square(gme.kpoints[1,:])) / 2 / np.pi
     else:
         X = np.arange(len(gme.kpoints[0, :]))
 
