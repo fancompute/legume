@@ -5,6 +5,7 @@ import argparse
 
 import autograd
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
 import numpy as np
 from autograd import grad
 
@@ -15,10 +16,10 @@ from legume.optimizers import adam_optimize
 parser = argparse.ArgumentParser()
 parser.add_argument('--verbose', action='store_true')
 parser.add_argument('--optimize', action='store_true')
-parser.add_argument('-N_epochs', default=10, type=int)
+parser.add_argument('-N_epochs', default=20, type=int)
 parser.add_argument('-learning_rate', default=0.1, type=float)
 parser.add_argument('-gmax', default=5, type=int)
-parser.add_argument('-gmode_npts', default=1000, type=int)
+parser.add_argument('-gmode_npts', default=2000, type=int)
 parser.add_argument('-neig', default=10, type=int)
 parser.add_argument('-ymax', default=0.1, type=float)
 parser.add_argument('-N_polygons', default=20, type=int)
@@ -63,7 +64,7 @@ def parameterize_density_layer(layer, rho, eta=0.5, beta=100):
 def objective(rho):
 	parameterize_density_layer(gme.phc.layers[-1], rho, eta=0.5, beta=10)
 	gme.run(kpoints=path.kpoints, **options)
-	tgt_freqs = gme.freqs[1:10, 1]
+	tgt_freqs = gme.freqs[0:10, 1]
 	return bd.sqrt(bd.var(tgt_freqs))
 
 
@@ -73,7 +74,7 @@ def objective(rho):
 # rho_0[int(0.25 * len(rho_0)):int(0.75 * len(rho_0))] = 1.0
 
 x0 = np.linspace(-np.pi, +np.pi, args.N_polygons)
-rho_0 = 0.5 + np.sin(x0) * 0.5
+rho_0 = 0.5 + np.sin(4*x0) * 0.5
 
 # Compute results for initial structure
 legume.set_backend('autograd')
@@ -81,8 +82,13 @@ objective_grad = grad(objective)
 gme = make_grating()
 parameterize_density_layer(gme.phc.layers[-1], rho_0, eta=0.5, beta=10)
 gme.run(kpoints=path.kpoints, **options)
-gme.phc.plot_overview(cmap='Reds')
-legume.viz.bands(gme)
+
+fig = plt.figure(constrained_layout=True)
+gs = gridspec.GridSpec(3, 2, figure=fig, height_ratios=[1.0, 0.33, 0.15])
+
+gme.phc.plot_overview(cmap='Reds', fig=fig, subplot_spec=gs[0,0], cbar=False)
+ax1 = fig.add_subplot(gs[1, 0])
+legume.viz.bands(gme, ax=ax1)
 
 if args.optimize:
 	## Optimize
@@ -93,16 +99,18 @@ if args.optimize:
 
 	of_value = [of._value if type(of) is autograd.numpy.numpy_boxes.ArrayBox else of for of in ofs]
 
-	plt.figure(figsize=(4, 3), constrained_layout=True)
-	plt.plot(of_value, "o-")
-	plt.xlabel("Epoch")
-	plt.ylabel("Cost function")
-	plt.show()
+	ax3 = fig.add_subplot(gs[2, :])
+	ax3.plot(of_value, "o-")
+	ax3.set_xlabel("Epoch")
+	ax3.set_ylabel("Cost function")
 
 	## Display results (recompute at optimal structure)
 	gme = make_grating()
 	parameterize_density_layer(gme.phc.layers[-1], rho_opt, eta=0.5, beta=10)
 	gme.run(kpoints=path.kpoints, **options)
 
-	gme.phc.plot_overview(cmap='Blues')
-	legume.viz.bands(gme)
+	gme.phc.plot_overview(cmap='Blues', fig=fig, subplot_spec=gs[0, 1], cbar=False)
+	ax2 = fig.add_subplot(gs[1, 1])
+	legume.viz.bands(gme, ax=ax2)
+
+fig.tight_layout(pad=0)
