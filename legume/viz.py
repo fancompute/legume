@@ -17,7 +17,9 @@ def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o'):
     ax.plot(X, gme.freqs, ls, c="#1f77b4", label="", ms=4, mew=1)
 
     if lightcone:
-        vec_LL = np.sqrt(np.square(gme.kpoints[0, :]) + np.square(gme.kpoints[1, :])) / np.pi
+        eps_clad = [gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg]
+        vec_LL = np.sqrt(np.square(gme.kpoints[0, :]) + np.square(gme.kpoints[1, :])) \
+            / 2 / np.pi / np.sqrt(max(eps_clad))
         ax.fill_between(X, vec_LL, gme.freqs[:].max(), facecolor="#cccccc", zorder=4, alpha=0.5)
 
     ax.set_xlim(left=0, right=max(X))
