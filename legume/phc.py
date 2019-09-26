@@ -2,7 +2,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
+from matplotlib import gridspec
 
 import legume.utils as utils
 import legume.backend as bd
@@ -145,7 +145,7 @@ class PhotCryst(object):
 		else:
 			raise ValueError("Cross-section must be in {'xy', 'yz', 'xz'}")
 
-	def plot_overview(self, Nx=100, Ny=100, Nz=50, cladding=False, figsize=(4,8), cmap='Greys'):
+	def plot_overview(self, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True, cmap='Greys', subplot_spec=None, fig=None, figsize=(4,8)):
 		'''
 		Plot an overview of PhC cross-sections
 		'''
@@ -158,8 +158,14 @@ class PhotCryst(object):
 			all_layers = self.layers
 		N_layers = len(all_layers)
 
-		fig = plt.figure(constrained_layout=True, figsize=figsize)
-		gs = GridSpec(N_layers+1, 2, figure=fig)
+		if subplot_spec is None and fig is None:
+			fig = plt.figure(constrained_layout=True, figsize=figsize)
+			gs = gridspec.GridSpec(N_layers+1, 2, figure=fig)
+		elif subplot_spec is not None and fig is not None:
+			gs = gridspec.GridSpecFromSubplotSpec(N_layers+1, 2, subplot_spec)
+		else:
+			raise ValueError("Parameters subplot_spec and fig should be both specified or both unspecified")
+
 		ax1 = fig.add_subplot(gs[0, 0])
 		ax2 = fig.add_subplot(gs[0, 1])
 		ax = []
@@ -170,7 +176,7 @@ class PhotCryst(object):
 					clim=[eps_min, eps_max], cbar=False, cmap=cmap)
 		ax1.set_title("xz at y = 0")
 		utils.plot_yz(self, ax=ax2, Ny=Ny, Nz=Nz,
-					clim=[eps_min, eps_max], cbar=True, cmap=cmap)
+					clim=[eps_min, eps_max], cbar=cbar, cmap=cmap)
 		ax2.set_title("yz at x = 0")
 
 		for indl in range(N_layers):
