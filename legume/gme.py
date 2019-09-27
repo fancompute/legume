@@ -81,6 +81,10 @@ class GuidedModeExp(object):
 			# Number of eigen-frequencies to be stored (starting from lowest)
 			'numeig'	   : 10,
 
+			# Using the 'average' or the 'background' permittivity of the layers
+			# in the guided mode computation
+			'eps_eff'	   : 'average',
+
 			# Print information at intermmediate steps
 			'verbose'	   : True
 			}
@@ -261,12 +265,21 @@ class GuidedModeExp(object):
 							np.square(kpoints[1, :])))
 		Gmax = np.amax(np.sqrt(np.square(self.gvec[0, :]) +
 							np.square(self.gvec[1, :])))
+
 		# Array of g-points over which the guided modes will be computed
 		g_array = np.linspace(0, Gmax + kmax, self.gmode_npts)
-		# Array of average permittivity of every layer (including claddings)
-		eps_array = np.array(list(get_value(layer.eps_avg) for layer in \
-			[self.phc.claddings[0]] + self.phc.layers + 
+
+		# Array of effective permittivity of every layer (including claddings)
+		if self.eps_eff=='average':
+			layer_eps = 'eps_avg'
+		elif self.eps_eff=='background':
+			layer_eps = 'eps_b'
+		else:
+			raise ValueError("'eps_eff' can be 'average' or 'background'")
+		eps_array = np.array(list(get_value(getattr(layer, layer_eps)) 
+			for layer in [self.phc.claddings[0]] + self.phc.layers + 
 			[self.phc.claddings[1]]), dtype=np.float64)
+
 		# Array of thickness of every layer (not including claddings)
 		d_array = np.array(list(get_value(layer.d) for layer in \
 			self.phc.layers), dtype=np.float64)
@@ -385,10 +398,17 @@ class GuidedModeExp(object):
 		# gmax cutoff, only a finite number of mode indexes can enter)
 		gmode_include = []
 		for mode in self.gmode_inds:
-			if (mode%2==0 and len(self.omegas_te) >= mode//2) \
-				or (mode%2==1 and len(self.omegas_tm) >= mode//2):
+			if (mode%2==0 and len(self.omegas_te) > mode//2) \
+				or (mode%2==1 and len(self.omegas_tm) > mode//2):
 				gmode_include.append(mode)
-		self.gmode_include = np.array(gmode_include)
+		if gmode_include == []:
+			raise RuntimeError("No guided modes were found, which probably "
+				"means that the layers effective permittivity is smaller than "
+				"that of at least one cladding. Reconsider your structure, or "
+				"try changing 'eps_eff' from 'average' to 'background' in "
+				"GuidedModeExp.run().")
+		else:
+			self.gmode_include = np.array(gmode_include)
 
 		# We now construct the matrix block by block
 		mat_blocks = [[] for i in range(self.gmode_include.size)]
