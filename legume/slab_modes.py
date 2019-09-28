@@ -389,17 +389,18 @@ def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
 	Xs = np.zeros((eps_array.size, g_array.size), dtype=np.complex128)
 	Ys = np.zeros((eps_array.size, g_array.size), dtype=np.complex128)
 	for ig, g in enumerate(g_array):
+		g_val = max([g, 1e-10])
 		# Get the scattering and transfer matrices
 		if pol.lower()=='te' and clad==0:
-			S_mat, T_mat = S_T_matrices_TE(omega, g, np.flip(eps_array), 
+			S_mat, T_mat = S_T_matrices_TE(omega, g_val, np.flip(eps_array), 
 							np.flip(d_array))
 		elif pol.lower()=='te' and clad==1:
-			S_mat, T_mat = S_T_matrices_TE(omega, g, eps_array, d_array)
+			S_mat, T_mat = S_T_matrices_TE(omega, g_val, eps_array, d_array)
 		elif pol.lower()=='tm' and clad==0:
-			S_mat, T_mat = S_T_matrices_TM(omega, g, np.flip(eps_array), 
+			S_mat, T_mat = S_T_matrices_TM(omega, g_val, np.flip(eps_array), 
 							np.flip(d_array))
 		elif pol.lower()=='tm' and clad==1:
-			S_mat, T_mat = S_T_matrices_TM(omega, g, eps_array, d_array)
+			S_mat, T_mat = S_T_matrices_TM(omega, g_val, eps_array, d_array)
 		
 		# Compute the transfer matrix coefficients
 		coeffs = np.zeros((2, eps_array.size), dtype=np.complex128)

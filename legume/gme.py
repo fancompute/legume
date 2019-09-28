@@ -495,9 +495,9 @@ class GuidedModeExp(object):
 				"stored eigenmodes" % self.numeig)
 		
 		# G + k vectors
-		gkx = self.gvec[0, :] + self.kpoints[0, kind]
+		gkx = self.gvec[0, :] + self.kpoints[0, kind] + 1e-10
 		gky = self.gvec[1, :] + self.kpoints[1, kind]
-		gk = np.sqrt(np.square(gkx + 1e-20) + np.square(gky))
+		gk = np.sqrt(np.square(gkx) + np.square(gky))
 
 		# Iterate over all the modes to be computed
 		rad_tot = []
@@ -572,13 +572,12 @@ class GuidedModeExp(object):
 						rad = self.rad_tm_tm(gk, indmode1, oms1, As1, Bs1, 
 							chis1, indmoder[clad_ind], omr, Xs['tm'][clad_ind], 
 							Ys['tm'][clad_ind], chis['tm'][clad_ind], pp)
-					# raise Exception
+
 					rad = rad*bd.conj(evec[count:
 						count+self.modes_numg[kind][im1]][:, np.newaxis])
-					rad_coup['tm'][clad_ind] += bd.sum(rad, axis=0)
-					# raise Exception
+					rad_coup['tm'][clad_ind] = rad_coup['tm'][clad_ind] + bd.sum(rad, axis=0)
+
 				count += self.modes_numg[kind][im1]
-			# raise Exception
 			rad_dos = [self.phc.claddings[i].eps_avg/bd.sqrt(
 					self.phc.claddings[i].eps_avg*omr**2 - gkr[i]**2) / \
 					4 / np.pi for i in [0, 1]]
