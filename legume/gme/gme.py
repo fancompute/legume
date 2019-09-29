@@ -6,7 +6,7 @@ from itertools import zip_longest
 from functools import reduce
 
 from .slab_modes import guided_modes, rad_modes
-from .matrix_elements import *
+from . import matrix_elements
 from legume.backend import backend as bd
 from legume.utils import I_alpha, J_alpha, get_value, ftinv
 from legume.viz import plot_eps
@@ -428,24 +428,28 @@ class GuidedModeExp(object):
                 (indmode2, oms2, As2, Bs2, chis2) = self._get_guided(gk, mode2)
 
                 if mode1%2 + mode2%2 == 0:
-                    mat_block = mat_te_te(self.eps_array, self.d_array, 
+                    mat_block = matrix_elements.mat_te_te(
+                                    self.eps_array, self.d_array, 
                                     self.eps_inv_mat, indmode1, oms1,
                                     As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
                                     chis2, qq)
                 elif mode1%2 + mode2%2 == 2:
-                    mat_block = mat_tm_tm(self.eps_array, self.d_array, 
+                    mat_block = matrix_elements.mat_tm_tm(
+                                    self.eps_array, self.d_array, 
                                     self.eps_inv_mat, gk, indmode1, oms1,
                                     As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
                                     chis2, pp)
                 elif mode1%2==0 and mode2%2==1:
-                    mat_block = mat_te_tm(self.eps_array, self.d_array, 
+                    mat_block = matrix_elements.mat_te_tm(
+                                    self.eps_array, self.d_array, 
                                     self.eps_inv_mat, indmode1, oms1,
                                     As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
                                     chis2, pq.transpose(), 1j)
                 elif mode1%2==1 and mode2%2==0:
                     # Note: TM-TE is just hermitian conjugate of TE-TM
                     # with switched indexes 1 <-> 2
-                    mat_block = mat_te_tm(self.eps_array, self.d_array, 
+                    mat_block = matrix_elements.mat_te_tm(
+                                    self.eps_array, self.d_array, 
                                     self.eps_inv_mat, indmode2, oms2,
                                     As2, Bs2, chis2, indmode1, oms1, As1, Bs1, 
                                     chis1, pq, -1j) 
@@ -543,7 +547,8 @@ class GuidedModeExp(object):
                         qq = (np.outer(gkx[indmode1], gkx[indmoder[clad_ind]])
                             + np.outer(gky[indmode1], gky[indmoder[clad_ind]]))\
                             / np.outer(gk[indmode1], gk[indmoder[clad_ind]])
-                        rad = rad_te_te(self.eps_array, self.d_array, 
+                        rad = matrix_elements.rad_te_te(
+                            self.eps_array, self.d_array, 
                             self.eps_inv_mat, indmode1, oms1, As1, Bs1, chis1, 
                             indmoder[clad_ind], omr, Xs['te'][clad_ind], 
                             Ys['te'][clad_ind], chis['te'][clad_ind], qq)
@@ -552,7 +557,8 @@ class GuidedModeExp(object):
                         pq = (np.outer(gkx[indmode1], gky[indmoder[clad_ind]])
                             - np.outer(gky[indmode1], gkx[indmoder[clad_ind]]))\
                             / np.outer(gk[indmode1], gk[indmoder[clad_ind]])
-                        rad = rad_tm_te(self.eps_array, self.d_array, 
+                        rad = matrix_elements.rad_tm_te(
+                            self.eps_array, self.d_array, 
                             self.eps_inv_mat, indmode1, oms1, As1, Bs1, chis1, 
                             indmoder[clad_ind], omr, Xs['te'][clad_ind], 
                             Ys['te'][clad_ind], chis['te'][clad_ind], pq)
@@ -568,7 +574,8 @@ class GuidedModeExp(object):
                         qp = (np.outer(gky[indmode1], gkx[indmoder[clad_ind]])
                             - np.outer(gkx[indmode1], gky[indmoder[clad_ind]]))\
                             / np.outer(gk[indmode1], gk[indmoder[clad_ind]])
-                        rad = rad_te_tm(self.eps_array, self.d_array, 
+                        rad = matrix_elements.rad_te_tm(
+                            self.eps_array, self.d_array, 
                             self.eps_inv_mat, indmode1, oms1, As1, Bs1, chis1, 
                             indmoder[clad_ind], omr, Xs['tm'][clad_ind], 
                             Ys['tm'][clad_ind], chis['tm'][clad_ind], qp)
@@ -577,14 +584,15 @@ class GuidedModeExp(object):
                         pp = (np.outer(gkx[indmode1], gkx[indmoder[clad_ind]])
                             + np.outer(gky[indmode1], gky[indmoder[clad_ind]]))\
                             / np.outer(gk[indmode1], gk[indmoder[clad_ind]])
-                        rad = rad_tm_tm(self.eps_array, self.d_array, 
+                        rad = matrix_elements.rad_tm_tm(
+                            self.eps_array, self.d_array, 
                             self.eps_inv_mat, gk, indmode1, oms1, As1, Bs1, 
                             chis1, indmoder[clad_ind], omr, Xs['tm'][clad_ind], 
                             Ys['tm'][clad_ind], chis['tm'][clad_ind], pp)
 
                     rad = rad*bd.conj(evec[count:
                         count+self.modes_numg[kind][im1]][:, np.newaxis])
-                    rad_coup['tm'][clad_ind] = rad_coup['tm'][clad_ind] + bd.sum(rad, axis=0)
+                    rad_coup['tm'][clad_ind] += bd.sum(rad, axis=0)
 
                 count += self.modes_numg[kind][im1]
             rad_dos = [self.phc.claddings[i].eps_avg/bd.sqrt(
