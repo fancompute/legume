@@ -255,7 +255,7 @@ class GuidedModeExp(object):
         t_start = time.time()
         
         def print_vb(*args):
-            if self.verbose: print(*args)
+            if self.verbose==True: print(*args)
 
         # Parse the input arguments
         self._run_options(kwargs)
@@ -497,7 +497,7 @@ class GuidedModeExp(object):
         Output
             freqs_im        : imaginary part of the frequencies 
         '''
-        if self.freqs == []:
+        if len(self.freqs)==0:
             raise RuntimeError("Run the GME computation first!")
         if np.max(np.array(minds)) > self.numeig - 1:
             raise ValueError("Requested mode index out of range for the %d "
