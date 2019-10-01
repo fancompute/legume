@@ -242,7 +242,8 @@ class ShapesLayer(Layer):
         self.shapes = []
 
     def __repr__(self):
-        rep = 'ShapesLayer('
+        rep = 'ShapesLayer(eps_b = %.2f, d = %.2f' % (self.eps_b, self.d)
+        rep += ',' if len(self.shapes) > 0 else ''
         for shape in self.shapes:
             rep += '\n' + repr(shape)
         rep += '\n)' if len(self.shapes) > 0 else ')'

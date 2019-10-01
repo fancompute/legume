@@ -47,8 +47,8 @@ class Circle(Shape):
         super().__init__(eps=eps)
 
     def __repr__(self):
-        return "Circle(x = %.4f, y = %.4f, r = %.4f)" % \
-               (self.x_cent, self.y_cent, self.r)
+        return "Circle(eps = %.2f, x = %.4f, y = %.4f, r = %.4f)" % \
+               (self.eps, self.x_cent, self.y_cent, self.r)
 
     def compute_ft(self, gvec):
         '''
@@ -91,8 +91,8 @@ class Poly(Shape):
             " specified in counter-clockwise order")
 
     def __repr__(self):
-        return "Poly(x_edges = %s, y_edges = %s)" % \
-               (self.x_edges, self.y_edges)
+        return "Poly(eps = %.2f, x_edges = %s, y_edges = %s)" % \
+               (self.eps, self.x_edges, self.y_edges)
 
     @staticmethod
     def _check_counterclockwise(x_edges, y_edges, verbose=False):
@@ -212,8 +212,8 @@ class Square(Poly):
         super().__init__(eps, x_edges, y_edges)
 
     def __repr__(self):
-        return "Square(x_cent = %.4f, y_cent = %.4f, a = %.4f)" % \
-               (self.x_cent, self.y_cent, self.a)
+        return "Square(eps = %.2f, x_cent = %.4f, y_cent = %.4f, a = %.4f)" % \
+               (self.eps, self.x_cent, self.y_cent, self.a)
 
 class Hexagon(Poly):
     '''
@@ -229,5 +229,5 @@ class Hexagon(Poly):
         super().__init__(eps, x_edges, y_edges) 
 
     def __repr__(self):
-        return "Hexagon(x_cent = %.4f, y_cent = %.4f, a = %.4f)" % \
-               (self.x_cent, self.y_cent, self.a)
+        return "Hexagon(eps = %.2f, x_cent = %.4f, y_cent = %.4f, a = %.4f)" % \
+               (self.eps, self.x_cent, self.y_cent, self.a)
