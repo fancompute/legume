@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.interpolate import interp1d
 
 import time
 from itertools import zip_longest
@@ -125,7 +126,10 @@ class GuidedModeExp(object):
             Interpolate the A/B coefficient (ic = 0/1) in layer number il
             '''
             param_list = [coeffs[i][il, ic, 0] for i in range(len(coeffs))]
-            return np.interp(gk[indmode], gs, np.array(param_list)).ravel()
+            c_interp = np.interp(gk[indmode], gs, np.array(param_list))
+            # cfun = interp1d(gs, np.array(param_list), kind='cubic')
+            # c_interp = cfun(gk[indmode])
+            return c_interp.ravel()
 
         def interp_guided(im, omegas, coeffs):
             '''
@@ -651,6 +655,7 @@ class GuidedModeExp(object):
         while z > z_max and lind<self.N_layers:
             lind+=1
             z_max = self.phc.layers[lind-1].z_max
+        if z > z_max and lind==self.N_layers: lind += 1
 
         if field.lower()=='h':
             count = 0
@@ -661,7 +666,7 @@ class GuidedModeExp(object):
                 (indmode, oms, As, Bs, chis) = self._get_guided(gnorm, mode1)
 
                 # TE-component
-                if im1%2==0:
+                if mode1%2==0:
                     # Do claddings separately
                     if lind==0:
                         H = Bs[0, :] * bd.exp(-1j*chis[0, :]
@@ -687,7 +692,7 @@ class GuidedModeExp(object):
                                 gnorm[indmode]
 
                 # TM-component
-                elif im1%2==0:
+                elif mode1%2==0:
                     Hz = bd.zeros(Hz_ft.shape)
                     # Do claddings separately
                     if lind==0:
@@ -725,7 +730,7 @@ class GuidedModeExp(object):
                 (indmode, oms, As, Bs, chis) = self._get_guided(gnorm, mode1)
 
                 # TE-component
-                if im1%2==0:
+                if mode1%2==0:
                     Dz = bd.zeros(Dz_ft.shape)
                     # Do claddings separately
                     if lind==0:
@@ -752,7 +757,7 @@ class GuidedModeExp(object):
                         Dy = Dxy * qy[indmode]
 
                 # TM-component
-                elif im1%2==0:
+                elif mode1%2==0:
                     if lind==0:
                         D = 1j / omega * Bs[0,:] * \
                             bd.exp(-1j*chis[0,:] * \
