@@ -616,3 +616,207 @@ class GuidedModeExp(object):
         # Finally compute radiation rate in units of frequency  
         freqs_im = bd.array(rad_tot)/2/np.pi
         return (freqs_im, coup_l, coup_u)
+
+    def ft_field_xy(self, field, kind, mind, z):
+        '''
+        Compute the 'H', 'D' or 'E' field FT in the xy-plane at position z
+        '''
+        evec = self.eigvecs[kind][:, mind]
+        omega = self.freqs[kind][mind]*2*np.pi
+        k = self.kpoints[:, kind]
+
+        # G + k vectors
+        gkx = self.gvec[0, :] + k[0] + 1e-10
+        gky = self.gvec[1, :] + k[1]
+        gnorm = np.sqrt(np.square(gkx) + np.square(gky))
+
+        # Unit vectors in the propagation direction
+        px = gkx / gnorm
+        py = gky / gnorm
+
+        # Unit vectors in-plane orthogonal to the propagation direction
+        qx = py
+        qy = -px
+
+        z_max = self.phc.claddings[0].z_max
+        lind = 0 # Index denoting which layer (including claddings) z is in 
+        while z > z_max and lind<self.N_layers:
+            lind+=1
+            z_max = self.phc.layers[lind-1].z_max
+
+        if field.lower()=='h':
+            count = 0
+            [Hx_ft, Hy_ft, Hz_ft] = [bd.zeros(gnorm.shape, dtype=np.complex128)
+                                     for i in range(3)]
+            for im1 in range(self.gmode_include.size):
+                mode1 = self.gmode_include[im1]
+                (indmode, oms, As, Bs, chis) = self._get_guided(gnorm, mode1)
+
+                # TE-component
+                if im1%2==0:
+                    # Do claddings separately
+                    if lind==0:
+                        H = Bs[0, :] * bd.exp(-1j*chis[0, :]
+                                            *(z-self.phc.claddings[0].z_max))
+                        Hx = H * 1j*chis[0, :] * px[indmode]
+                        Hy = H * 1j*chis[0, :] * py[indmode]
+                        Hz = H * 1j*gnorm[indmode]
+                    elif lind==self.eps_array.size:
+                        H = As[-1, :] * bd.exp(1j*chis[-1, :]
+                                            *(z-self.phc.claddings[1].z_max))
+                        Hx = -H * 1j*chis[-1, :] * px[indmode]
+                        Hy = -H * 1j*chis[-1, :] * py[indmode]
+                        Hz = H * 1j*gnorm[indmode]
+                    else:
+                        z_cent = (self.phc.layers[lind-1].z_min + 
+                                    self.phc.layers[lind-1].z_max) / 2
+                        zp = bd.exp(1j*chis[lind, :]*(z-z_cent))
+                        zn = bd.exp(-1j*chis[lind, :]*(z-z_cent))
+                        Hxy = -1j*As[lind, :]*zp + 1j*Bs[lind, :]*zn
+                        Hx = Hxy * chis[lind, :] * px[indmode]
+                        Hy = Hxy * chis[lind, :] * py[indmode]
+                        Hz = 1j*(As[lind, :]*zp + Bs[lind, :]*zn) *\
+                                gnorm[indmode]
+
+                # TM-component
+                elif im1%2==0:
+                    Hz = bd.zeros(Hz_ft.shape)
+                    # Do claddings separately
+                    if lind==0:
+                        H = Bs[0, :] * bd.exp(-1j*chis[0, :]
+                                            *(z-self.phc.claddings[0].z_max))
+                        Hx = H * qx[indmode]
+                        Hy = H * qy[indmode]
+                    elif lind==self.eps_array.size:
+                        H = As[-1, :] * bd.exp(1j*chis[-1, :]
+                                            *(z-self.phc.claddings[1].z_max))
+                        Hx = H * qx[indmode]
+                        Hy = H * qy[indmode]
+                    else:
+                        z_cent = (self.phc.layers[lind-1].z_min + 
+                                    self.phc.layers[lind-1].z_max) / 2
+                        zp = bd.exp(1j*chis[lind, :]*(z-z_cent))
+                        zn = bd.exp(-1j*chis[lind, :]*(z-z_cent))
+                        Hxy = As[lind, :]*zp + Bs[lind, :]*zn
+                        Hx = Hxy * qx[indmode]
+                        Hy = Hxy * qy[indmode]
+
+                Hx_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*Hx
+                Hy_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*Hy
+                Hz_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*Hz
+                count += self.modes_numg[kind][im1]
+
+            return (Hx_ft, Hy_ft, Hz_ft)
+
+        elif field.lower()=='d':
+            count = 0
+            [Dx_ft, Dy_ft, Dz_ft] = [bd.zeros(gnorm.shape, dtype=np.complex128)
+                                     for i in range(3)]
+            for im1 in range(self.gmode_include.size):
+                mode1 = self.gmode_include[im1]
+                (indmode, oms, As, Bs, chis) = self._get_guided(gnorm, mode1)
+
+                # TE-component
+                if im1%2==0:
+                    Dz = bd.zeros(Dz_ft.shape)
+                    # Do claddings separately
+                    if lind==0:
+                        D = 1j * Bs[0, :] * oms**2 / omega * \
+                            self.eps_array[0] * bd.exp(-1j*chis[0, :] * \
+                            (z-self.phc.claddings[0].z_max))
+                        Dx = D * qx[indmode]
+                        Dy = D * qy[indmode]
+                    elif lind==self.eps_array.size:
+                        D = 1j * As[-1, :] * oms**2 / omega * \
+                            self.eps_array[-1] * bd.exp(1j*chis[-1, :] * \
+                            (z-self.phc.claddings[1].z_max))
+                        Dx = D * qx[indmode]
+                        Dy = D * qy[indmode]
+                    else:
+                        z_cent = (self.phc.layers[lind-1].z_min + 
+                                    self.phc.layers[lind-1].z_max) / 2
+                        zp = bd.exp(1j*chis[lind, :]*(z-z_cent))
+                        zn = bd.exp(-1j*chis[lind, :]*(z-z_cent))
+                        Dxy = 1j*oms[indmode]**2 / omega * \
+                            self.eps_array[lind] * \
+                            (As[lind, :]*zp + Bs[lind, :]*zn)
+                        Dx = Dxy * qx[indmode]
+                        Dy = Dxy * qy[indmode]
+
+                # TM-component
+                elif im1%2==0:
+                    if lind==0:
+                        D = 1j / omega * Bs[0,:] * \
+                            bd.exp(-1j*chis[0,:] * \
+                            (z-self.phc.claddings[0].z_max))
+                        Dx = D * 1j*chis[0,:] * px[indmode]
+                        Dy = D * 1j*chis[0,:] * py[indmode]
+                        Dz = D * 1j*gnorm[indmode]
+                    elif lind==self.eps_array.size:
+                        D = 1j / omega * As[-1,:] * \
+                            bd.exp(1j*chis[-1, :] * \
+                            (z-self.phc.claddings[1].z_max))
+                        Dx = -D * 1j*chis[-1, :] * px[indmode]
+                        Dy = -D * 1j*chis[-1, :] * py[indmode]
+                        Dz = D * 1j*gnorm[indmode]
+                    else:
+                        z_cent = (self.phc.layers[lind-1].z_min + 
+                                    self.phc.layers[lind-1].z_max) / 2
+                        zp = bd.exp(1j*chis[lind, :]*(z-z_cent))
+                        zn = bd.exp(-1j*chis[lind, :]*(z-z_cent))
+                        Dxy = 1 / omega * chis[lind, :] * \
+                            (As[lind, :]*zp - Bs[lind, :]*zn)
+                        Dx = Dxy * px[indmode]
+                        Dy = Dxy * py[indmode]
+                        Dz = -1 / omega * gnorm[indmode] * \
+                            (As[lind, :]*zp + Bs[lind, :]*zn)
+
+                Dx_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*Dx
+                Dy_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*Dy
+                Dz_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*Dz
+                count += self.modes_numg[kind][im1]
+
+            return (Dx_ft, Dy_ft, Dz_ft)
+
+    def plot_field_xy(self, field, kind, mind, z,
+                component='xyz', val='re', Nx=100, Ny=100):
+        '''
+        Plot the field ('H', 'D', or 'E') at an xy-plane at position z for mode 
+        number mind at k-vector kind. 
+        'comp' can be: 'x', 'y', 'z' or a combination thereof, e.g. 'xz' (a 
+        separate plot is created for each component)
+        'val' can be: 're', 'im', 'abs'
+        '''
+
+        # Make a grid in the x-y plane
+        (xgrid, ygrid) = self.phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
+
+        # Get the field fourier components
+        (fx, fy, fz) = self.ft_field_xy(field, kind, mind, z)
+
+        f1 = plt.figure()
+        sp = len(component)
+        for ic, comp in enumerate(component):
+            if comp=='x':
+                fi = ftinv(fx, self.gvec, xgrid, ygrid)
+            elif comp=='y':
+                fi = ftinv(fy, self.gvec, xgrid, ygrid)
+            elif comp=='z':
+                fi = ftinv(fz, self.gvec, xgrid, ygrid)
+            else:
+                raise ValueError("'component' can be 'x', 'y', 'z', or a "
+                    "combination of those")
+            
+            extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
+            ax = f1.add_subplot(1, sp, ic+1)
+
+            if val=='re':
+                im = ax.imshow(np.real(fi), extent=extent, cmap='RdBu')
+            elif val=='im':
+                im = ax.imshow(np.imag(fi), extent=extent, cmap='RdBu')
+            elif val=='abs':
+                im = ax.imshow(np.abs(fi), extent=extent, cmap='magma')
+
+            f1.colorbar(im, ax=ax)
+            ax.set_title("%s(%s_%s)" % (val, field, comp))
+            plt.show()
