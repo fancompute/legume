@@ -792,7 +792,7 @@ class GuidedModeExp(object):
             return (Dx_ft, Dy_ft, Dz_ft)
 
     def plot_field_xy(self, field, kind, mind, z,
-                component='xyz', val='re', Nx=100, Ny=100):
+                component='xyz', val='re', Nx=100, Ny=100, cbar=True):
         '''
         Plot the field ('H', 'D', or 'E') at an xy-plane at position z for mode 
         number mind at k-vector kind. 
@@ -823,13 +823,22 @@ class GuidedModeExp(object):
             extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
             ax = f1.add_subplot(1, sp, ic+1)
 
-            if val=='re':
-                im = ax.imshow(np.real(fi), extent=extent, cmap='RdBu')
-            elif val=='im':
-                im = ax.imshow(np.imag(fi), extent=extent, cmap='RdBu')
+            if val=='re' or val=='im':
+                Z = np.real(fi) if val=='re' else np.imag(fi)
+                cmap = 'RdBu'
+                vmax = np.abs(Z).max()
+                vmin = -vmax
             elif val=='abs':
-                im = ax.imshow(np.abs(fi), extent=extent, cmap='magma')
+                Z = np.abs(fi)
+                cmap='magma'
+                vmax = Z.max()
+                vmin = 0
+            else:
+                raise ValueError("'val' can be 'im', 're', or 'abs'")
 
-            f1.colorbar(im, ax=ax)
+            im = ax.imshow(Z, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
+
+            if cbar:
+                f1.colorbar(im, ax=ax)
             ax.set_title("%s(%s_%s)" % (val, field, comp))
             plt.show()
