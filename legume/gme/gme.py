@@ -37,6 +37,14 @@ class GuidedModeExp(object):
         self._init_reciprocal()
         self.compute_ft()
 
+    def __repr__(self):
+        rep = 'GuidedModeExp(\n'
+        rep += 'gmax = ' + repr(self.gmax) + '\n'
+        rep += 'modes_numg = ' + repr(self.modes_numg) + '\n'
+        rep += 'N_basis = ' + repr(self.N_basis) + '\n'
+        rep += repr(self.phc) + '\n)'
+        return rep
+
     def _init_reciprocal(self):
         '''
         Initialize reciprocal lattice vectors based on self.phc and self.gmax

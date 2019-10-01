@@ -14,6 +14,9 @@ class Shape(object):
         self.eps = eps
         self.area = bd.real(self.compute_ft(bd.array([[0], [0]])))
 
+    def __repr__(self):
+        return "Shape"
+
     def parse_ft_gvec(self, gvec):
         if type(gvec) == list:
             gvec = np.array(gvec)
@@ -43,6 +46,10 @@ class Circle(Shape):
         self.r = r
         super().__init__(eps=eps)
 
+    def __repr__(self):
+        return "Circle(x = %.4f, y = %.4f, r = %.4f)" % \
+               (self.x_cent, self.y_cent, self.r)
+
     def compute_ft(self, gvec):
         '''
         FT of a 2D function equal to 1 inside the circle and 0 outside
@@ -70,13 +77,22 @@ class Poly(Shape):
     def __init__(self, eps=1, x_edges=0, y_edges=0):
         # Make extra sure that the last point of the polygon is the same as the 
         # first point
-        if not self._check_counterclockwise(x_edges, y_edges):
-            raise ValueError("The edges defined by x_edges and y_edges must be"
-            " specified in counter-clockwise order")
+
+        # if not self._check_counterclockwise(x_edges, y_edges):
+        #     raise ValueError("The edges defined by x_edges and y_edges must be"
+        #     " specified in counter-clockwise order")
 
         self.x_edges = bd.hstack((x_edges, x_edges[0]))
         self.y_edges = bd.hstack((y_edges, y_edges[0]))
         super().__init__(eps)
+
+        if not self.compute_ft([[0], [0]]):
+            raise ValueError("The edges defined by x_edges and y_edges must be"
+            " specified in counter-clockwise order")
+
+    def __repr__(self):
+        return "Poly(x_edges = %s, y_edges = %s)" % \
+               (self.x_edges, self.y_edges)
 
     @staticmethod
     def _check_counterclockwise(x_edges, y_edges, verbose=False):
@@ -195,6 +211,10 @@ class Square(Poly):
         y_edges = y_cent + bd.array([-a/2, -a/2, a/2, a/2])
         super().__init__(eps, x_edges, y_edges)
 
+    def __repr__(self):
+        return "Square(x_cent = %.4f, y_cent = %.4f, a = %.4f)" % \
+               (self.x_cent, self.y_cent, self.a)
+
 class Hexagon(Poly):
     '''
     Define class for a hexagon shape
@@ -207,3 +227,7 @@ class Hexagon(Poly):
         y_edges = y_cent + bd.array([0, np.sqrt(3)/2*a, np.sqrt(3)/2*a, 0, \
                     -np.sqrt(3)/2*a, -np.sqrt(3)/2*a, 0])
         super().__init__(eps, x_edges, y_edges) 
+
+    def __repr__(self):
+        return "Hexagon(x_cent = %.4f, y_cent = %.4f, a = %.4f)" % \
+               (self.x_cent, self.y_cent, self.a)
