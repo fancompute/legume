@@ -33,13 +33,13 @@ class PhotCryst(object):
         rep += '\n)' if len(self.layers) > 0 else ')'
         return rep
 
-    def z_grid(self, Nz=100):
+    def z_grid(self, Nz=100, dist=1):
         ''' 
         Define a z-grid for visualization purposes once some layers have been 
         added
         '''
-        zmin = self.layers[0].z_min - 1
-        zmax = self.layers[-1].z_max + 1
+        zmin = self.layers[0].z_min - dist
+        zmax = self.layers[-1].z_max + dist
     
         return np.linspace(zmin, zmax, Nz)
 

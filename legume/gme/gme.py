@@ -842,3 +842,63 @@ class GuidedModeExp(object):
                 f1.colorbar(im, ax=ax)
             ax.set_title("%s(%s_%s)" % (val, field, comp))
             plt.show()
+
+
+    def plot_field_xz(self, field, kind, mind, y,
+                component='xyz', val='re', Nx=100, Nz=100, cbar=True):
+        '''
+        Hacked version for plotting the xz plane by stitching together xy "planes" for various
+        z slices
+        '''
+        xgrid = self.phc.lattice.xy_grid(Nx=Nx, Ny=2)[0]
+        ygrid = np.array([y])
+        zgrid = self.phc.z_grid(Nz=Nz, dist=0.0)
+
+        # Get the field fourier components
+        Nft = self.T1[0].shape[0]
+        fx = np.zeros((Nz, Nft), dtype=np.complex128)
+        fy = np.zeros((Nz, Nft), dtype=np.complex128)
+        fz = np.zeros((Nz, Nft), dtype=np.complex128)
+
+        for i, z in enumerate(zgrid):
+            (fx[i,:], fy[i,:], fz[i,:]) = self.ft_field_xy(field, kind, mind, z)
+
+        f1 = plt.figure()
+        sp = len(component)
+        for ic, comp in enumerate(component):
+            fi = np.zeros((Nz, Nx), dtype=np.complex128)
+            if comp=='x':
+                for i, z in enumerate(zgrid):
+                    fi[i,:] = ftinv(fx[i,:], self.gvec, xgrid, ygrid)
+            elif comp=='y':
+                for i, z in enumerate(zgrid):
+                    fi[i,:] = ftinv(fy[i,:], self.gvec, xgrid, ygrid)
+            elif comp=='z':
+                for i, z in enumerate(zgrid):
+                    fi[i,:] = ftinv(fz[i,:], self.gvec, xgrid, ygrid)
+            else:
+                raise ValueError("'component' can be 'x', 'y', 'z', or a "
+                    "combination of those")
+            
+            extent = [xgrid[0], xgrid[-1], zgrid[0], zgrid[-1]]
+            ax = f1.add_subplot(1, sp, ic+1)
+
+            if val=='re' or val=='im':
+                Z = np.real(fi) if val=='re' else np.imag(fi)
+                cmap = 'RdBu'
+                vmax = np.abs(Z).max()
+                vmin = -vmax
+            elif val=='abs':
+                Z = np.abs(fi)
+                cmap='magma'
+                vmax = Z.max()
+                vmin = 0
+            else:
+                raise ValueError("'val' can be 'im', 're', or 'abs'")
+
+            im = ax.imshow(Z, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
+
+            if cbar:
+                f1.colorbar(im, ax=ax)
+            ax.set_title("%s(%s_%s)" % (val, field, comp))
+            plt.show()
