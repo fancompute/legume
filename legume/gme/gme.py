@@ -685,7 +685,7 @@ class GuidedModeExp(object):
 
                 # TM-component
                 elif mode1%2==0:
-                    Hz = bd.zeros(Hz_ft.shape)
+                    Hz = bd.zeros(indmode.shape)
                     # Do claddings separately
                     if lind==0:
                         H = Bs[0, :] * bd.exp(-1j*chis[0, :]
@@ -723,7 +723,7 @@ class GuidedModeExp(object):
 
                 # TE-component
                 if mode1%2==0:
-                    Dz = bd.zeros(Dz_ft.shape)
+                    Dz = bd.zeros(indmode.shape)
                     # Do claddings separately
                     if lind==0:
                         D = 1j * Bs[0, :] * oms**2 / omega * \
@@ -742,7 +742,7 @@ class GuidedModeExp(object):
                                     self.phc.layers[lind-1].z_max) / 2
                         zp = bd.exp(1j*chis[lind, :]*(z-z_cent))
                         zn = bd.exp(-1j*chis[lind, :]*(z-z_cent))
-                        Dxy = 1j*oms[indmode]**2 / omega * \
+                        Dxy = 1j*oms**2 / omega * \
                             self.eps_array[lind] * \
                             (As[lind, :]*zp + Bs[lind, :]*zn)
                         Dx = Dxy * qx[indmode]
