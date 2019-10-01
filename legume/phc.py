@@ -25,6 +25,14 @@ class PhotCryst(object):
         # Initialize an empty list of layers
         self.layers = []
 
+    def __repr__(self):
+        rep = 'PhotonicCrystal('
+        rep += '\n' + repr(self.lattice)
+        for i, layer in enumerate(self.layers):
+            rep += '\n%d: ' % i + repr(layer)
+        rep += '\n)' if len(self.layers) > 0 else ')'
+        return rep
+
     def z_grid(self, Nz=100):
         ''' 
         Define a z-grid for visualization purposes once some layers have been 
@@ -206,6 +214,9 @@ class Layer(object):
 
         self.lattice = lattice
 
+    def __repr__(self):
+        return 'Layer'
+
     def compute_ft(self, gvec):
         '''
         Compute fourier transform over gvec: [2 x Ng] numpy array
@@ -229,6 +240,13 @@ class ShapesLayer(Layer):
         # Initialize an empty list of shapes
         self.layer_type = 'shapes'
         self.shapes = []
+
+    def __repr__(self):
+        rep = 'ShapesLayer('
+        for shape in self.shapes:
+            rep += '\n' + repr(shape)
+        rep += '\n)' if len(self.shapes) > 0 else ')'
+        return rep
 
     def add_shape(self, *args):
         '''
