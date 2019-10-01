@@ -739,7 +739,7 @@ class GuidedModeExp(object):
                             (z-self.phc.claddings[0].z_max))
                         Dx = D * qx[indmode]
                         Dy = D * qy[indmode]
-                    elif lind==self.eps_array.size:
+                    elif lind==self.eps_array.size-1:
                         D = 1j * As[-1, :] * oms**2 / omega * \
                             self.eps_array[-1] * bd.exp(1j*chis[-1, :] * \
                             (z-self.phc.claddings[1].z_max))
@@ -765,7 +765,7 @@ class GuidedModeExp(object):
                         Dx = D * 1j*chis[0,:] * px[indmode]
                         Dy = D * 1j*chis[0,:] * py[indmode]
                         Dz = D * 1j*gnorm[indmode]
-                    elif lind==self.eps_array.size:
+                    elif lind==self.eps_array.size-1:
                         D = 1j / omega * As[-1,:] * \
                             bd.exp(1j*chis[-1, :] * \
                             (z-self.phc.claddings[1].z_max))
