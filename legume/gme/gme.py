@@ -676,7 +676,7 @@ class GuidedModeExp(object):
                         Hz = H * 1j*gnorm[indmode]
                     elif lind==self.eps_array.size-1:
                         H = As[-1, :] * bd.exp(1j*chis[-1, :]
-                                            *(z-self.phc.claddings[1].z_max))
+                                            *(z-self.phc.claddings[1].z_min))
                         Hx = -H * 1j*chis[-1, :] * px[indmode]
                         Hy = -H * 1j*chis[-1, :] * py[indmode]
                         Hz = H * 1j*gnorm[indmode]
@@ -702,7 +702,7 @@ class GuidedModeExp(object):
                         Hy = H * qy[indmode]
                     elif lind==self.eps_array.size-1:
                         H = As[-1, :] * bd.exp(1j*chis[-1, :]
-                                            *(z-self.phc.claddings[1].z_max))
+                                            *(z-self.phc.claddings[1].z_min))
                         Hx = H * qx[indmode]
                         Hy = H * qy[indmode]
                     else:
@@ -742,7 +742,7 @@ class GuidedModeExp(object):
                     elif lind==self.eps_array.size-1:
                         D = 1j * As[-1, :] * oms**2 / omega * \
                             self.eps_array[-1] * bd.exp(1j*chis[-1, :] * \
-                            (z-self.phc.claddings[1].z_max))
+                            (z-self.phc.claddings[1].z_min))
                         Dx = D * qx[indmode]
                         Dy = D * qy[indmode]
                     else:
@@ -768,7 +768,7 @@ class GuidedModeExp(object):
                     elif lind==self.eps_array.size-1:
                         D = 1j / omega * As[-1,:] * \
                             bd.exp(1j*chis[-1, :] * \
-                            (z-self.phc.claddings[1].z_max))
+                            (z-self.phc.claddings[1].z_min))
                         Dx = -D * 1j*chis[-1, :] * px[indmode]
                         Dy = -D * 1j*chis[-1, :] * py[indmode]
                         Dz = D * 1j*gnorm[indmode]
@@ -852,7 +852,7 @@ class GuidedModeExp(object):
         '''
         xgrid = self.phc.lattice.xy_grid(Nx=Nx, Ny=2)[0]
         ygrid = np.array([y])
-        zgrid = self.phc.z_grid(Nz=Nz, dist=0.0)
+        zgrid = self.phc.z_grid(Nz=Nz, dist=0.5)
 
         # Get the field fourier components
         Nft = self.T1[0].shape[0]
