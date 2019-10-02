@@ -77,7 +77,7 @@ x0 = np.linspace(-np.pi, +np.pi, args.N_polygons)
 rho_0 = 0.5 + np.sin(4*x0) * 0.5
 
 # Compute results for initial structure
-legume.set_backend('autograd')
+legume.set_backend('numpy')
 objective_grad = grad(objective)
 gme = make_grating()
 parameterize_density_layer(gme.phc.layers[-1], rho_0, eta=0.5, beta=10)
@@ -97,10 +97,8 @@ if args.optimize:
 								   options={'direction': 'min', 'disp': ['of', 'params']})
 	legume.set_backend('numpy')
 
-	of_value = [of._value if type(of) is autograd.numpy.numpy_boxes.ArrayBox else of for of in ofs]
-
 	ax3 = fig.add_subplot(gs[2, :])
-	ax3.plot(of_value, "o-")
+	ax3.plot(ofs, "o-")
 	ax3.set_xlabel("Epoch")
 	ax3.set_ylabel("Cost function")
 
