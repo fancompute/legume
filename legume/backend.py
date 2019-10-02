@@ -52,6 +52,8 @@ class NumpyBackend(Backend):
     where = staticmethod(np.where)
     triu = staticmethod(np.triu)
     amax = staticmethod(np.amax)
+    max = staticmethod(np.max)
+    min = staticmethod(np.min)
     sort = staticmethod(np.sort)
 
     # math functions
@@ -101,6 +103,8 @@ class AutogradBackend(Backend):
     where = staticmethod(npa.where)
     triu = staticmethod(npa.triu)
     amax = staticmethod(npa.amax)
+    max = staticmethod(npa.max)
+    min = staticmethod(npa.min)
     sort = staticmethod(npa.sort)
 
     # math functions
