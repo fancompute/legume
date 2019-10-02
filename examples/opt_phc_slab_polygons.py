@@ -1,69 +1,67 @@
+""" This attempts to perform topology optimization of a photonic crystal slab band gap through a density
+defined across a grid of polygons
+"""
 
 import argparse
 
 import autograd
 import matplotlib.pyplot as plt
-from matplotlib import gridspec
 import numpy as np
 from autograd import grad
 
 import legume
 from legume.backend import backend as bd
 from legume.optimizers import adam_optimize
-import skimage
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--verbose', action='store_true')
 parser.add_argument('--optimize', action='store_true')
-parser.add_argument('-N_epochs', default=20, type=int)
-parser.add_argument('-learning_rate', default=0.1, type=float)
+parser.add_argument('-N_epochs', default=10, type=int)
+parser.add_argument('-learning_rate', default=0.0001, type=float)
 parser.add_argument('-gmax', default=5, type=float)
 parser.add_argument('-gmode_npts', default=2000, type=int)
 parser.add_argument('-neig', default=10, type=int)
 parser.add_argument('-N_polygons', default=20, type=int)
 parser.add_argument('-H', default=0.33, type=float)
 parser.add_argument('-D', default=0.20, type=float)
-parser.add_argument('-eps', default=12, type=float)
+parser.add_argument('-eps_b', default=12, type=float)
 args = parser.parse_args()
 
-options = {'gmode_inds': np.arange(0, 8, 2),
+options = {'gmode_inds': np.array([0, 2]),
 		   'gmode_npts': args.gmode_npts,
 		   'numeig': args.neig,
 		   'verbose': args.verbose}
 
-lattice = legume.Lattice('square')
-path = lattice.bz_path(['G', 'M', 'X', 'G'], [10, 10, 10])
+lattice = legume.Lattice('hexagonal')
+path = lattice.bz_path(['G', 'M', 'K', 'G'], [10, 10, 10])
 
 def projection(rho, eta=0.5, beta=100):
 	return bd.divide(bd.tanh(beta * eta) + bd.tanh(beta * (rho - eta)), bd.tanh(beta * eta) + bd.tanh(beta * (1 - eta)))
 
 
-def make_grating():
+def make_structure():
 	phc = legume.PhotCryst(lattice)
-	phc.add_layer(d=args.D, eps_b=args.eps)
+	phc.add_layer(d=args.D, eps_b=args.eps_b)
 	return legume.GuidedModeExp(phc, gmax=args.gmax)
 
 
-def parameterize_density_layer(layer, rho, eta=0.5, beta=100):
+def parameterize_density_layer(layer, rho, eta=0.5, beta=10):
 	assert rho.shape[0] == rho.shape[1], "For now only square grids"
 	N = rho.shape[0]
 
-	X = np.linspace(-1.0, +1.0, N+1)
-	Y = np.linspace(-1.0, +1.0, N+1)
+	X = np.linspace(-0.5, +0.5, N+1)
+	Y = np.linspace(-0.5, +0.5, N+1)
 
 	rho_proj = projection(rho, eta, beta)
-	plt.figure()
-	plt.imshow(rho_proj)
-	plt.show()
 
 	for i in range(len(X) - 1):
 		x0 = X[i]
 		x1 = X[i + 1]
 		for j in range(len(Y) - 1):
-			y0 = Y[i]
-			y1 = Y[i + 1]
+			y0 = Y[j]
+			y1 = Y[j + 1]
 
-			eps = 1 + rho_proj[i,j] * (args.eps - 1)
+			eps = 12 + (1 - 12) * rho_proj[i,j]
 			grating = legume.Poly(eps=eps,
 								  x_edges=np.array([x0, x1, x1, x0]),
 								  y_edges=np.array([y0, y0, y1, y1]))
@@ -73,22 +71,43 @@ def parameterize_density_layer(layer, rho, eta=0.5, beta=100):
 def objective(rho):
 	parameterize_density_layer(gme.phc.layers[-1], rho, eta=0.5, beta=10)
 	gme.run(kpoints=path.kpoints, **options)
-	tgt_freqs = gme.freqs[0:10, 1]
-	return bd.sqrt(bd.var(tgt_freqs))
+	gap_size = gme.freqs[:,1].min()-gme.freqs[:,0].max()
+	return -gap_size
 
-
-N = args.N_polygons
-# Initialize structure
-(rr, cc) = skimage.draw.circle(N/2, N/2, N/5)
-rho_0 = np.zeros((N,N))
-rho_0[rr,cc] = 1
-# plt.figure()
-# plt.imshow(rho_0)
-
-# Compute results for initial structure
 legume.set_backend('numpy')
-gme = make_grating()
-parameterize_density_layer(gme.phc.layers[-1], rho_0, eta=0.5, beta=10)
-# gme.run(kpoints=path.kpoints, **options)
 
-gme.phc.plot_overview()
+r0 = 0.2
+
+# # Can verify starting structure
+# phc2=legume.PhotCryst(lattice)
+# phc2.add_layer(d=args.D, eps_b=args.eps_b)
+# phc2.layers[-1].add_shape(legume.Circle(eps=1, x_cent=0.0, y_cent=0.0, r=r0))
+# gme2=legume.GuidedModeExp(phc2, gmax=args.gmax)
+# gme2.run(kpoints=path.kpoints, **options)
+# legume.viz.bands(gme2)
+
+# Initialize the polygon slab
+N = args.N_polygons
+X = np.linspace(-0.5, +0.5, N)
+Y = np.linspace(-0.5, +0.5, N)
+(Y, X) = np.meshgrid(Y, X)
+R = np.sqrt(np.square(X) + np.square(Y))
+rho_0 = np.zeros((N,N))
+rho_0[R<r0] = 1.0
+
+gme = make_structure()
+parameterize_density_layer(gme.phc.layers[-1], rho_0, eta=0.5, beta=10)
+gme.run(kpoints=path.kpoints, **options)
+legume.viz.bands(gme)
+
+# Optimize
+legume.set_backend('autograd')
+objective_grad = grad(objective)
+(rho_opt, ofs) = adam_optimize(objective, rho_0, objective_grad, step_size=args.learning_rate, Nsteps=args.N_epochs,
+							   options={'direction': 'min', 'disp': ['of']})
+
+legume.set_backend('numpy')
+gme = make_structure()
+parameterize_density_layer(gme.phc.layers[-1], rho_opt, eta=0.5, beta=10)
+gme.run(kpoints=path.kpoints, **options)
+legume.viz.bands(gme)
