@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--verbose', action='store_true')
 parser.add_argument('--optimize', action='store_true')
 parser.add_argument('-N_epochs', default=10, type=int)
-parser.add_argument('-learning_rate', default=0.0001, type=float)
+parser.add_argument('-learning_rate', default=0.5, type=float)
 parser.add_argument('-gmax', default=5, type=float)
 parser.add_argument('-gmode_npts', default=2000, type=int)
 parser.add_argument('-neig', default=10, type=int)
@@ -39,13 +39,15 @@ def projection(rho, eta=0.5, beta=100):
 	return bd.divide(bd.tanh(beta * eta) + bd.tanh(beta * (rho - eta)), bd.tanh(beta * eta) + bd.tanh(beta * (1 - eta)))
 
 
-def make_structure():
+def make_simulation(polygons):
 	phc = legume.PhotCryst(lattice)
 	phc.add_layer(d=args.D, eps_b=args.eps_b)
-	return legume.GuidedModeExp(phc, gmax=args.gmax)
+	for polygon in polygons: phc.layers[-1].add_shape(polygon)
+	gme = legume.GuidedModeExp(phc, gmax=args.gmax)
+	return gme
 
 
-def parameterize_density_layer(layer, rho, eta=0.5, beta=10):
+def generate_polygons(rho, eta=0.5, beta=10):
 	assert rho.shape[0] == rho.shape[1], "For now only square grids"
 	N = rho.shape[0]
 
@@ -54,6 +56,7 @@ def parameterize_density_layer(layer, rho, eta=0.5, beta=10):
 
 	rho_proj = projection(rho, eta, beta)
 
+	polygons = []
 	for i in range(len(X) - 1):
 		x0 = X[i]
 		x1 = X[i + 1]
@@ -62,17 +65,20 @@ def parameterize_density_layer(layer, rho, eta=0.5, beta=10):
 			y1 = Y[j + 1]
 
 			eps = 12 + (1 - 12) * rho_proj[i,j]
-			grating = legume.Poly(eps=eps,
+			polygon = legume.Poly(eps=eps,
 								  x_edges=np.array([x0, x1, x1, x0]),
 								  y_edges=np.array([y0, y0, y1, y1]))
-			layer.add_shape(grating)
+			polygons.append(polygon)
+
+	return polygons
 
 
 def objective(rho):
-	parameterize_density_layer(gme.phc.layers[-1], rho, eta=0.5, beta=10)
+	polygons = generate_polygons(rho, eta=0.5, beta=10)
+	gme = make_simulation(polygons)
 	gme.run(kpoints=path.kpoints, **options)
-	gap_size = gme.freqs[:,1].min()-gme.freqs[:,0].max()
-	return -gap_size
+	gap_size = bd.min(gme.freqs[:,1])-bd.max(gme.freqs[:,0])
+	return gap_size
 
 legume.set_backend('numpy')
 
@@ -95,19 +101,22 @@ R = np.sqrt(np.square(X) + np.square(Y))
 rho_0 = np.zeros((N,N))
 rho_0[R<r0] = 1.0
 
-gme = make_structure()
-parameterize_density_layer(gme.phc.layers[-1], rho_0, eta=0.5, beta=10)
+polygons = generate_polygons(rho_0, eta=0.5, beta=10)
+gme = make_simulation(polygons)
 gme.run(kpoints=path.kpoints, **options)
-legume.viz.bands(gme)
+gap_size = bd.min(gme.freqs[:,1])-bd.max(gme.freqs[:,0])
 
 # Optimize
 legume.set_backend('autograd')
 objective_grad = grad(objective)
 (rho_opt, ofs) = adam_optimize(objective, rho_0, objective_grad, step_size=args.learning_rate, Nsteps=args.N_epochs,
-							   options={'direction': 'min', 'disp': ['of']})
+							   options={'direction': 'max', 'disp': ['of']})
 
 legume.set_backend('numpy')
-gme = make_structure()
-parameterize_density_layer(gme.phc.layers[-1], rho_opt, eta=0.5, beta=10)
+polygons = generate_polygons(rho_opt, eta=0.5, beta=10)
+gme = make_simulation(polygons)
 gme.run(kpoints=path.kpoints, **options)
 legume.viz.bands(gme)
+
+gme.plot_overview_ft()
+gme.phc.plot_overview()
