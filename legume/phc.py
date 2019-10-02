@@ -6,6 +6,7 @@ from matplotlib import gridspec
 
 import legume.viz as viz
 import legume.backend as bd
+import legume.utils as utils
 from .shapes import Shape, Circle, Poly, Square
 from .backend import backend as bd
 
@@ -121,7 +122,7 @@ class PhotCryst(object):
                         in_shape = shape.is_inside(xmesh + 
                             n1*a1[0] + n2*a2[0], ymesh + 
                             n1*a1[1] + n2*a2[1])
-                        eps_r[in_shape*zlayer] = shape.eps
+                        eps_r[in_shape*zlayer] = utils.get_value(shape.eps)
 
         return eps_r
 

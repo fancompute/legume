@@ -7,7 +7,7 @@ import autograd
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
 import numpy as np
-from autograd import grad
+from autograd import grad, value_and_grad
 
 import legume
 from legume.backend import backend as bd
@@ -62,6 +62,7 @@ def parameterize_density_layer(layer, rho, eta=0.5, beta=100):
 
 
 def objective(rho):
+	gme = make_grating()
 	parameterize_density_layer(gme.phc.layers[-1], rho, eta=0.5, beta=10)
 	gme.run(kpoints=path.kpoints, **options)
 	tgt_freqs = gme.freqs[0:10, 1]
@@ -77,8 +78,8 @@ x0 = np.linspace(-np.pi, +np.pi, args.N_polygons)
 rho_0 = 0.5 + np.sin(4*x0) * 0.5
 
 # Compute results for initial structure
-legume.set_backend('numpy')
-objective_grad = grad(objective)
+legume.set_backend('autograd')
+objective_grad = value_and_grad(objective)
 gme = make_grating()
 parameterize_density_layer(gme.phc.layers[-1], rho_0, eta=0.5, beta=10)
 gme.run(kpoints=path.kpoints, **options)
@@ -93,7 +94,7 @@ legume.viz.bands(gme, ax=ax1)
 if args.optimize:
 	## Optimize
 	legume.set_backend('autograd')
-	(rho_opt, ofs) = adam_optimize(objective, rho_0, objective_grad, step_size=args.learning_rate, Nsteps=args.N_epochs,
+	(rho_opt, ofs) = adam_optimize(objective_grad, rho_0, jac=True, step_size=args.learning_rate, Nsteps=args.N_epochs,
 								   options={'direction': 'min', 'disp': ['of', 'params']})
 	legume.set_backend('numpy')
 

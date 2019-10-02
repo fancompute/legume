@@ -22,9 +22,13 @@ def adam_optimize(objective, params, jac, step_size=1e-2, Nsteps=100, bounds=Non
 
     for iteration in range(Nsteps):
 
-        of = objective(params)
+        if jac==True:
+            of, grad = objective(params)
+        else:
+            of = objective(params)
+            grad = jac(params)
+
         of_list.append(of._value if type(of) is ArrayBox else of) 
-        grad = jac(params)
 
         if 'disp' in opt_keys:
             print("At iteration %d :" %(iteration))
