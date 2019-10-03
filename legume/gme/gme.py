@@ -179,7 +179,7 @@ class GuidedModeExp(object):
         every layer in the PhC.
         '''
         (n1max, n2max) = (self.n1g, self.n2g)
-        G1 = self.gvec - self.gvec[:, [0]]
+        G1 = - self.gvec + self.gvec[:, [0]]
         G2 = np.zeros((2, n1max*n2max))
 
         # Initialize the FT coefficient lists; in the end the length of these 
@@ -188,7 +188,7 @@ class GuidedModeExp(object):
         self.T2 = []
 
         for ind1 in range(n1max):
-            G2[:, ind1*n2max:(ind1+1)*n2max] = self.gvec[:, [ind1*n2max]] - \
+            G2[:, ind1*n2max:(ind1+1)*n2max] = - self.gvec[:, [ind1*n2max]] + \
                             self.gvec[:, range(n2max)]
 
         for layer in [self.phc.claddings[0]] + self.phc.layers + \
@@ -640,7 +640,7 @@ class GuidedModeExp(object):
         # G + k vectors
         gkx = self.gvec[0, :] + k[0] + 1e-10
         gky = self.gvec[1, :] + k[1]
-        gnorm = np.sqrt(np.square(gkx) + np.square(gky))
+        gnorm = bd.sqrt(bd.square(gkx) + bd.square(gky))
 
         # Unit vectors in the propagation direction
         px = gkx / gnorm
@@ -692,7 +692,7 @@ class GuidedModeExp(object):
                                 gnorm[indmode]
 
                 # TM-component
-                elif mode1%2==0:
+                elif mode1%2==1:
                     Hz = bd.zeros(indmode.shape)
                     # Do claddings separately
                     if lind==0:
@@ -757,7 +757,7 @@ class GuidedModeExp(object):
                         Dy = Dxy * qy[indmode]
 
                 # TM-component
-                elif mode1%2==0:
+                elif mode1%2==1:
                     if lind==0:
                         D = 1j / omega * Bs[0,:] * \
                             bd.exp(-1j*chis[0,:] * \
@@ -836,7 +836,8 @@ class GuidedModeExp(object):
             else:
                 raise ValueError("'val' can be 'im', 're', or 'abs'")
 
-            im = ax.imshow(Z, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
+            im = ax.imshow(Z, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax,
+                            origin='lower')
 
             if cbar:
                 f1.colorbar(im, ax=ax)

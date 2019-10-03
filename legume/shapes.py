@@ -61,7 +61,7 @@ class Circle(Shape):
         gabs = np.sqrt(np.abs(np.square(gx)) + np.abs(np.square(gy)))
         gabs += 1e-10 # To avoid numerical instability at zero
 
-        ft = bd.exp(1j*gx*self.x_cent + 1j*gy*self.y_cent)*self.r* \
+        ft = bd.exp(-1j*gx*self.x_cent - 1j*gy*self.y_cent)*self.r* \
                             2*np.pi/gabs*bd.bessel1(gabs*self.r)
 
         return ft
@@ -86,7 +86,7 @@ class Poly(Shape):
         self.y_edges = bd.hstack((y_edges, y_edges[0]))
         super().__init__(eps)
 
-        if not self.compute_ft([[0], [0]]):
+        if self.compute_ft([[0], [0]]) < 0:
             raise ValueError("The edges defined by x_edges and y_edges must be"
             " specified in counter-clockwise order")
 
@@ -123,8 +123,10 @@ class Poly(Shape):
         (xj, yj) = self.x_edges, self.y_edges
         npts = xj.shape[0]
         ng = gx.shape[0]
-        gx = gx[:, bd.newaxis]
-        gy = gy[:, bd.newaxis]
+        # Note: the paper uses +1j*g*x convention for FT while we use 
+        # -1j*g*x everywhere in legume
+        gx = -gx[:, bd.newaxis]
+        gy = -gy[:, bd.newaxis]
         xj = xj[bd.newaxis, :]
         yj = yj[bd.newaxis, :]
 

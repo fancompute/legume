@@ -21,7 +21,7 @@ def ftinv(ft_coeff, gvec, xgrid, ygrid):
     (g_unique, ind_unique) = np.unique(gvec, return_index=True, axis=1)
 
     for indg in ind_unique:
-        ftinv += ft_coeff[indg]*np.exp(-1j*gvec[0, indg]*xmesh - \
+        ftinv += ft_coeff[indg]*np.exp(1j*gvec[0, indg]*xmesh + \
                             1j*gvec[1, indg]*ymesh)
 
     # # Do the x- and y-transforms separately 
