@@ -7,7 +7,8 @@ def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o'):
 
     if np.all(gme.kpoints[0,:]==0) and not np.all(gme.kpoints[1,:]==0) \
         or np.all(gme.kpoints[1,:]==0) and not np.all(gme.kpoints[0,:]==0):
-        X = np.sqrt(np.square(gme.kpoints[0,:]) + np.square(gme.kpoints[1,:])) / 2 / np.pi
+        X = np.sqrt(np.square(gme.kpoints[0,:]) + 
+                np.square(gme.kpoints[1,:])) / 2 / np.pi
     else:
         X = np.arange(len(gme.kpoints[0, :]))
 
@@ -18,9 +19,10 @@ def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o'):
 
     if lightcone:
         eps_clad = [gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg]
-        vec_LL = np.sqrt(np.square(gme.kpoints[0, :]) + np.square(gme.kpoints[1, :])) \
-            / 2 / np.pi / np.sqrt(max(eps_clad))
-        ax.fill_between(X, vec_LL, gme.freqs[:].max(), facecolor="#cccccc", zorder=4, alpha=0.5)
+        vec_LL = np.sqrt(np.square(gme.kpoints[0, :]) + 
+            np.square(gme.kpoints[1, :])) / 2 / np.pi / np.sqrt(max(eps_clad))
+        ax.fill_between(X, vec_LL,  max(vec_LL.max(), gme.freqs[:].max()), 
+                        facecolor="#cccccc", zorder=4, alpha=0.5)
 
     ax.set_xlim(left=0, right=max(X))
     ax.set_ylim(bottom=0.0, top=gme.freqs[:].max())
@@ -46,7 +48,8 @@ def plot_eps(eps_r, clim=None, ax=None, extent=None, cmap='Greys', cbar=False):
         
     return im
 
-def plot_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None, cbar=False, cmap='Greys'):
+def plot_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
+             cbar=False, cmap='Greys'):
     '''
     Plot an xz-cross section showing all the layers and shapes
     '''
@@ -61,7 +64,8 @@ def plot_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None, cbar=False, cmap='Greys
     plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
 
-def plot_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None, cbar=False, cmap='Greys'):
+def plot_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None,
+             cbar=False, cmap='Greys'):
     '''
     Plot an xy-cross section showing all the layers and shapes
     '''
@@ -75,7 +79,8 @@ def plot_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None, cbar=False, cmap='Grey
     plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
 
-def plot_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None, cbar=False, cmap='Greys'):
+def plot_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None,
+             cbar=False, cmap='Greys'):
     '''
     Plot a yz-cross section showing all the layers and shapes
     '''
