@@ -22,12 +22,13 @@ parser.add_argument('--optimize', action='store_true')
 
 parser.add_argument('--verbose', action='store_true')
 
+parser.add_argument('-init', default='soft', type=str)
 parser.add_argument('-epochs', default=10, type=int)
 parser.add_argument('-lr', default=0.1, type=float)
 parser.add_argument('-gmax', default=5, type=float)
 parser.add_argument('-gmode_npts', default=2000, type=int)
 parser.add_argument('-neig', default=10, type=int)
-parser.add_argument('-N_polygons', default=20, type=int)
+parser.add_argument('-N_polygons', default=40, type=int)
 parser.add_argument('-D', default=0.50, type=float)
 parser.add_argument('-eta', default=0.5, type=float)
 parser.add_argument('-beta', default=10, type=float)
@@ -35,7 +36,7 @@ parser.add_argument('-eps_b', default=12, type=float)
 parser.add_argument('-r0', default=0.2, type=float)
 args = parser.parse_args()
 
-options = {'gmode_inds': np.array([0, 2]),
+options = {'gmode_inds': np.array([0, 3]),
            'gmode_npts': args.gmode_npts,
            'numeig': args.neig,
            'verbose': args.verbose}
@@ -44,7 +45,6 @@ lattice = legume.Lattice('hexagonal')
 a2 = lattice.a1
 lattice.a1 = lattice.a2
 lattice.a2 = a2
-lattice_hardcoded = lattice
 # lattice_hardcoded = legume.Lattice('square') # Hardcoded to squares to mimic old version (periodicity is still actually hex)
 
 # _,_,sq_Xe,sq_Ye = generate_grid(legume.Lattice('square'), 1, extent_min=-0.5, extent_max=0.5)
@@ -64,14 +64,14 @@ lattice_hardcoded = lattice
 path = lattice.bz_path(['G', 'M', 'K', 'G'], [20, 20, 20])
 path_opt = lattice.bz_path(['M', 'K'], [5])
 
-def init_hole(lattice, N, r0, mode='crisp'):
+def init_hole(lattice, N, r0, mode='soft'):
     """Initialize the density distribution across N**2 polygons projected onto `lattice`
     """
     x, y, _, _ = generate_grid(lattice, N, extent_min=-0.5, extent_max=0.5)
     r = np.sqrt(np.square(x) + np.square(y))
     rho = np.zeros(r.shape)
 
-    if mode=='crisp':
+    if mode=='hard':
         rho[r<r0] = 1.0
     elif mode =='soft':
         rho += np.exp(-r**2/r0**2)
@@ -169,7 +169,7 @@ def objective(rho):
     Runs gme
     Computes size of bandgap
     """
-    polygons = generate_polygons(lattice_hardcoded, rho, eta=args.eta, beta=args.beta)
+    polygons = generate_polygons(lattice, rho, eta=args.eta, beta=args.beta)
     gme = make_simulation(polygons)
     gme.run(kpoints=path_opt.kpoints, **options)
     band_up = gme.freqs[:,1]
@@ -206,10 +206,10 @@ legume.set_backend('numpy')
 
 # Initialize the polygon slab
 
-rho_0 = init_hole(lattice_hardcoded, args.N_polygons, args.r0, mode='crisp')
+rho_0 = init_hole(lattice, args.N_polygons, args.r0, mode=args.init)
 
 if args.initialize:
-    polygons = generate_polygons(lattice_hardcoded, rho_0, eta=args.eta, beta=args.beta)
+    polygons = generate_polygons(lattice, rho_0, eta=args.eta, beta=args.beta)
     gme = make_simulation(polygons)
     gme.run(kpoints=path.kpoints, **options)
     summarize_results(gme)
@@ -222,7 +222,7 @@ if args.optimize:
                                    options={'direction': 'max', 'disp': ['of']})
 
     legume.set_backend('numpy')
-    polygons = generate_polygons(lattice_hardcoded, rho_opt, eta=args.eta, beta=args.beta)
+    polygons = generate_polygons(lattice, rho_opt, eta=args.eta, beta=args.beta)
     gme = make_simulation(polygons)
     gme.run(kpoints=path.kpoints, **options)
     summarize_results(gme)
