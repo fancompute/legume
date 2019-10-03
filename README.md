@@ -19,17 +19,12 @@ Alternatively just download and make sure you have all the requirements installe
 ## To do
 (I've put some non-urgent things as Issues. Below are the things that have to be taken care of to have the minimum needed for what can be considered a functioning package)
 
-- Test single-layer, multi-mode GME with TE/TM coupling (asymmetric structure)
 - Test multi-layer GME
   - vs. some paper? 
   - vs. COMSOL?
-- Write the Q-factor computation for TM modes
-- Write a method to compute the actual fields from the eigenvectors
-- Add some visualization methods:
-    - field visualization including permittivity shapes overlay
-    - band visualization including light cone overlay
-    - Q-factor visualization? 
-- Write some nice tests and examples
+  - vs. S4?
+- Improve visualization methods in `viz.py` and add some new ones:
+    - Q-factor visualization?
 
 For the optimization part:
 - Make Q-factor computation compatible with the autograd backend
