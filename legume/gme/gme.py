@@ -165,11 +165,9 @@ class GuidedModeExp(object):
         '''
         chis = np.zeros((self.N_layers + 2, gkr.size), dtype=np.complex128)
         for il in range(self.N_layers + 2):
-            chis[il, :] = np.sqrt(self.eps_array[il]*omr**2 - 
+            chis[il, :] = bd.sqrt(self.eps_array[il]*omr**2 - 
                             gkr**2, dtype=np.complex128).ravel()
         (Xs, Ys) = rad_modes(omr, gkr, self.eps_array, self.d_array, pol, clad)
-
-        # raise Exception
         
         return (Xs, Ys, chis)
 
@@ -358,7 +356,6 @@ class GuidedModeExp(object):
                         - bd.ones(self.numeig))))
             freqs.append(freq)
             eigvecs.append(evec[:, :self.numeig])
-            # raise Exception
 
         # Store the eigenfrequencies taking the standard reduced frequency 
         # convention for the units (2pi a/c)
@@ -478,8 +475,6 @@ class GuidedModeExp(object):
         mat_rows = [bd.hstack(mb) for mb in mat_blocks]
         mat = bd.vstack(mat_rows)
 
-        # raise Exception
-
         '''
         If the matrix is within numerical precision to real symmetric, 
         make it explicitly so. This will speed up the diagonalization and will
@@ -564,7 +559,6 @@ class GuidedModeExp(object):
                             self.eps_inv_mat, indmode1, oms1, As1, Bs1, chis1, 
                             indmoder[clad_ind], omr, Xs['te'][clad_ind], 
                             Ys['te'][clad_ind], chis['te'][clad_ind], qq)
-                        # raise Exception
                     else:
                         pq = (np.outer(gkx[indmode1], gky[indmoder[clad_ind]])
                             - np.outer(gky[indmode1], gkx[indmoder[clad_ind]]))\
@@ -574,12 +568,10 @@ class GuidedModeExp(object):
                             self.eps_inv_mat, indmode1, oms1, As1, Bs1, chis1, 
                             indmoder[clad_ind], omr, Xs['te'][clad_ind], 
                             Ys['te'][clad_ind], chis['te'][clad_ind], pq)
-                        # raise Exception
 
                     rad = rad*bd.conj(evec[count:
                         count+self.modes_numg[kind][im1]][:, np.newaxis])
                     rad_coup['te'][clad_ind] += bd.sum(rad, axis=0)
-                    # raise Exception
 
                     # Radiation to TM-polarized states
                     if mode1%2 == 0:
@@ -591,7 +583,6 @@ class GuidedModeExp(object):
                             self.eps_inv_mat, indmode1, oms1, As1, Bs1, chis1, 
                             indmoder[clad_ind], omr, Xs['tm'][clad_ind], 
                             Ys['tm'][clad_ind], chis['tm'][clad_ind], qp)
-                        # raise Exception
                     else:
                         pp = (np.outer(gkx[indmode1], gkx[indmoder[clad_ind]])
                             + np.outer(gky[indmode1], gky[indmoder[clad_ind]]))\
@@ -610,8 +601,7 @@ class GuidedModeExp(object):
             rad_dos = [self.phc.claddings[i].eps_avg/bd.sqrt(
                     self.phc.claddings[i].eps_avg*omr**2 - gkr[i]**2) / \
                     4 / np.pi for i in [0, 1]]
-            # raise Exception
-            rad_t = 0
+            rad_t = 0 # will sum up contributions from all the channels
             (c_l, c_u) = ({}, {})
             for pol in ['te', 'tm']:
                 c_l[pol] = rad_coup[pol][0]
@@ -620,12 +610,12 @@ class GuidedModeExp(object):
                     np.pi*bd.sum(bd.square(bd.abs(c_l[pol]))*rad_dos[0]) + \
                     np.pi*bd.sum(bd.square(bd.abs(c_u[pol]))*rad_dos[1])
             rad_tot.append(bd.imag(bd.sqrt(omr**2 + 1j*rad_t)))
-            # raise Exception
+
             # NB: think about the normalization of the couplings!
             coup_l.append(c_l)
             coup_u.append(c_u)
                 
-        # Finally compute radiation rate in units of frequency  
+        # Compute radiation rate in units of frequency  
         freqs_im = bd.array(rad_tot)/2/np.pi
         return (freqs_im, coup_l, coup_u)
 

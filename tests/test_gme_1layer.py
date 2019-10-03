@@ -2,19 +2,26 @@ import unittest
 
 import numpy as np
 
-from legume import GuidedModeExp, Circle, PhotCryst, Lattice
+from legume import GuidedModeExp, Circle, Poly, PhotCryst, Lattice
 import matplotlib.pyplot as plt
 from itertools import zip_longest
 import scipy.io
 
 class TestGME(unittest.TestCase):
+    '''
+    Tests of single-layer legume vs. stored data from my MATLAB GME
+    Asymmetric claddings everywhere.
+    ''' 
     def test_square(self):
-        # Initialize a lattice
+        '''
+        Test a square-lattice PhC with a triangular hole
+        '''
+
         lattice = Lattice('square')
-        # Initialize a PhC with asymmetric cladding
         phc = PhotCryst(lattice, eps_u=5.)
         phc.add_layer(d=0.5, eps_b=12.)
-        phc.add_shape(Circle(r=0.2, x_cent=0.1, y_cent=0.2))
+        poly = Poly(eps=3, x_edges=[-0.1, 0.2, 0], y_edges = [-0.1, -0.1, 0.3])
+        phc.add_shape(poly)
 
         # Find the modes of the structure and compare to the saved .mat file
         gme = GuidedModeExp(phc, gmax=4)
@@ -34,11 +41,14 @@ class TestGME(unittest.TestCase):
         self.assertLessEqual(diff_imag, 1e-3)
 
     def test_rect(self):
+        '''
+        Test a rectangular-lattice PhC with a circular hole
+        '''
         lattice = Lattice([1., 0], [0., .5])
 
         phc = PhotCryst(lattice, eps_u=5.)
         phc.add_layer(d=0.5, eps_b=12.)
-        phc.add_shape(Circle(r=0.2, x_cent=0.1))
+        phc.add_shape(Circle(eps=1, r=0.2, x_cent=0, y_cent=0))
 
         gme = GuidedModeExp(phc, gmax=3)
         options = {'gmode_inds': [0, 1, 2, 3], 'numeig': 10, 'verbose': False}
@@ -59,6 +69,9 @@ class TestGME(unittest.TestCase):
         self.assertLessEqual(diff_imag, 1e-3)
 
     def test_hex(self):
+        '''
+        Test a hexagonal-lattice PhC with a circular hole
+        '''
         lattice = Lattice('hexagonal')
         phc = PhotCryst(lattice, eps_l=5.)
         phc.add_layer(d=0.5, eps_b=12.)

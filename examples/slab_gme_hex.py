@@ -10,13 +10,18 @@ from itertools import zip_longest
 if __name__ == '__main__':
 	# Initialize a rectangular-lattice PhC
 	lattice = Lattice('hexagonal')
-	phc = PhotCryst(lattice, eps_l=1., eps_u=1.)
+	phc = PhotCryst(lattice, eps_l=5., eps_u=1.)
 	# Make a path in the BZ 
-	npts = 10 # npts = 1 just will just take the three high-symmetry points
-	path = lattice.bz_path(['G', 'M', 'K', 'G'], [npts])
+	npts = 1 # npts = 1 just will just take the three high-symmetry points
+	path = lattice.bz_path(['M', 'G', 'K', 'M'], [npts])
+
+	# # Select a single specific k-point
+	# path.kpoints = path.kpoints[:, 20].reshape(2, 1)
+	# print(path.kpoints)
+	# npts = 1
 
 	# Optional: add an un-patterned layer
-	# phc.add_layer(d=0.5, eps_b=12.)
+	phc.add_layer(d=0.5, eps_b=12.)
 
 	# Add a patterned layer
 	phc.add_layer(d=0.5, eps_b=12.)
@@ -26,7 +31,7 @@ if __name__ == '__main__':
 	# Initialize the guided mode expansion
 	gme = GuidedModeExp(phc, gmax=6)
 	options = {'gmode_inds': [0, 1, 2, 3], 'numeig': 10, 'verbose': False, 
-		'gmode_npts': 2000}
+		'gmode_npts': 5000}
 	# And run it
 	gme.run(kpoints=path.kpoints, **options)
 
@@ -39,7 +44,7 @@ if __name__ == '__main__':
 	# Either print or visualize the results
 	if npts==1:
 		print("Real part of frequencies:      \n", gme.freqs)	
-		print("Imaginary part of frequencies: \n", gme.freqs)
+		print("Imaginary part of frequencies: \n", freqs_im)
 	else:
 		legume.viz.bands(gme)
 

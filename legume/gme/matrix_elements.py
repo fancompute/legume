@@ -167,7 +167,7 @@ def rad_te_te(eps_array, d_array, eps_inv_mat, indmode1, oms1,
             np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1])  )
 
     # Final pre-factor
-    mat = mat * np.outer(oms1**2, omr*np.ones(indmoder.size)) * qq
+    mat = mat * bd.outer(oms1**2, omr*bd.ones(indmoder.size)) * qq
 
     return mat
 

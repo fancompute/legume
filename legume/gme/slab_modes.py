@@ -404,7 +404,7 @@ def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
         
         # Compute the transfer matrix coefficients
         coeffs = np.zeros((2, eps_array.size), dtype=np.complex128)
-        coeffs[:, 0] = [1, 0]
+        coeffs[:, 0] = [0, 1]
         coeffs[:, 1] = T_mat[0].dot(S_mat[0].dot(coeffs[:, 0]))
         for i, S in enumerate(S_mat[1:-1]):
             T2 = T_mat[i+1]
@@ -412,7 +412,7 @@ def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
             coeffs[:, i+2] = T2.dot(S.dot(T1.dot(coeffs[:, i+1])))
         coeffs[:, -1] = S_mat[-1].dot(T_mat[-1].dot(coeffs[:, -2]))
 
-        coeffs = coeffs / coeffs[0, -1] 
+        coeffs = coeffs / coeffs[1, -1] 
         if pol=='te':
             c_ind = [0, -1]
             coeffs = coeffs/np.sqrt(eps_array[c_ind[clad]])
@@ -428,6 +428,11 @@ def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
     '''
     (Xs, Ys) corresponds to the X, W coefficients for TE radiative modes in 
     Andreani and Gerace PRB (2006), and to the Z, Y coefficients for TM modes
+
+    Note that there's an error in the manuscript; within our definitions, the 
+    correct statement should be: X3 = 0 for states out-going in the lower 
+    cladding; normalize through W1; and W1 = 0 for states out-going in the upper
+    cladding; normalize through X3.
     '''
     return (Xs, Ys)
 

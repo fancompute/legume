@@ -78,10 +78,6 @@ class Poly(Shape):
         # Make extra sure that the last point of the polygon is the same as the 
         # first point
 
-        # if not self._check_counterclockwise(x_edges, y_edges):
-        #     raise ValueError("The edges defined by x_edges and y_edges must be"
-        #     " specified in counter-clockwise order")
-
         self.x_edges = bd.hstack((x_edges, x_edges[0]))
         self.y_edges = bd.hstack((y_edges, y_edges[0]))
         super().__init__(eps)
@@ -93,22 +89,6 @@ class Poly(Shape):
     def __repr__(self):
         return "Poly(eps = %.2f, x_edges = %s, y_edges = %s)" % \
                (self.eps, self.x_edges, self.y_edges)
-
-    @staticmethod
-    def _check_counterclockwise(x_edges, y_edges, verbose=False):
-        x = x_edges + [x_edges[0]]
-        y = y_edges + [y_edges[0]]
-
-        # Compute polygon area based on: 
-        # http://mathworld.wolfram.com/PolygonArea.html
-        area = 0
-        for i in range(0, len(x_edges) - 1):
-            area += 0.5 * (x[i]*y[i+1] - x[i+1]*y[i])
-
-        if verbose: print("Polygon area is: %f" % (area))
-        # The sign of the resulting area is +/- depending on 
-        # counter-clockwise/clockwise
-        return area > 0
 
     def compute_ft(self, gvec):
         '''
