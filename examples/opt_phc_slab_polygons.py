@@ -41,8 +41,25 @@ options = {'gmode_inds': np.array([0, 2]),
            'verbose': args.verbose}
 
 lattice = legume.Lattice('hexagonal')
-# lattice_hardcoded = lattice
-lattice_hardcoded = legume.Lattice('square') # Hardcoded to squares to mimic old version (periodicity is still actually hex)
+a2 = lattice.a1
+lattice.a1 = lattice.a2
+lattice.a2 = a2
+lattice_hardcoded = lattice
+# lattice_hardcoded = legume.Lattice('square') # Hardcoded to squares to mimic old version (periodicity is still actually hex)
+
+# _,_,sq_Xe,sq_Ye = generate_grid(legume.Lattice('square'), 1, extent_min=-0.5, extent_max=0.5)
+# lat = legume.Lattice('hexagonal')
+# a2 = lat.a1
+# lat.a1 = lat.a2
+# lat.a2 = a2
+# _,_,hex_Xe,hex_Ye = generate_grid(lat, 1, extent_min=-0.5, extent_max=0.5)
+# plt.figure();
+# plt.plot(sq_Xe, sq_Ye, 'k-');
+# plt.plot(sq_Xe[0], sq_Ye[0], 'ko');
+# plt.plot(hex_Xe, hex_Ye, 'r-');
+# plt.plot(hex_Xe[0], hex_Ye[0], 'ro');
+# plt.axis('image')
+# plt.show()
 
 path = lattice.bz_path(['G', 'M', 'K', 'G'], [20, 20, 20])
 path_opt = lattice.bz_path(['M', 'K'], [5])
