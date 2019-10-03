@@ -61,8 +61,8 @@ lattice.a2 = a2
 # plt.axis('image')
 # plt.show()
 
-path = lattice.bz_path(['G', 'M', 'K', 'G'], [20, 20, 20])
-path_opt = lattice.bz_path(['M', 'K'], [5])
+path = lattice.bz_path(['G', 'M', 'K', 'G'], [10, 10, 10])
+path_opt = path # lattice.bz_path(['M', 'K'], [5])
 
 def init_hole(lattice, N, r0, mode='soft'):
     """Initialize the density distribution across N**2 polygons projected onto `lattice`
@@ -172,12 +172,12 @@ def objective(rho):
     polygons = generate_polygons(lattice, rho, eta=args.eta, beta=args.beta)
     gme = make_simulation(polygons)
     gme.run(kpoints=path_opt.kpoints, **options)
-    band_up = gme.freqs[:,1]
+    band_up = gme.freqs[:,1:]
     band_dn = gme.freqs[:,0]
 
-    eps_clad = [gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg]
-    vec_LL = bd.sqrt(np.square(gme.kpoints[0, :]) + bd.square(gme.kpoints[1, :])) \
-        / 2 / np.pi / np.sqrt(bd.max(eps_clad))
+    # eps_clad = [gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg]
+    # vec_LL = bd.sqrt(np.square(gme.kpoints[0, :]) + bd.square(gme.kpoints[1, :])) \
+    #     / 2 / np.pi / np.sqrt(bd.max(eps_clad))
 
     # intersection_up_LL = bd.min(bd.vstack( (band_up, vec_LL) ), axis=0)
     intersection_up_LL = band_up
