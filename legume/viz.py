@@ -1,30 +1,45 @@
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import numpy as np
 
 
 # TODO: Make this more general
-def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o'):
+def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o', Q=False, cmap='viridis', size=20, edgecolor='w', Q_clip=1e10):
 
     if np.all(gme.kpoints[0,:]==0) and not np.all(gme.kpoints[1,:]==0) \
         or np.all(gme.kpoints[1,:]==0) and not np.all(gme.kpoints[0,:]==0):
-        X = np.sqrt(np.square(gme.kpoints[0,:]) + 
+        X0 = np.sqrt(np.square(gme.kpoints[0,:]) + 
                 np.square(gme.kpoints[1,:])) / 2 / np.pi
     else:
-        X = np.arange(len(gme.kpoints[0, :]))
+        X0 = np.arange(len(gme.kpoints[0, :]))
+
+    X = np.tile(X0.reshape(len(X0),1), (1, gme.freqs.shape[1]))
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
+    if Q:
+        freqs_im = []
+        for kind in range(len(X0)):
+            (freq_im, _, _) = gme.compute_rad(kind=kind, minds=range(10))
+            freqs_im.append(freq_im)
+        freqs_im = np.array(freqs_im).flatten() + 1e-16
+        Q = gme.freqs.flatten()/2/freqs_im
+        Q_max = np.max(Q[Q<Q_clip])
 
-    ax.plot(X, gme.freqs, ls, c="#1f77b4", label="", ms=4, mew=1)
+        p = ax.scatter(X.flatten(), gme.freqs.flatten(), 
+                            c=Q, cmap=cmap, s=size, vmax=Q_max, norm=mpl.colors.LogNorm(), edgecolors=edgecolor)
+        plt.colorbar(p, ax=ax, label="Radiative quality factor", extend="max")
+    else:
+        ax.plot(X, gme.freqs, ls, c="#1f77b4", label="", ms=4, mew=1)
 
     if lightcone:
         eps_clad = [gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg]
         vec_LL = np.sqrt(np.square(gme.kpoints[0, :]) + 
             np.square(gme.kpoints[1, :])) / 2 / np.pi / np.sqrt(max(eps_clad))
-        ax.fill_between(X, vec_LL,  max(vec_LL.max(), gme.freqs[:].max()), 
-                        facecolor="#cccccc", zorder=4, alpha=0.5)
+        ax.fill_between(X0, vec_LL,  max(vec_LL.max(), gme.freqs[:].max()), 
+                        facecolor="#eeeeee", zorder=0)
 
-    ax.set_xlim(left=0, right=max(X))
+    ax.set_xlim(left=0, right=max(X0))
     ax.set_ylim(bottom=0.0, top=gme.freqs[:].max())
     # ax.set_xticks([])
     ax.set_xlabel('Wave vector')
