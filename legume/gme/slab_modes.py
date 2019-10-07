@@ -30,6 +30,7 @@ def guided_modes(g_array, eps_array, d_array, n_modes=1,
     for ig, g in enumerate(g_array):
 
         g_val = max([g, 1e-4])
+        compute_g = True
 
         om_lb = g_val/np.sqrt(eps_array[1:-1].max())
         om_ub = g_val/np.sqrt(max(eps_array[0],eps_array[-1]))
@@ -39,21 +40,17 @@ def guided_modes(g_array, eps_array, d_array, n_modes=1,
                 # step is added just to be on the safe side
                 om_ub = min(om_ub, 
                     omegas[-1] + step + (g_array[ig] - g_array[ig-1]))
+            '''
+            Check if the guided mode needs to be computed at all; when using the
+            gmode_compute = 'exact' option, there might be identical g-points
+            in the g_array, so we don't want to compute those multiple times
+            '''
+            compute_g = np.abs(g - g_array[ig-1]) > 1e-8
 
-        (omegas, coeffs) = guided_mode_given_g(g=g_val, eps_array=eps_array, 
+        if compute_g:
+            (omegas, coeffs) = guided_mode_given_g(g=g_val, eps_array=eps_array, 
             d_array=d_array, n_modes=n_modes,
             omega_lb=om_lb, omega_ub=om_ub, step=step, tol=tol, pol=pol)
-            # g_val = 1e-4
-            # omega = g_val/np.sqrt(max(eps_array[0], eps_array[-1])) - tol
-            # chis = chi(omega, g_val, eps_array)
-            # chis[0] += 1j*1e-10
-            # chis[-1] += 1j*1e-10
-            # AB = AB_matrices(omega, g_val, eps_array, d_array, 
-            #                   chis, pol)
-            # norm = normalization_coeff(omega, g_val, eps_array, d_array, 
-            #                   AB, pol)
-            # coeffs = [AB / np.sqrt(norm)]
-            # omegas = [omega]
 
         om_guided.append(omegas)
         coeffs_guided.append(coeffs)

@@ -70,7 +70,8 @@ class TestGME(unittest.TestCase):
 
     def test_hex(self):
         '''
-        Test a hexagonal-lattice PhC with a circular hole
+        Test a hexagonal-lattice PhC with a circular hole and
+        gmode_compute = 'exact'
         '''
         lattice = Lattice('hexagonal')
         phc = PhotCryst(lattice, eps_l=5.)
@@ -79,7 +80,8 @@ class TestGME(unittest.TestCase):
 
         gme = GuidedModeExp(phc, gmax=6)
         # gme.plot_overview_ft(cladding=True)
-        options = {'gmode_inds': [1, 2, 3], 'numeig': 10, 'verbose': False}
+        options = {'gmode_inds': [1, 2, 3], 'numeig': 10, 'verbose': False, 
+                    'gmode_compute': 'exact'}
         gme.run(kpoints=np.array([[0.1], [0.1]]), **options)
         (freqs_im, _, _) = gme.compute_rad(kind=0, minds=range(10))
 

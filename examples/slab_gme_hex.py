@@ -30,8 +30,8 @@ if __name__ == '__main__':
 
 	# Initialize the guided mode expansion
 	gme = GuidedModeExp(phc, gmax=6)
-	options = {'gmode_inds': [0, 1, 2, 3], 'numeig': 10, 'verbose': False, 
-		'gmode_npts': 5000}
+	options = {'gmode_inds': [0, 1, 2, 3], 'numeig': 10, 'verbose': True, 
+		'gmode_npts': 4000, 'gmode_compute': 'exact'}
 	# And run it
 	gme.run(kpoints=path.kpoints, **options)
 
