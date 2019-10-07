@@ -23,8 +23,6 @@ Alternatively just download and make sure you have all the requirements installe
   - vs. some paper? 
   - vs. COMSOL?
   - vs. S4?
-- Improve visualization methods in `viz.py` and add some new ones:
-    - Q-factor visualization?
 
 For the optimization part:
 - Make Q-factor computation compatible with the autograd backend
