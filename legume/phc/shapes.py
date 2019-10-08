@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.path as mpltPath
 
-from .backend import backend as bd
+from legume.backend import backend as bd
 
 class Shape(object):
     ''' 
