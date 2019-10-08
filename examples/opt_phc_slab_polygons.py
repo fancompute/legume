@@ -4,9 +4,7 @@ defined across a grid of polygons
 
 import argparse
 
-import autograd
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import numpy as np
 import scipy
 from autograd import grad
@@ -37,9 +35,9 @@ parser.add_argument('-r0', default=0.2, type=float)
 args = parser.parse_args()
 
 options = {'gmode_inds': np.array([0, 3]),
-           'gmode_npts': args.gmode_npts,
-           'numeig': args.neig,
-           'verbose': args.verbose}
+		   'gmode_npts': args.gmode_npts,
+		   'numeig': args.neig,
+		   'verbose': args.verbose}
 
 lattice = legume.Lattice('hexagonal')
 a2 = lattice.a1
@@ -62,145 +60,151 @@ lattice.a2 = a2
 # plt.show()
 
 path = lattice.bz_path(['G', 'M', 'K', 'G'], [10, 10, 10])
-path_opt = path # lattice.bz_path(['M', 'K'], [5])
+path_opt = path  # lattice.bz_path(['M', 'K'], [5])
+
 
 def init_hole(lattice, N, r0, mode='soft'):
-    """Initialize the density distribution across N**2 polygons projected onto `lattice`
-    """
-    x, y, _, _ = generate_grid(lattice, N, extent_min=-0.5, extent_max=0.5)
-    r = np.sqrt(np.square(x) + np.square(y))
-    rho = np.zeros(r.shape)
+	"""Initialize the density distribution across N**2 polygons projected onto `lattice`
+	"""
+	x, y, _, _ = generate_grid(lattice, N, extent_min=-0.5, extent_max=0.5)
+	r = np.sqrt(np.square(x) + np.square(y))
+	rho = np.zeros(r.shape)
 
-    if mode=='hard':
-        rho[r<r0] = 1.0
-    elif mode =='soft':
-        rho += np.exp(-r**2/r0**2)
-    else:
-        raise ValueError('Invalid init mode = %s' % init)
+	if mode == 'hard':
+		rho[r < r0] = 1.0
+	elif mode == 'soft':
+		rho += np.exp(-r ** 2 / r0 ** 2)
+	else:
+		raise ValueError('Invalid init mode = %s' % init)
 
-    return rho
+	return rho
+
 
 def projection(rho, eta=0.5, beta=100):
-    """Density projection operator
-    """
-    return bd.divide(bd.tanh(beta * eta) + bd.tanh(beta * (rho - eta)), bd.tanh(beta * eta) + bd.tanh(beta * (1 - eta)))
+	"""Density projection operator
+	"""
+	return bd.divide(bd.tanh(beta * eta) + bd.tanh(beta * (rho - eta)), bd.tanh(beta * eta) + bd.tanh(beta * (1 - eta)))
+
 
 def make_simulation(polygons):
-    """Create the gme object and build the phc from `polygons`
-    """
-    phc = legume.PhotCryst(lattice)
-    phc.add_layer(d=args.D, eps_b=args.eps_b)
-    for polygon in polygons: phc.layers[-1].add_shape(polygon)
-    gme = legume.GuidedModeExp(phc, gmax=args.gmax)
-    return gme
+	"""Create the gme object and build the phc from `polygons`
+	"""
+	phc = legume.PhotCryst(lattice)
+	phc.add_layer(d=args.D, eps_b=args.eps_b)
+	for polygon in polygons: phc.layers[-1].add_shape(polygon)
+	gme = legume.GuidedModeExp(phc, gmax=args.gmax)
+	return gme
+
 
 def generate_grid(lattice, N, extent_min=-0.5, extent_max=0.5):
-    """Generates the center and edge coords for N**2 polygons projected onto `lattice`
+	"""Generates the center and edge coords for N**2 polygons projected onto `lattice`
 
-    """
-    # Set the extent of the grid 
-    extent = extent_max - extent_min
+	"""
+	# Set the extent of the grid
+	extent = extent_max - extent_min
 
-    # Grid cell size
-    h = extent / N
+	# Grid cell size
+	h = extent / N
 
-    # Coordinate transform matrix
-    T = np.hstack((lattice.a1[:, np.newaxis], lattice.a2[:, np.newaxis]))
+	# Coordinate transform matrix
+	T = np.hstack((lattice.a1[:, np.newaxis], lattice.a2[:, np.newaxis]))
 
-    Xc = np.linspace(extent_min+h/2, extent_max-h/2, N) # Grid cell center x coords
-    Yc = np.linspace(extent_min+h/2, extent_max-h/2, N) # Grid cell center y coords
-    Xc, Yc = np.meshgrid(Xc, Yc)
-    Xc = Xc.reshape(-1)
-    Yc = Yc.reshape(-1)
+	Xc = np.linspace(extent_min + h / 2, extent_max - h / 2, N)  # Grid cell center x coords
+	Yc = np.linspace(extent_min + h / 2, extent_max - h / 2, N)  # Grid cell center y coords
+	Xc, Yc = np.meshgrid(Xc, Yc)
+	Xc = Xc.reshape(-1)
+	Yc = Yc.reshape(-1)
 
-    XYc =  T @ np.stack((Xc, Yc)) 
+	XYc = T @ np.stack((Xc, Yc))
 
-    # Make *relative* polygon vertex coordinates
-    corner_x_rel = [-h/2, +h/2, +h/2, -h/2]
-    corner_y_rel = [-h/2, -h/2, +h/2, +h/2]
+	# Make *relative* polygon vertex coordinates
+	corner_x_rel = [-h / 2, +h / 2, +h / 2, -h / 2]
+	corner_y_rel = [-h / 2, -h / 2, +h / 2, +h / 2]
 
-    # Make absolute polygon vertex coordinates
-    coords = []
-    for i, (x_rel, y_rel) in enumerate(zip(corner_x_rel, corner_y_rel)):
-        coords.append(Xc+x_rel)
-        coords.append(Yc+y_rel)
+	# Make absolute polygon vertex coordinates
+	coords = []
+	for i, (x_rel, y_rel) in enumerate(zip(corner_x_rel, corner_y_rel)):
+		coords.append(Xc + x_rel)
+		coords.append(Yc + y_rel)
 
-    # Project into the lattice vectors
-    # We use block_diag to do the vertex coordinates in parallel
-    XYe = scipy.sparse.block_diag((T,T,T,T)) @ np.stack(coords)
+	# Project into the lattice vectors
+	# We use block_diag to do the vertex coordinates in parallel
+	XYe = scipy.sparse.block_diag((T, T, T, T)) @ np.stack(coords)
 
-    Xe = XYe[0::2,:]
-    Ye = XYe[1::2,:]
-    Xc = XYc[0,:]
-    Yc = XYc[1,:]
+	Xe = XYe[0::2, :]
+	Ye = XYe[1::2, :]
+	Xc = XYc[0, :]
+	Yc = XYc[1, :]
 
-    return Xc, Yc, Xe, Ye
+	return Xc, Yc, Xe, Ye
 
 
 def generate_polygons(lattice, rho, eta=0.5, beta=10):
-    """Converts the density, `rho`, into legume polygons.
+	"""Converts the density, `rho`, into legume polygons.
 
-    This performs a projection of the density along the way. 
-    `lattice` can be the actual lattice of the crystal or can be hardcoded as 'square'
-    if we want to just use a rectangular grid, pray to god, and hope for the best...
-    """
+	This performs a projection of the density along the way.
+	`lattice` can be the actual lattice of the crystal or can be hardcoded as 'square'
+	if we want to just use a rectangular grid, pray to god, and hope for the best...
+	"""
 
-    # TODO(ian): perhaps add a check here that len(rho) == N**2 in case of user error
-    N = int(np.sqrt(len(rho)))
-    _, _, Xe, Ye = generate_grid(lattice, N, extent_min=-0.5, extent_max=0.5)
-    
-    rho_proj = projection(rho, eta, beta)
+	# TODO(ian): perhaps add a check here that len(rho) == N**2 in case of user error
+	N = int(np.sqrt(len(rho)))
+	_, _, Xe, Ye = generate_grid(lattice, N, extent_min=-0.5, extent_max=0.5)
 
-    polygons = []
-    for i in range(len(rho)):
-        eps = args.eps_b + (1 - args.eps_b) * rho_proj[i]
-        polygon = legume.Poly(eps=eps,
-                              x_edges=Xe[:,i],
-                              y_edges=Ye[:,i])
-        polygons.append(polygon)
+	rho_proj = projection(rho, eta, beta)
 
-    return polygons
+	polygons = []
+	for i in range(len(rho)):
+		eps = args.eps_b + (1 - args.eps_b) * rho_proj[i]
+		polygon = legume.Poly(eps=eps,
+							  x_edges=Xe[:, i],
+							  y_edges=Ye[:, i])
+		polygons.append(polygon)
 
-def objective(rho):
-    """The objective function.
+	return polygons
 
-    Takes rho -> polygons
-    Makes gme object
-    Runs gme
-    Computes size of bandgap
-    """
-    polygons = generate_polygons(lattice, rho, eta=args.eta, beta=args.beta)
-    gme = make_simulation(polygons)
-    gme.run(kpoints=path_opt.kpoints, **options)
-    band_up = gme.freqs[:,1:]
-    band_dn = gme.freqs[:,0]
 
-    # eps_clad = [gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg]
-    # vec_LL = bd.sqrt(np.square(gme.kpoints[0, :]) + bd.square(gme.kpoints[1, :])) \
-    #     / 2 / np.pi / np.sqrt(bd.max(eps_clad))
+def objective(rho, sign=1.0):
+	"""The objective function.
 
-    # intersection_up_LL = bd.min(bd.vstack( (band_up, vec_LL) ), axis=0)
-    intersection_up_LL = band_up
-    gap_width = bd.min(intersection_up_LL)-bd.max(band_dn)
+	Takes rho -> polygons
+	Makes gme object
+	Runs gme
+	Computes size of bandgap
+	"""
+	polygons = generate_polygons(lattice, rho, eta=args.eta, beta=args.beta)
+	gme = make_simulation(polygons)
+	gme.run(kpoints=path_opt.kpoints, **options)
+	band_up = gme.freqs[:, 1:]
+	band_dn = gme.freqs[:, 0]
 
-    return gap_width
+	# eps_clad = [gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg]
+	# vec_LL = bd.sqrt(np.square(gme.kpoints[0, :]) + bd.square(gme.kpoints[1, :])) \
+	#     / 2 / np.pi / np.sqrt(bd.max(eps_clad))
+
+	# intersection_up_LL = bd.min(bd.vstack( (band_up, vec_LL) ), axis=0)
+	intersection_up_LL = band_up
+	gap_width = bd.min(intersection_up_LL) - bd.max(band_dn)
+
+	return gap_width * sign
 
 
 def summarize_results(gme):
-    """Summarize the results of a gme run.
+	"""Summarize the results of a gme run.
 
-    Plots the bands and the real space structure
-    """
-    gap_size = bd.min(gme.freqs[:,1])-bd.max(gme.freqs[:,0])
-    gap_mid = 0.5*bd.min(gme.freqs[:,1]) + 0.5* bd.max(gme.freqs[:,0])
+	Plots the bands and the real space structure
+	"""
+	gap_size = bd.min(gme.freqs[:, 1]) - bd.max(gme.freqs[:, 0])
+	gap_mid = 0.5 * bd.min(gme.freqs[:, 1]) + 0.5 * bd.max(gme.freqs[:, 0])
 
-    print("Gap size (relative): %.2f (%.2f)" % (gap_size, gap_size/gap_mid))
+	print("Gap size (relative): %.2f (%.2f)" % (gap_size, gap_size / gap_mid))
 
-    fig = plt.figure(constrained_layout=True)
-    gs = fig.add_gridspec(ncols=2, nrows=1)
-    ax1 = fig.add_subplot(gs[0])
-    legume.viz.bands(gme, ax=ax1)
-    gme.phc.plot_overview(fig=fig, gridspec=gs[1], cbar=False)
+	fig = plt.figure(constrained_layout=True)
+	gs = fig.add_gridspec(ncols=2, nrows=1)
+	ax1 = fig.add_subplot(gs[0])
+	legume.viz.bands(gme, ax=ax1, Q=True)
+	gme.phc.plot_overview(fig=fig, gridspec=gs[1], cbar=False)
+
 
 legume.set_backend('numpy')
 
@@ -208,47 +212,52 @@ legume.set_backend('numpy')
 
 rho_0 = init_hole(lattice, args.N_polygons, args.r0, mode=args.init)
 
-if args.initialize:
-    polygons = generate_polygons(lattice, rho_0, eta=args.eta, beta=args.beta)
-    gme = make_simulation(polygons)
-    gme.run(kpoints=path.kpoints, **options)
-    summarize_results(gme)
+polygons = generate_polygons(lattice, rho_0, eta=args.eta, beta=args.beta)
+gme = make_simulation(polygons)
+gme.run(kpoints=path.kpoints, **options)
+summarize_results(gme)
 
 # Optimize
-if args.optimize:
-    legume.set_backend('autograd')
-    objective_grad = grad(objective)
-    (rho_opt, ofs) = adam_optimize(objective, rho_0, objective_grad, step_size=args.lr, Nsteps=args.epochs,
-                                   options={'direction': 'max', 'disp': ['of']})
+legume.set_backend('autograd')
+objective_grad = grad(objective)
+(rho_opt, ofs) = adam_optimize(objective, rho_0, objective_grad, step_size=args.lr, Nsteps=args.epochs,
+							   options={'direction': 'max', 'disp': ['of']})
 
-    legume.set_backend('numpy')
-    polygons = generate_polygons(lattice, rho_opt, eta=args.eta, beta=args.beta)
-    gme = make_simulation(polygons)
-    gme.run(kpoints=path.kpoints, **options)
-    summarize_results(gme)
+# result = minimize(objective,
+#                   rho_0,
+#                   args=(-1.0,),
+#                   method='BFGS',
+#                   jac=jacobian(objective),
+#                   options={'disp': True, 'maxiter': args.epochs})
+# rho_opt = result.x
+
+legume.set_backend('numpy')
+polygons = generate_polygons(lattice, rho_opt, eta=args.eta, beta=args.beta)
+gme = make_simulation(polygons)
+gme.run(kpoints=path.kpoints, **options)
+summarize_results(gme)
 
 if False:
-    # WIP on converting to an exportable format
-    import skimage
+	# WIP on converting to an exportable format
+	import skimage
 
-    proj_rho_opt = projection(rho_opt)
-    rho_contours = skimage.measure.find_contours(proj_rho_opt, 0.5)
+	proj_rho_opt = projection(rho_opt)
+	rho_contours = skimage.measure.find_contours(proj_rho_opt, 0.5)
 
-    fig, ax = plt.subplots()
-    ax.imshow(proj_rho_opt, cmap=plt.cm.gray)
-    for n, contour in enumerate(rho_contours):
-        ax.plot(contour[:, 1], contour[:, 0], linewidth=2)
+	fig, ax = plt.subplots()
+	ax.imshow(proj_rho_opt, cmap=plt.cm.gray)
+	for n, contour in enumerate(rho_contours):
+		ax.plot(contour[:, 1], contour[:, 0], linewidth=2)
 
-    ax.axis('image')
-    ax.set_xticks([])
-    ax.set_yticks([])
-    plt.show()
+	ax.axis('image')
+	ax.set_xticks([])
+	ax.set_yticks([])
+	plt.show()
 
-
-    N = args.N_polygons
-    vertices = []
-    edges = []
-    for n, contour in enumerate(rho_contours):
-        contour_scaled = contour/(N-1) - 0.5
-        vertices.append(contour_scaled)
-        edges.append(np.arange(contour_scaled.shape[0]))
+	N = args.N_polygons
+	vertices = []
+	edges = []
+	for n, contour in enumerate(rho_contours):
+		contour_scaled = contour / (N - 1) - 0.5
+		vertices.append(contour_scaled)
+		edges.append(np.arange(contour_scaled.shape[0]))
