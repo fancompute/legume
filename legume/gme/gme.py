@@ -31,6 +31,7 @@ class GuidedModeExp(object):
 
         # Eigenfrequencies and eigenvectors
         self.freqs = []
+        self.freqs_im = []
         self.eigvecs = []
 
         # Initialize the reciprocal lattice vectors and compute the FT of all
@@ -97,6 +98,9 @@ class GuidedModeExp(object):
 
             # Number of eigen-frequencies to be stored (starting from lowest)
             'numeig'       : 10,
+
+            # Should the imaginary parts of the frequencies also be computed
+            'compute_im'   : True,
 
             # Using the 'average' or the 'background' permittivity of the layers
             # in the guided mode computation
@@ -410,6 +414,13 @@ class GuidedModeExp(object):
             print_vb("%1.4f seconds of that was guided modes computation"
                     % self.t_guided)
 
+        if self.compute_im:
+            print_vb("Computing imaginary part of the freqeuncies")
+            t = time.time()
+            self.run_im()
+            print_vb("%1.4f seconds to compute radiative rates"
+                    % (time.time()-t))
+
     def compute_eps_inv(self):
         '''
         Construct the inverse FT matrices for the permittivity in each layer
@@ -554,6 +565,28 @@ class GuidedModeExp(object):
         self.mat = mat  
 
         return mat
+
+    def run_im(self):
+        '''
+        Compute the radiative rates associated to all the freqeuncies that were 
+        computed during self.run()
+        '''
+        if len(self.freqs)==0:
+            raise RuntimeError("Run the GME computation first!")
+
+        freqs_i = [] # Imaginary part of frequencies
+        cl = []      # Coupling constants to lower-cladding radiative modes
+        cu = []      # Coupling constants to upper-cladding radiative modes
+        for kind in range(len(self.freqs)):
+            minds = np.arange(0, self.numeig)
+            (freqs_im, coup_l, coup_u) = self.compute_rad(kind, minds)
+            freqs_i.append(freqs_im)
+            cl.append(coup_l)
+            cu.append(coup_u)
+
+        self.freqs_im = np.array(freqs_i)
+        self.coup_l = cl
+        self.coup_u = cu
 
     def compute_rad(self, kind, minds=[0]):
         '''

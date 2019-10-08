@@ -4,7 +4,8 @@ import numpy as np
 
 
 # TODO: Make this more general
-def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o', Q=False, cmap='viridis', size=20, edgecolor='w', Q_clip=1e10):
+def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o', Q=False, 
+    cmap='viridis', size=20, edgecolor='w', Q_clip=1e10):
 
     if np.all(gme.kpoints[0,:]==0) and not np.all(gme.kpoints[1,:]==0) \
         or np.all(gme.kpoints[1,:]==0) and not np.all(gme.kpoints[0,:]==0):
@@ -18,16 +19,21 @@ def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o', Q=False, cmap='vi
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
     if Q:
-        freqs_im = []
-        for kind in range(len(X0)):
-            (freq_im, _, _) = gme.compute_rad(kind=kind, minds=range(10))
-            freqs_im.append(freq_im)
+        if len(gme.freqs_im) == 0:
+            freqs_im = []
+            for kind in range(len(X0)):
+                (freq_im, _, _) = gme.compute_rad(kind=kind, 
+                                        minds=range(gme.numeig))
+                freqs_im.append(freq_im)
+        else:
+            freqs_im = gme.freqs_im
         freqs_im = np.array(freqs_im).flatten() + 1e-16
         Q = gme.freqs.flatten()/2/freqs_im
         Q_max = np.max(Q[Q<Q_clip])
 
         p = ax.scatter(X.flatten(), gme.freqs.flatten(), 
-                            c=Q, cmap=cmap, s=size, vmax=Q_max, norm=mpl.colors.LogNorm(), edgecolors=edgecolor)
+                            c=Q, cmap=cmap, s=size, vmax=Q_max, 
+                            norm=mpl.colors.LogNorm(), edgecolors=edgecolor)
         plt.colorbar(p, ax=ax, label="Radiative quality factor", extend="max")
     else:
         ax.plot(X, gme.freqs, ls, c="#1f77b4", label="", ms=4, mew=1)
@@ -36,7 +42,7 @@ def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o', Q=False, cmap='vi
         eps_clad = [gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg]
         vec_LL = np.sqrt(np.square(gme.kpoints[0, :]) + 
             np.square(gme.kpoints[1, :])) / 2 / np.pi / np.sqrt(max(eps_clad))
-        ax.fill_between(X0, vec_LL,  max(vec_LL.max(), gme.freqs[:].max()), 
+        ax.fill_between(X0, vec_LL,  max(100, vec_LL.max(), gme.freqs[:].max()), 
                         facecolor="#eeeeee", zorder=0)
 
     ax.set_xlim(left=0, right=max(X0))
