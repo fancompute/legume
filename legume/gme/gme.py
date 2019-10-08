@@ -109,7 +109,7 @@ class GuidedModeExp(object):
         if 'gmode_compute' in options.keys():
             if options['gmode_compute'] == 'exact':
                 if 'gmode_npts' in options.keys():
-                    print("Warning: ignoring 'gmode_npts' supplied in options"
+                    print("Warning: ignoring 'gmode_npts' supplied in options "
                             "when using 'gmode_compute' = 'exact'")
             elif options['gmode_compute'] != 'interp':
                 raise ValueError("options['gmode_compute'] can be one of"
@@ -361,11 +361,13 @@ class GuidedModeExp(object):
             # Array of g-points over which the guided modes will be computed
             g_array = np.linspace(0, Gmax + kmax, self.gmode_npts)
             self.compute_guided(g_array)
+            self.t_guided = time.time()-t
 
             print_vb("%1.4f seconds for guided mode computation"% 
                             (time.time()-t))
         else:
             print_vb("Using the 'exact' method of guided mode computation")
+            self.t_guided = 0
 
         # Compute inverse matrix of FT of permittivity
         t = time.time()
@@ -404,6 +406,9 @@ class GuidedModeExp(object):
         self.eigvecs = eigvecs
 
         print_vb("%1.4f seconds total time to run"% (time.time()-t_start))
+        if self.gmode_compute.lower() == 'exact':
+            print_vb("%1.4f seconds of that was guided modes computation"
+                    % self.t_guided)
 
     def compute_eps_inv(self):
         '''
@@ -431,6 +436,7 @@ class GuidedModeExp(object):
 
         # Compute the guided modes over gk if using the 'exact' method
         if self.gmode_compute.lower() == 'exact':
+            t = time.time()
             g_array = np.sort(gk)
             # Expand boundaries a bit to make sure we get all the modes
             # Note that the 'exact' computation still uses interpolation, 
@@ -438,6 +444,7 @@ class GuidedModeExp(object):
             g_array[0] -= 1e-6
             g_array[-1] += 1e-6
             self.compute_guided(g_array)
+            self.t_guided += time.time() - t
 
         # Unit vectors in the propagation direction; we add a tiny component 
         # in the x-direction to avoid problems at gk = 0
