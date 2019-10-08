@@ -28,14 +28,12 @@ class TestGME(unittest.TestCase):
         options = {'gmode_inds': [0, 1, 2, 3], 'numeig': 10, 'verbose': False, 
                     'gmode_npts': 2000}
         gme.run(kpoints=np.array([[0.1], [0.2]]), **options)
-        (freqs_im, _, _) = gme.compute_rad(kind=0, 
-                                    minds=range(10))
 
         dat = scipy.io.loadmat('./tests/data/gme_square.mat')
         diff_real = np.sum(np.abs(gme.freqs - dat['Eks']/2/np.pi) / \
                                     (gme.freqs+1e-10))
-        diff_imag = np.sum(np.abs(freqs_im - dat['Pks']/2/np.pi) / \
-                                    (np.abs(freqs_im)+1e-10))
+        diff_imag = np.sum(np.abs(gme.freqs_im - dat['Pks']/2/np.pi) / \
+                                    (np.abs(gme.freqs_im)+1e-10))
 
         self.assertLessEqual(diff_real, 1e-4)
         self.assertLessEqual(diff_imag, 1e-3)
@@ -53,17 +51,12 @@ class TestGME(unittest.TestCase):
         gme = GuidedModeExp(phc, gmax=3)
         options = {'gmode_inds': [0, 1, 2, 3], 'numeig': 10, 'verbose': False}
         gme.run(kpoints=np.array([[0., 0.1], [0., 0.2]]), **options)
-        freqs_im = []
-        for kind in [0, 1]:
-            (f_im, _, _) = gme.compute_rad(kind=kind, minds=range(10))
-            freqs_im.append(f_im)
-        freqs_im = np.array(freqs_im)
 
         dat = scipy.io.loadmat('./tests/data/gme_rect.mat')
         diff_real = np.sum(np.abs(gme.freqs - dat['Eks']/2/np.pi) / \
                                     (gme.freqs+1e-10))
-        diff_imag = np.sum(np.abs(freqs_im - dat['Pks']/2/np.pi) / \
-                                    (np.abs(freqs_im)+1e-10))
+        diff_imag = np.sum(np.abs(gme.freqs_im - dat['Pks']/2/np.pi) / \
+                                    (np.abs(gme.freqs_im)+1e-10))
 
         self.assertLessEqual(diff_real, 1e-4)
         self.assertLessEqual(diff_imag, 1e-3)
@@ -71,7 +64,7 @@ class TestGME(unittest.TestCase):
     def test_hex(self):
         '''
         Test a hexagonal-lattice PhC with a circular hole and
-        gmode_compute = 'exact'
+        gmode_compute = 'interp'
         '''
         lattice = Lattice('hexagonal')
         phc = PhotCryst(lattice, eps_l=5.)
@@ -81,15 +74,14 @@ class TestGME(unittest.TestCase):
         gme = GuidedModeExp(phc, gmax=6)
         # gme.plot_overview_ft(cladding=True)
         options = {'gmode_inds': [1, 2, 3], 'numeig': 10, 'verbose': False, 
-                    'gmode_compute': 'exact'}
+                    'gmode_compute': 'interp'}
         gme.run(kpoints=np.array([[0.1], [0.1]]), **options)
-        (freqs_im, _, _) = gme.compute_rad(kind=0, minds=range(10))
 
         dat = scipy.io.loadmat('./tests/data/gme_hex.mat')
         diff_real = np.sum(np.abs(gme.freqs - dat['Eks']/2/np.pi) / \
                                     (gme.freqs+1e-10))
-        diff_imag = np.sum(np.abs(freqs_im - dat['Pks']/2/np.pi) / \
-                                    (np.abs(freqs_im)+1e-10))
+        diff_imag = np.sum(np.abs(gme.freqs_im - dat['Pks']/2/np.pi) / \
+                                    (np.abs(gme.freqs_im)+1e-10))
 
         # Lower tolerance allowed because the MATLAB reciprocal space is 
         # hexagonal while the legume one is a parallelogram

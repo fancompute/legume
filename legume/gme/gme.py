@@ -81,7 +81,7 @@ class GuidedModeExp(object):
             # Define whether the guided modes are computed in the beginning
             # and then interpolated ('interp'), or whether they are computed
             # exactly at every k-step ('exact')
-            'gmode_compute': 'interp',
+            'gmode_compute': 'exact',
 
             # Indexes of modes to be included in the expansion
             'gmode_inds'   : [0],
