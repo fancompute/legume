@@ -941,7 +941,7 @@ class GuidedModeExp(object):
         '''
         xgrid = self.phc.lattice.xy_grid(Nx=Nx, Ny=2)[0]
         ygrid = np.array([y])
-        zgrid = self.phc.z_grid(Nz=Nz, dist=0.5)
+        zgrid = self.phc.z_grid(Nz=Nz, dist=1.0)
 
         # Get the field fourier components
         Nft = self.T1[0].shape[0]
@@ -986,6 +986,9 @@ class GuidedModeExp(object):
                 raise ValueError("'val' can be 'im', 're', or 'abs'")
 
             im = ax.imshow(Z, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
+
+            epsr = self.phc.get_eps(np.meshgrid(xgrid, ygrid, zgrid)).squeeze(0)
+            ax.contour(xgrid,zgrid,epsr.transpose(),1,colors='k',linewidths=1)
 
             if cbar:
                 f1.colorbar(im, ax=ax)
