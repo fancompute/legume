@@ -1,13 +1,21 @@
 import numpy as np
 
 from legume.backend import backend as bd
-from legume.utils import I_alpha, J_alpha, get_value
 
 '''
 Notation is following Andreani and Gerace PRB 2006 with the exception that all
 wave-vectors are always defined as (eps*omega^2/c^2 - g^2) regardless of 
 whether that makes them real or imaginary
 '''
+
+'''===========HELPER FUNCTIONS FOR Z-INTEGRATION============'''
+def I_alpha(a, d): # integrate exp(iaz)dz from -d/2 to d/2
+    a = a + 1e-20
+    return 2 / a * bd.sin(a*d/2)
+
+def J_alpha(a): # integrate exp(iaz)dz from 0 to inf
+    a = a + 1e-20
+    return 1j / a
 
 '''===========MATRIX ELEMENTS BETWEEN GUIDED SLAB MODES============'''
 def mat_te_te(eps_array, d_array, eps_inv_mat, indmode1, oms1,
