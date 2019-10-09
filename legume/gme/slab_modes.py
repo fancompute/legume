@@ -1,6 +1,16 @@
 import numpy as np
 from scipy.optimize import brentq
-from legume.utils import RedhefferStar, I_alpha, J_alpha
+from legume.backend import backend as bd
+
+'''===========HELPER FUNCTIONS FOR Z-INTEGRATION============'''
+def I_alpha(a, d): # integrate exp(iaz)dz from -d/2 to d/2
+    a = a + 1e-20
+    return 2 / a * bd.sin(a*d/2)
+
+def J_alpha(a): # integrate exp(iaz)dz from 0 to inf
+    a = a + 1e-20
+    return 1j / a
+'''========================================================='''
 
 def guided_modes(g_array, eps_array, d_array, n_modes=1, 
             step=1e-3, tol=1e-4, pol='TE'):
