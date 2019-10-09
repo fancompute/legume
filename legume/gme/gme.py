@@ -39,8 +39,6 @@ class GuidedModeExp(object):
         self._init_reciprocal()
         self.compute_ft()
 
-
-
     def __repr__(self):
         rep = 'GuidedModeExp(\n'
         rep += 'gmax = ' + repr(self.gmax) + '\n'
@@ -190,7 +188,7 @@ class GuidedModeExp(object):
         '''
         chis = np.zeros((self.N_layers + 2, gkr.size), dtype=np.complex128)
         for il in range(self.N_layers + 2):
-            chis[il, :] = bd.sqrt(self.eps_array[il]*omr**2 - 
+            chis[il, :] = np.sqrt(self.eps_array[il]*omr**2 - 
                             gkr**2, dtype=np.complex128).ravel()
         (Xs, Ys) = rad_modes(omr, gkr, self.eps_array, self.d_array, pol, clad)
         
@@ -632,7 +630,7 @@ class GuidedModeExp(object):
             [Xs, Ys, chis] = [{'te': [], 'tm': []} for i in range(3)]
             for clad_ind in [0, 1]:
                 for pol in ['te', 'tm']:
-                    (X, Y, chi) = self._get_rad(gkr[clad_ind], omr, 
+                    (X, Y, chi) = self._get_rad(gkr[clad_ind], get_value(omr), 
                             pol=pol, clad=clad_ind)
                     Xs[pol].append(X)
                     Ys[pol].append(Y)
