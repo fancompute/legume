@@ -123,3 +123,77 @@ def plot_reciprocal(gme):
     plt.plot(gme.gvec[0, :], gme.gvec[1, :], 'bx')
     ax.set_title("Reciprocal lattice")
     plt.show()
+
+def plot_field(gme, field, kind, mind, x=None, y=None, z=None,
+            component='xyz', val='re', N1=100, N2=100, cbar=True, eps=True):
+    '''
+    Plot the 'field' ('H' or 'D') at the plane defined by 'x', 'y', or 'z', 
+    for mode number mind at k-vector kind. 
+    'comp' can be: 'x', 'y', 'z' or a combination thereof, e.g. 'xz' (a 
+    separate plot is created for each component)
+    'val' can be: 're', 'im', 'abs'
+    '''
+
+    field = field.lower()
+    val = val.lower()
+    component = component.lower()
+
+    # Get the field fourier components
+    if z is not None and x is None and y is None:
+        (fi, grid1, grid2) = gme.get_field_xy(field, kind, mind, z, 
+                                            component, N1, N2)
+        if eps==True:
+            epsr = gme.phc.get_eps(np.meshgrid(
+                            grid1, grid2, np.array(z))).squeeze()
+        pl, o, v = 'xy', 'z', z
+    elif x is not None and z is None and y is None:
+        (fi, grid1, grid2) = gme.get_field_yz(field, kind, mind, x, 
+                                            component, N1, N2)
+        if eps==True:
+            epsr = gme.phc.get_eps(np.meshgrid(
+                            np.array(x), grid1, grid2)).squeeze().transpose()
+        pl, o, v = 'yz', 'x', x
+    elif y is not None and z is None and x is None:
+        (fi, grid1, grid2) = gme.get_field_xz(field, kind, mind, y, 
+                                            component, N1, N2)
+        if eps==True:
+            epsr = gme.phc.get_eps(np.meshgrid(
+                            grid1, np.array(y), grid2)).squeeze().transpose()
+        pl, o, v = 'xz', 'y', y
+    else:
+        raise ValueError("Specify exactly one of 'x', 'y', or 'z'.")
+
+    print(epsr.shape, grid1.shape, grid2.shape)
+
+    f1 = plt.figure()
+    sp = len(component)
+    for ic, comp in enumerate(component):
+        f = fi[comp]
+        
+        extent = [grid1[0], grid1[-1], grid2[0], grid2[-1]]
+        ax = f1.add_subplot(1, sp, ic+1)
+
+        if val=='re' or val=='im':
+            Z = np.real(f) if val=='re' else np.imag(f)
+            cmap = 'RdBu'
+            vmax = np.abs(Z).max()
+            vmin = -vmax
+        elif val=='abs':
+            Z = np.abs(f)
+            cmap='magma'
+            vmax = Z.max()
+            vmin = 0
+        else:
+            raise ValueError("'val' can be 'im', 're', or 'abs'")
+
+        im = ax.imshow(Z, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax,
+                        origin='lower')
+
+        if eps==True:
+            ax.contour(grid1, grid2, epsr, 1, colors='k', linewidths=1)
+
+        if cbar==True:
+            f1.colorbar(im, ax=ax)
+        ax.set_title("%s(%s_%s)" % (val, field, comp))
+        f1.suptitle("%s-plane at %s = %1.4f" %(pl, o, v))
+        plt.show()

@@ -883,118 +883,94 @@ class GuidedModeExp(object):
 
             return (Dx_ft, Dy_ft, Dz_ft)
 
-    def plot_field_xy(self, field, kind, mind, z,
-                component='xyz', val='re', Nx=100, Ny=100, cbar=True):
+    def get_field_xy(self, field, kind, mind, z,
+                    component='xyz', Nx=100, Ny=100):
         '''
-        Plot the field ('H', 'D', or 'E') at an xy-plane at position z for mode 
-        number mind at k-vector kind. 
-        'comp' can be: 'x', 'y', 'z' or a combination thereof, e.g. 'xz' (a 
-        separate plot is created for each component)
-        'val' can be: 're', 'im', 'abs'
+        Get the 'field' ('H' or 'D') at an xy-plane at position z for mode 
+        number mind at k-vector kind.
+        Returns a dictionary with the ['x'], ['y'], and ['z'] components of the 
+        corresponding field; only the ones requested in 'comp' are computed 
         '''
 
         # Make a grid in the x-y plane
         (xgrid, ygrid) = self.phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
 
         # Get the field fourier components
-        (fx, fy, fz) = self.ft_field_xy(field, kind, mind, z)
+        ft, fi = {}, {}
+        (ft['x'], ft['y'], ft['z']) = self.ft_field_xy(field, kind, mind, z)
 
-        f1 = plt.figure()
-        sp = len(component)
-        for ic, comp in enumerate(component):
-            if comp=='x':
-                fi = ftinv(fx, self.gvec, xgrid, ygrid)
-            elif comp=='y':
-                fi = ftinv(fy, self.gvec, xgrid, ygrid)
-            elif comp=='z':
-                fi = ftinv(fz, self.gvec, xgrid, ygrid)
+        for comp in component:
+            if comp in ft.keys():
+                if not (comp in fi.keys()):
+                    fi[comp] = ftinv(ft[comp], self.gvec, xgrid, ygrid)
             else:
-                raise ValueError("'component' can be 'x', 'y', 'z', or a "
-                    "combination of those")
-            
-            extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
-            ax = f1.add_subplot(1, sp, ic+1)
+                raise ValueError("'component' can be any combination of "
+                    "'x', 'y', and 'z' only.")
 
-            if val=='re' or val=='im':
-                Z = np.real(fi) if val=='re' else np.imag(fi)
-                cmap = 'RdBu'
-                vmax = np.abs(Z).max()
-                vmin = -vmax
-            elif val=='abs':
-                Z = np.abs(fi)
-                cmap='magma'
-                vmax = Z.max()
-                vmin = 0
-            else:
-                raise ValueError("'val' can be 'im', 're', or 'abs'")
+        return (fi, xgrid, ygrid)
 
-            im = ax.imshow(Z, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax,
-                            origin='lower')
-
-            if cbar:
-                f1.colorbar(im, ax=ax)
-            ax.set_title("%s(%s_%s)" % (val, field, comp))
-            plt.show()
-
-
-    def plot_field_xz(self, field, kind, mind, y,
-                component='xyz', val='re', Nx=100, Nz=100, cbar=True):
+    def get_field_xz(self, field, kind, mind, y,
+                    component='xyz', Nx=100, Nz=100, dist=1.):
         '''
-        Hacked version for plotting the xz plane by stitching together xy "planes" for various
-        z slices
+        Hacked version for getting the field in an xz plane by stitching 
+        together xy "planes" for various z slices
         '''
         xgrid = self.phc.lattice.xy_grid(Nx=Nx, Ny=2)[0]
         ygrid = np.array([y])
-        zgrid = self.phc.z_grid(Nz=Nz, dist=1.0)
+        zgrid = self.phc.z_grid(Nz=Nz, dist=dist)
 
-        # Get the field fourier components
-        Nft = self.T1[0].shape[0]
-        fx = np.zeros((Nz, Nft), dtype=np.complex128)
-        fy = np.zeros((Nz, Nft), dtype=np.complex128)
-        fz = np.zeros((Nz, Nft), dtype=np.complex128)
-
+        # Get the field components
+        ft = {'x': [], 'y': [], 'z': []}
+        fi = {}
         for i, z in enumerate(zgrid):
-            (fx[i,:], fy[i,:], fz[i,:]) = self.ft_field_xy(field, kind, mind, z)
+            (fx, fy, fz) = self.ft_field_xy(field, kind, mind, z)
+            ft['x'].append(fx)
+            ft['y'].append(fy)
+            ft['z'].append(fz)
 
-        f1 = plt.figure()
-        sp = len(component)
-        for ic, comp in enumerate(component):
-            fi = np.zeros((Nz, Nx), dtype=np.complex128)
-            if comp=='x':
-                for i, z in enumerate(zgrid):
-                    fi[i,:] = ftinv(fx[i,:], self.gvec, xgrid, ygrid)
-            elif comp=='y':
-                for i, z in enumerate(zgrid):
-                    fi[i,:] = ftinv(fy[i,:], self.gvec, xgrid, ygrid)
-            elif comp=='z':
-                for i, z in enumerate(zgrid):
-                    fi[i,:] = ftinv(fz[i,:], self.gvec, xgrid, ygrid)
+        for comp in component:
+            if comp in ft.keys():
+                if not (comp in fi.keys()):
+                    fi[comp] = []
+                    for i, z in enumerate(zgrid):
+                        fi[comp].append(ftinv(ft[comp][i], 
+                                            self.gvec, xgrid, ygrid).ravel())
+                    fi[comp] = bd.array(fi[comp])
             else:
-                raise ValueError("'component' can be 'x', 'y', 'z', or a "
-                    "combination of those")
-            
-            extent = [xgrid[0], xgrid[-1], zgrid[0], zgrid[-1]]
-            ax = f1.add_subplot(1, sp, ic+1)
+                raise ValueError("'component' can be any combination of "
+                    "'x', 'y', and 'z' only.")
 
-            if val=='re' or val=='im':
-                Z = np.real(fi) if val=='re' else np.imag(fi)
-                cmap = 'RdBu'
-                vmax = np.abs(Z).max()
-                vmin = -vmax
-            elif val=='abs':
-                Z = np.abs(fi)
-                cmap='magma'
-                vmax = Z.max()
-                vmin = 0
+        return (fi, xgrid, zgrid)
+
+    def get_field_yz(self, field, kind, mind, x,
+                    component='xyz', Ny=100, Nz=100, dist=1.):
+        '''
+        Hacked version for getting the field in a yz plane by stitching 
+        together xy "planes" for various z slices
+        '''
+        xgrid = np.array([x])
+        ygrid = self.phc.lattice.xy_grid(Nx=2, Ny=Ny)[1]        
+        zgrid = self.phc.z_grid(Nz=Nz, dist=dist)
+
+        # Get the field components
+        ft = {'x': [], 'y': [], 'z': []}
+        fi = {}
+        for i, z in enumerate(zgrid):
+            (fx, fy, fz) = self.ft_field_xy(field, kind, mind, z)
+            ft['x'].append(fx)
+            ft['y'].append(fy)
+            ft['z'].append(fz)
+
+        for comp in component:
+            if comp in ft.keys():
+                if not (comp in fi.keys()):
+                    fi[comp] = []
+                    for i, z in enumerate(zgrid):
+                        fi[comp].append(ftinv(ft[comp][i], 
+                                            self.gvec, xgrid, ygrid).ravel())
+                    fi[comp] = bd.array(fi[comp])
             else:
-                raise ValueError("'val' can be 'im', 're', or 'abs'")
+                raise ValueError("'component' can be any combination of "
+                    "'x', 'y', and 'z' only.")
 
-            im = ax.imshow(Z, extent=extent, cmap=cmap, vmin=vmin, vmax=vmax)
-
-            epsr = self.phc.get_eps(np.meshgrid(xgrid, ygrid, zgrid)).squeeze(0)
-            ax.contour(xgrid,zgrid,epsr.transpose(),1,colors='k',linewidths=1)
-
-            if cbar:
-                f1.colorbar(im, ax=ax)
-            ax.set_title("%s(%s_%s)" % (val, field, comp))
-            plt.show()
+        return (fi, ygrid, zgrid)
