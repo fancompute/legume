@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
+from legume import GuidedModeExp, PhotCryst
 
 
 # TODO: Make this more general
@@ -69,7 +70,7 @@ def plot_eps(eps_r, clim=None, ax=None, extent=None, cmap='Greys', cbar=False):
         
     return im
 
-def plot_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
+def eps_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
              cbar=False, cmap='Greys'):
     '''
     Plot an xz-cross section showing all the layers and shapes
@@ -85,7 +86,7 @@ def plot_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
     plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
 
-def plot_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None,
+def eps_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None,
              cbar=False, cmap='Greys'):
     '''
     Plot an xy-cross section showing all the layers and shapes
@@ -100,7 +101,7 @@ def plot_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None,
     plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
 
-def plot_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None,
+def eps_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None,
              cbar=False, cmap='Greys'):
     '''
     Plot a yz-cross section showing all the layers and shapes
@@ -114,8 +115,106 @@ def plot_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None,
 
     plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
+def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True, cmap='Greys', gridspec=None, fig=None, figsize=(4,8)):
+    '''
+    Plot the permittivity of the PhC cross-sections
+    '''
+    if isinstance(struct, GuidedModeExp):
+        phc = struct.phc
+    elif isinstance(struct, PhotCryst):
+        phc = struct
+    else:
+        raise ValueError("'struct' should be a PhotCryst or a "
+                                "GuidedModeExp instance")
 
-def plot_reciprocal(gme):
+    (eps_min, eps_max) = phc.get_eps_bounds()
+
+    if cladding:
+        all_layers = [phc.claddings[0]] + phc.layers + [phc.claddings[1]]
+    else:
+        all_layers = phc.layers
+    N_layers = len(all_layers)
+
+    if gridspec is None and fig is None:
+        fig = plt.figure(constrained_layout=True, figsize=figsize)
+        gs = mpl.gridspec.GridSpec(N_layers+1, 2, figure=fig)
+    elif gridspec is not None and fig is not None:
+        gs = mpl.gridspec.GridSpecFromSubplotSpec(N_layers+1, 2, gridspec)
+    else:
+        raise ValueError("Parameters gridspec and fig should be both specified or both unspecified")
+
+    ax1 = fig.add_subplot(gs[0, 0])
+    ax2 = fig.add_subplot(gs[0, 1])
+    ax = []
+    for i in range(N_layers):
+        ax.append(fig.add_subplot(gs[1+i, :]))
+
+    eps_xz(phc, ax=ax1, Nx=Nx, Nz=Nz,
+                clim=[eps_min, eps_max], cbar=False, cmap=cmap)
+    ax1.set_title("xz at y = 0")
+    eps_yz(phc, ax=ax2, Ny=Ny, Nz=Nz,
+                clim=[eps_min, eps_max], cbar=cbar, cmap=cmap)
+    ax2.set_title("yz at x = 0")
+
+    for indl in range(N_layers):
+        zpos = (all_layers[indl].z_max + all_layers[indl].z_min)/2
+        eps_xy(phc, z=zpos, ax=ax[indl], Nx=Nx, Ny=Ny,
+                clim=[eps_min, eps_max], cbar=False, cmap=cmap)
+        if cladding==True:
+            if indl > 0 and indl < N_layers-1:
+                ax[indl].set_title("xy in layer %d" % indl)
+            elif indl==N_layers-1:
+                ax[0].set_title("xy in lower cladding")
+                ax[-1].set_title("xy in upper cladding")
+        else:
+            ax[indl].set_title("xy in layer %d" % indl)
+    plt.show()
+
+def structure_ft(gme, Nx=100, Ny=100, cladding=False):
+    '''
+    Plot the permittivity of the PhC cross-sections as computed from an 
+    inverse Fourier transform with the GME reciprocal lattice vectors.
+    '''
+    (xgrid, ygrid) = gme.phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
+
+    if cladding==True:
+        all_layers = [gme.phc.claddings[0]] + gme.phc.layers + \
+                        [gme.phc.claddings[1]]
+    else:
+        all_layers = gme.phc.layers
+    N_layers = len(all_layers)
+
+    fig, ax = plt.subplots(1, N_layers, constrained_layout=True)
+    if N_layers==1: ax=[ax]
+
+    (eps_min, eps_max) = (all_layers[0].eps_b, all_layers[0].eps_b)
+    ims = []
+    for (indl, layer) in enumerate(all_layers):
+        (eps_r, _, _) = gme.get_eps_xy(z=(layer.z_min + layer.z_max)/2, 
+                                        Nx=Nx, Ny=Ny)
+
+        eps_min = min([eps_min, np.amin(np.real(eps_r))])
+        eps_max = max([eps_max, np.amax(np.real(eps_r))])
+        extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
+
+        im = plot_eps(np.real(eps_r), ax=ax[indl], extent=extent, 
+                        cbar=False)
+        ims.append(im)
+        if cladding:
+            if indl > 0 and indl < N_layers-1:
+                ax[indl].set_title("xy in layer %d" % indl)
+            elif indl==N_layers-1:
+                ax[0].set_title("xy in lower cladding")
+                ax[-1].set_title("xy in upper cladding")
+        else:
+            ax[indl].set_title("xy in layer %d" % indl)
+    
+    for il in range(N_layers):
+        ims[il].set_clim(vmin=eps_min, vmax=eps_max)
+    plt.colorbar(ims[-1])
+    plt.show()
+
+def reciprocal(gme):
     '''
     Plot the reciprocal lattice of a GME object
     '''
@@ -124,7 +223,7 @@ def plot_reciprocal(gme):
     ax.set_title("Reciprocal lattice")
     plt.show()
 
-def plot_field(gme, field, kind, mind, x=None, y=None, z=None,
+def field(gme, field, kind, mind, x=None, y=None, z=None,
             component='xyz', val='re', N1=100, N2=100, cbar=True, eps=True):
     '''
     Plot the 'field' ('H' or 'D') at the plane defined by 'x', 'y', or 'z', 
@@ -162,8 +261,6 @@ def plot_field(gme, field, kind, mind, x=None, y=None, z=None,
         pl, o, v = 'xz', 'y', y
     else:
         raise ValueError("Specify exactly one of 'x', 'y', or 'z'.")
-
-    print(epsr.shape, grid1.shape, grid2.shape)
 
     f1 = plt.figure()
     sp = len(component)

@@ -1,8 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib as mpl
 
-import legume.viz as viz
 from legume.backend import backend as bd
 import legume.utils as utils
 from . import ShapesLayer, FreeformLayer, Lattice
@@ -136,64 +133,3 @@ class PhotCryst(object):
                 eps_max = max([eps_max, shape.eps])
 
         return (eps_min, eps_max)
-
-    def plot_cross(self, cross_section='xy', pos=0, Npts=[100, 100]):
-        '''
-        Plot a cross-section of the PhC at position pos along the third axis
-        '''
-        if cross_section == 'xy':
-            viz.plot_xy(self, z=pos, Nx=Npts[0], Ny=Npts[1])
-        elif cross_section == 'xz':
-            viz.plot_xz(self, y=pos, Nx=Npts[0], Nz=Npts[1])
-        elif cross_section == 'yz':
-            viz.plot_yz(self, x=pos, Ny=Npts[0], Nz=Npts[1])
-        else:
-            raise ValueError("Cross-section must be in {'xy', 'yz', 'xz'}")
-
-    def plot_overview(self, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True, cmap='Greys', gridspec=None, fig=None, figsize=(4,8)):
-        '''
-        Plot an overview of PhC cross-sections
-        '''
-
-        (eps_min, eps_max) = self.get_eps_bounds()
-
-        if cladding:
-            all_layers = [self.claddings[0]] + self.layers + [self.claddings[1]]
-        else:
-            all_layers = self.layers
-        N_layers = len(all_layers)
-
-        if gridspec is None and fig is None:
-            fig = plt.figure(constrained_layout=True, figsize=figsize)
-            gs = mpl.gridspec.GridSpec(N_layers+1, 2, figure=fig)
-        elif gridspec is not None and fig is not None:
-            gs = mpl.gridspec.GridSpecFromSubplotSpec(N_layers+1, 2, gridspec)
-        else:
-            raise ValueError("Parameters gridspec and fig should be both specified or both unspecified")
-
-        ax1 = fig.add_subplot(gs[0, 0])
-        ax2 = fig.add_subplot(gs[0, 1])
-        ax = []
-        for i in range(N_layers):
-            ax.append(fig.add_subplot(gs[1+i, :]))
-
-        viz.plot_xz(self, ax=ax1, Nx=Nx, Nz=Nz,
-                    clim=[eps_min, eps_max], cbar=False, cmap=cmap)
-        ax1.set_title("xz at y = 0")
-        viz.plot_yz(self, ax=ax2, Ny=Ny, Nz=Nz,
-                    clim=[eps_min, eps_max], cbar=cbar, cmap=cmap)
-        ax2.set_title("yz at x = 0")
-
-        for indl in range(N_layers):
-            zpos = (all_layers[indl].z_max + all_layers[indl].z_min)/2
-            viz.plot_xy(self, z=zpos, ax=ax[indl], Nx=Nx, Ny=Ny,
-                    clim=[eps_min, eps_max], cbar=False, cmap=cmap)
-            if cladding==True:
-                if indl > 0 and indl < N_layers-1:
-                    ax[indl].set_title("xy in layer %d" % indl)
-                elif indl==N_layers-1:
-                    ax[0].set_title("xy in lower cladding")
-                    ax[-1].set_title("xy in upper cladding")
-            else:
-                ax[indl].set_title("xy in layer %d" % indl)
-        plt.show()

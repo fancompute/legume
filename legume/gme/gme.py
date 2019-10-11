@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.interpolate import interp1d
 
 import time
@@ -10,7 +9,6 @@ from .slab_modes import guided_modes, rad_modes
 from . import matrix_elements
 from legume.backend import backend as bd
 from legume.utils import get_value, ftinv
-from legume.viz import plot_eps
 
 class GuidedModeExp(object):
     '''
@@ -194,6 +192,21 @@ class GuidedModeExp(object):
         
         return (Xs, Ys, chis)
 
+    def _z_to_lind(self, z):
+        '''
+        Get a layer index corresponding to a position z. Claddings are included 
+        as first and last layer
+        '''
+
+        z_max = self.phc.claddings[0].z_max
+        lind = 0 # Index denoting which layer (including claddings) z is in 
+        while z > z_max and lind<self.N_layers:
+            lind+=1
+            z_max = self.phc.layers[lind-1].z_max
+        if z > z_max and lind==self.N_layers: lind += 1
+
+        return lind
+
     def compute_guided(self, g_array):
         '''
         Compute the guided modes using the slab_modes module, reshape the 
@@ -253,54 +266,22 @@ class GuidedModeExp(object):
         self.G1 = G1
         self.G2 = G2
 
-    def plot_overview_ft(self, Nx=100, Ny=100, cladding=False):
+    def get_eps_xy(self, z, Nx=100, Ny=100):
         '''
-        Plot the permittivity of the PhC cross-sections as computed from an 
+        Get the permittivity of the PhC cross-sections as computed from an 
         inverse Fourier transform with the GME reciprocal lattice vectors.
         '''
         (xgrid, ygrid) = self.phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
+        lind = self._z_to_lind(z)
 
-        if cladding==True:
-            all_layers = [self.phc.claddings[0]] + self.phc.layers + \
-                            [self.phc.claddings[1]]
-            (T1, T2) = (self.T1, self.T2)
-        else:
-            all_layers = self.phc.layers
-            (T1, T2) = (self.T1[1:-1], self.T2[1:-1])
-        N_layers = len(all_layers)
-
-        fig, ax = plt.subplots(1, N_layers, constrained_layout=True)
-        if N_layers==1: ax=[ax]
-
-        (eps_min, eps_max) = (all_layers[0].eps_b, all_layers[0].eps_b)
-        ims = []
-        for (indl, layer) in enumerate(all_layers):
-            ft_coeffs = np.hstack((T1[indl], T2[indl], 
-                                np.conj(T1[indl]), np.conj(T2[indl])))
-            gvec = np.hstack((self.G1, self.G2, 
+        ft_coeffs = np.hstack((self.T1[lind], self.T2[lind], 
+                            np.conj(self.T1[lind]), np.conj(self.T2[lind])))
+        gvec = np.hstack((self.G1, self.G2, 
                                 -self.G1, -self.G2))
 
-            eps_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
-            eps_min = min([eps_min, np.amin(np.real(eps_r))])
-            eps_max = max([eps_max, np.amax(np.real(eps_r))])
-            extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
+        eps_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
 
-            im = plot_eps(np.real(eps_r), ax=ax[indl], extent=extent, 
-                            cbar=False)
-            ims.append(im)
-            if cladding:
-                if indl > 0 and indl < N_layers-1:
-                    ax[indl].set_title("xy in layer %d" % indl)
-                elif indl==N_layers-1:
-                    ax[0].set_title("xy in lower cladding")
-                    ax[-1].set_title("xy in upper cladding")
-            else:
-                ax[indl].set_title("xy in layer %d" % indl)
-        
-        for il in range(N_layers):
-            ims[il].set_clim(vmin=eps_min, vmax=eps_max)
-        plt.colorbar(ims[-1])
-        plt.show()
+        return (eps_r, xgrid, ygrid)
 
     def run(self, kpoints=np.array([[0], [0]]), **kwargs):
         ''' 
@@ -740,12 +721,7 @@ class GuidedModeExp(object):
         qx = py
         qy = -px
 
-        z_max = self.phc.claddings[0].z_max
-        lind = 0 # Index denoting which layer (including claddings) z is in 
-        while z > z_max and lind<self.N_layers:
-            lind+=1
-            z_max = self.phc.layers[lind-1].z_max
-        if z > z_max and lind==self.N_layers: lind += 1
+        lind = self._z_to_lind(z)
 
         if field.lower()=='h':
             count = 0
