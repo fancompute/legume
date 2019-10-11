@@ -43,11 +43,13 @@ def summarize_results(gme):
 
 	Plots the bands and the real space structure
 	"""
-	fig = plt.figure(constrained_layout=True)
+	fig = plt.figure(figsize=(8,3.5))
 	gs = fig.add_gridspec(ncols=2, nrows=1)
 	ax1 = fig.add_subplot(gs[0])
 	legume.viz.bands(gme, ax=ax1, Q=True)
-	gme.phc.plot_overview(fig=fig, gridspec=gs[1], cbar=False)
+	legume.viz.structure(gme, fig=fig, gridspec=gs[1], cbar=False)
+	fig.tight_layout()
+	return fig
 
 
 def projection(rho, eta=0.5, beta=100):
@@ -97,7 +99,8 @@ legume.set_backend('numpy')
 polygons = generate_polygons(rho_0, eta=args.eta, beta=args.beta)
 gme = make_simulation(polygons)
 gme.run(kpoints=path.kpoints, **options)
-summarize_results(gme)
+fig1 = summarize_results(gme)
+# fig1.savefig('./fig1.png', dpi=300)
 
 ## Optimize
 legume.set_backend('autograd')
@@ -111,4 +114,8 @@ legume.set_backend('numpy')
 polygons = generate_polygons(rho_opt, eta=args.eta, beta=args.beta)
 gme = make_simulation(polygons)
 gme.run(kpoints=path.kpoints, **options)
-summarize_results(gme)
+fig2 = summarize_results(gme)
+# fig2.savefig('./fig2.png', dpi=300)
+
+gme.plot_field_xz('d', kind=0, mind=1, y=0, component='y', val='re', Nx=100, Nz=100, cbar=False)
+gme.plot_field_xz('h', kind=0, mind=1, y=0, component='xz', val='re', Nx=100, Nz=100, cbar=False)
