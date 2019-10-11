@@ -223,7 +223,7 @@ def reciprocal(gme):
     ax.set_title("Reciprocal lattice")
     plt.show()
 
-def field(gme, field, kind, mind, x=None, y=None, z=None,
+def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
             component='xyz', val='re', N1=100, N2=100, cbar=True, eps=True):
     '''
     Plot the 'field' ('H' or 'D') at the plane defined by 'x', 'y', or 'z', 
@@ -245,6 +245,9 @@ def field(gme, field, kind, mind, x=None, y=None, z=None,
             epsr = gme.phc.get_eps(np.meshgrid(
                             grid1, grid2, np.array(z))).squeeze()
         pl, o, v = 'xy', 'z', z
+        if periodic==False:
+            kenv = np.exp(1j*grid1*gme.kpoints[0, kind] + 
+                            1j*grid2*gme.kpoints[1, kind])
     elif x is not None and z is None and y is None:
         (fi, grid1, grid2) = gme.get_field_yz(field, kind, mind, x, 
                                             component, N1, N2)
@@ -252,6 +255,9 @@ def field(gme, field, kind, mind, x=None, y=None, z=None,
             epsr = gme.phc.get_eps(np.meshgrid(
                             np.array(x), grid1, grid2)).squeeze().transpose()
         pl, o, v = 'yz', 'x', x
+        if periodic==False:
+            kenv = np.exp(1j*grid1*gme.kpoints[1, kind] +
+                            1j*x*gme.kpoints[0, kind])
     elif y is not None and z is None and x is None:
         (fi, grid1, grid2) = gme.get_field_xz(field, kind, mind, y, 
                                             component, N1, N2)
@@ -259,6 +265,9 @@ def field(gme, field, kind, mind, x=None, y=None, z=None,
             epsr = gme.phc.get_eps(np.meshgrid(
                             grid1, np.array(y), grid2)).squeeze().transpose()
         pl, o, v = 'xz', 'y', y
+        if periodic==False:
+            kenv = np.exp(1j*grid1*gme.kpoints[0, kind] +
+                            1j*y*gme.kpoints[1, kind])
     else:
         raise ValueError("Specify exactly one of 'x', 'y', or 'z'.")
 
@@ -266,6 +275,8 @@ def field(gme, field, kind, mind, x=None, y=None, z=None,
     sp = len(component)
     for ic, comp in enumerate(component):
         f = fi[comp]
+        if periodic==False:
+            f *= kenv
         
         extent = [grid1[0], grid1[-1], grid2[0], grid2[-1]]
         ax = f1.add_subplot(1, sp, ic+1)
