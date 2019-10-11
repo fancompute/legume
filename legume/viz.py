@@ -1,7 +1,8 @@
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
-from legume import GuidedModeExp, PhotCryst
+from .gme import GuidedModeExp
+from .phc import PhotCryst
 
 
 # TODO: Make this more general
