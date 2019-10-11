@@ -199,11 +199,13 @@ def summarize_results(gme):
 
 	print("Gap size (relative): %.2f (%.2f)" % (gap_size, gap_size / gap_mid))
 
-	fig = plt.figure(constrained_layout=True)
+	fig = plt.figure(figsize=(8,3.5))
 	gs = fig.add_gridspec(ncols=2, nrows=1)
 	ax1 = fig.add_subplot(gs[0])
 	legume.viz.bands(gme, ax=ax1, Q=True)
-	gme.phc.plot_overview(fig=fig, gridspec=gs[1], cbar=False)
+	legume.viz.structure(gme, fig=fig, gridspec=gs[1], cbar=False)
+	fig.tight_layout()
+	return fig
 
 
 legume.set_backend('numpy')
@@ -215,7 +217,8 @@ rho_0 = init_hole(lattice, args.N_polygons, args.r0, mode=args.init)
 polygons = generate_polygons(lattice, rho_0, eta=args.eta, beta=args.beta)
 gme = make_simulation(polygons)
 gme.run(kpoints=path.kpoints, **options)
-summarize_results(gme)
+fig1 = summarize_results(gme)
+fig1.savefig('./fig1.png', dpi=300)
 
 # Optimize
 legume.set_backend('autograd')
@@ -235,7 +238,8 @@ legume.set_backend('numpy')
 polygons = generate_polygons(lattice, rho_opt, eta=args.eta, beta=args.beta)
 gme = make_simulation(polygons)
 gme.run(kpoints=path.kpoints, **options)
-summarize_results(gme)
+fig2 = summarize_results(gme)
+fig2.savefig('./fig2.png', dpi=300)
 
 if False:
 	# WIP on converting to an exportable format
