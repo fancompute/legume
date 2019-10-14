@@ -26,6 +26,9 @@ class GuidedModeExp(object):
         self.modes_numg = []
         # Total number of basis vectors (equal to np.sum(self.modes_numg))
         self.N_basis = []
+        # Indexes of guided modes which are actually included in the computation
+        # (in case gmode_inds includes modes that are above the gmax cutoff)
+        self.gmode_include = []
 
         # Eigenfrequencies and eigenvectors
         self.freqs = []
@@ -468,19 +471,20 @@ class GuidedModeExp(object):
                 or (mode%2==1 and len(self.omegas_tm[ik]) > mode//2):
                 gmode_include.append(mode)
         if gmode_include == []:
-            raise RuntimeError("No guided modes were found. One possibility is "
+            raise RuntimeError("No guided modes were found for k-index %d. "
+                "One possibility is "
                 "that the effective permittivity of all layers is smaller than "
                 "that of at least one cladding. Reconsider your structure, or "
                 "try changing 'eps_eff' from 'average' to 'background' in "
-                "the options to GuidedModeExp.run().")
+                "the options to GuidedModeExp.run()." % kind)
         else:
-            self.gmode_include = np.array(gmode_include)
+            self.gmode_include.append(np.array(gmode_include))
 
         # We now construct the matrix block by block
-        mat_blocks = [[] for i in range(self.gmode_include.size)]
+        mat_blocks = [[] for i in range(self.gmode_include[-1].size)]
 
-        for im1 in range(self.gmode_include.size):
-            mode1 = self.gmode_include[im1]
+        for im1 in range(self.gmode_include[-1].size):
+            mode1 = self.gmode_include[-1][im1]
             (indmode1, oms1, As1, Bs1, chis1) = \
                         self._get_guided(gk, kind, mode1)
             modes_numg.append(indmode1.size)
@@ -489,8 +493,8 @@ class GuidedModeExp(object):
                 mat_blocks[im1].append(bd.zeros((modes_numg[-1], 
                     bd.sum(modes_numg[:-1]))))
 
-            for im2 in range(im1, self.gmode_include.size):
-                mode2 = self.gmode_include[im2]
+            for im2 in range(im1, self.gmode_include[-1].size):
+                mode2 = self.gmode_include[-1][im2]
                 (indmode2, oms2, As2, Bs2, chis2) = \
                             self._get_guided(gk, kind, mode2)
 
@@ -624,8 +628,8 @@ class GuidedModeExp(object):
                     chis[pol].append(chi)
             # Iterate over the 'gmode_include' basis of the PhC mode
             count = 0
-            for im1 in range(self.gmode_include.size):
-                mode1 = self.gmode_include[im1]
+            for im1 in range(self.gmode_include[kind].size):
+                mode1 = self.gmode_include[kind][im1]
                 (indmode1, oms1, As1, Bs1, chis1) = \
                             self._get_guided(gk, kind, mode1)
                 # Iterate over lower cladding (0) and upper cladding (1)
@@ -727,8 +731,8 @@ class GuidedModeExp(object):
             count = 0
             [Hx_ft, Hy_ft, Hz_ft] = [bd.zeros(gnorm.shape, dtype=np.complex128)
                                      for i in range(3)]
-            for im1 in range(self.gmode_include.size):
-                mode1 = self.gmode_include[im1]
+            for im1 in range(self.gmode_include[kind].size):
+                mode1 = self.gmode_include[kind][im1]
                 (indmode, oms, As, Bs, chis) = \
                             self._get_guided(gnorm, kind, mode1)
 
@@ -792,8 +796,8 @@ class GuidedModeExp(object):
             count = 0
             [Dx_ft, Dy_ft, Dz_ft] = [bd.zeros(gnorm.shape, dtype=np.complex128)
                                      for i in range(3)]
-            for im1 in range(self.gmode_include.size):
-                mode1 = self.gmode_include[im1]
+            for im1 in range(self.gmode_include[kind].size):
+                mode1 = self.gmode_include[kind][im1]
                 (indmode, oms, As, Bs, chis) = \
                             self._get_guided(gnorm, kind, mode1)
 
