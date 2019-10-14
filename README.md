@@ -14,7 +14,7 @@ pip install -e legume
 pip install -r legume/requirements.txt
 ```
 
-Alternatively just download and make sure you have all the requirements installed. 
+Alternatively just `git clone` it, make sure you have all the requirements installed, and add the path to the folder in your python path: `export PYTHONPATH=$PYTHONPATH:/path/to/the/location/of/legume`.
 
 ## To do
 (I've put some non-urgent things as Issues. Below are the things that have to be taken care of to have the minimum needed for what can be considered a functioning package)
