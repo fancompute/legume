@@ -792,7 +792,7 @@ class GuidedModeExp(object):
 
             return (Hx_ft, Hy_ft, Hz_ft)
 
-        elif field.lower()=='d':
+        elif field.lower()=='d' or field.lower()=='e':
             count = 0
             [Dx_ft, Dy_ft, Dz_ft] = [bd.zeros(gnorm.shape, dtype=np.complex128)
                                      for i in range(3)]
@@ -861,7 +861,14 @@ class GuidedModeExp(object):
                 Dz_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*Dz
                 count += self.modes_numg[kind][im1]
 
-            return (Dx_ft, Dy_ft, Dz_ft)
+            if field.lower()=='d':
+                return (Dx_ft, Dy_ft, Dz_ft)
+            else:
+                # Get E-field by convolving FT(1/eps) with FT(D)
+                Ex_ft = self.eps_inv_mat[lind].dot(Dx_ft)
+                Ey_ft = self.eps_inv_mat[lind].dot(Dy_ft)
+                Ez_ft = self.eps_inv_mat[lind].dot(Dz_ft)
+                return (Ex_ft, Ey_ft, Ez_ft)
 
     def get_field_xy(self, field, kind, mind, z,
                     component='xyz', Nx=100, Ny=100):
