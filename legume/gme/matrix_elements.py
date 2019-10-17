@@ -34,14 +34,15 @@ def mat_te_te(eps_array, d_array, eps_inv_mat, indmode1, oms1,
     for il in range(1, d_array.size+1):
         mat = mat + eps_inv_mat[il][indmat] * \
         eps_array[il]**2 * \
-        (np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) + 
-        np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) + 
-        np.outer(np.conj(As1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] -
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) +
-        np.outer(np.conj(Bs1[il, :]), As2[il, :])*I_alpha(chis2[il, :] +
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1])  )
+        (   (np.outer(np.conj(As1[il, :]), As2[il, :]) + 
+                np.outer(np.conj(Bs1[il, :]), Bs2[il, :])) * 
+            I_alpha(chis2[il, :] - np.conj(chis1[il, :][:, np.newaxis]),
+                d_array[il-1]) + 
+            (np.outer(np.conj(As1[il, :]), Bs2[il, :]) + 
+                np.outer(np.conj(Bs1[il, :]), As2[il, :])) *
+            I_alpha(chis2[il, :] + np.conj(chis1[il, :][:, np.newaxis]),
+                d_array[il-1])
+        )
     # raise Exception
 
     # Final pre-factor      
@@ -73,19 +74,19 @@ def mat_tm_tm(eps_array, d_array, eps_inv_mat, gk, indmode1, oms1,
 
     # Contributions from layers
     for il in range(1, d_array.size+1):
-        mat = mat + eps_inv_mat[il][indmat]*( \
+        mat = mat + eps_inv_mat[il][indmat]*( 
         (pp[indmat] * np.outer(np.conj(chis1[il, :]), chis2[il, :]) + \
-            np.outer(gk[indmode1], gk[indmode2])) * ( \
-        np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) + \
-        np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +\
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) ) - \
+            np.outer(gk[indmode1], gk[indmode2])) * ( 
+        (np.outer(np.conj(As1[il, :]), As2[il, :]) + 
+                np.outer(np.conj(Bs1[il, :]), Bs2[il, :])) * 
+            I_alpha(chis2[il, :] - np.conj(chis1[il, :][:, np.newaxis]),
+                d_array[il-1])) - \
         (pp[indmat] * np.outer(np.conj(chis1[il, :]), chis2[il, :]) - \
-            np.outer(gk[indmode1], gk[indmode2])) * ( \
-        np.outer(np.conj(As1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] -\
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) +
-        np.outer(np.conj(Bs1[il, :]), As2[il, :])*I_alpha(chis2[il, :] +\
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]))  )
+            np.outer(gk[indmode1], gk[indmode2])) * ( 
+        (np.outer(np.conj(As1[il, :]), Bs2[il, :]) + 
+                np.outer(np.conj(Bs1[il, :]), As2[il, :])) *
+            I_alpha(chis2[il, :] + np.conj(chis1[il, :][:, np.newaxis]),
+                d_array[il-1]))  )
     # Note: in Vitaly's thesis, there's a typo on line 3 of eq. (3.41), 
     # the term in brackets should be A*B*I + B*A*I instead of minus
 
@@ -101,7 +102,7 @@ def mat_te_tm(eps_array, d_array, eps_inv_mat, indmode1, oms1,
     # Contribution from lower cladding
     indmat = np.ix_(indmode1, indmode2)
     mat = eps_inv_mat[0][indmat] * \
-            eps_array[0] * 1j*chis2[0, :][np.newaxis, :]* \
+            eps_array[0] * 1j*chis2[0, :][np.newaxis, :] * \
             np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
             J_alpha(chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
 
@@ -113,16 +114,16 @@ def mat_te_tm(eps_array, d_array, eps_inv_mat, indmode1, oms1,
 
     # Contributions from layers
     for il in range(1, d_array.size+1):
-        mat = mat + signed_1j * eps_inv_mat[il][indmat] *\
-        eps_array[il] * chis2[il, :][np.newaxis, :] * (-\
-        np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) + \
-        np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +\
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) + \
-        np.outer(np.conj(As1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] -\
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) -
-        np.outer(np.conj(Bs1[il, :]), As2[il, :])*I_alpha(chis2[il, :] +\
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1])  )
+        mat = mat + signed_1j * eps_inv_mat[il][indmat] * \
+        eps_array[il] * chis2[il, :][np.newaxis, :] * ( 
+        (-np.outer(np.conj(As1[il, :]), As2[il, :]) + 
+                np.outer(np.conj(Bs1[il, :]), Bs2[il, :])) * 
+            I_alpha(chis2[il, :] - np.conj(chis1[il, :][:, np.newaxis]),
+                d_array[il-1]) + \
+        (np.outer(np.conj(As1[il, :]), Bs2[il, :]) - 
+                np.outer(np.conj(Bs1[il, :]), As2[il, :])) *
+            I_alpha(chis2[il, :] + np.conj(chis1[il, :][:, np.newaxis]),
+                d_array[il-1])  )
 
     # Final pre-factor
     mat = mat * (oms1**2)[:, np.newaxis] * qp[indmat]
