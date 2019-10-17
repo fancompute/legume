@@ -19,29 +19,30 @@ def mat_te_te(eps_array, d_array, eps_inv_mat, indmode1, oms1,
     
     # Contribution from lower cladding
     indmat = np.ix_(indmode1, indmode2)
-    mat = eps_inv_mat[0][indmat]* \
+    mat = eps_inv_mat[0][indmat] * \
             eps_array[0]**2 * \
             np.outer(np.conj(Bs1[0, :]), Bs2[0, :]) * \
             J_alpha(chis2[0, :] - np.conj(chis1[0, :][:, np.newaxis]))
 
     # Contribution from upper cladding
-    mat = mat + eps_inv_mat[-1][indmat]* \
+    mat = mat + eps_inv_mat[-1][indmat] * \
             eps_array[-1]**2 * \
             np.outer(np.conj(As1[-1, :]), As2[-1, :]) * \
             J_alpha(chis2[-1, :] - np.conj(chis1[-1, :][:, np.newaxis]))
 
     # Contributions from layers
     for il in range(1, d_array.size+1):
-        mat = mat + eps_inv_mat[il][indmat] *\
-        eps_array[il]**2 * ( \
-        np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -\
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) + \
-        np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +\
-            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) + \
-        np.outer(np.conj(As1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] -\
+        mat = mat + eps_inv_mat[il][indmat] * \
+        eps_array[il]**2 * \
+        (np.outer(np.conj(As1[il, :]), As2[il, :])*I_alpha(chis2[il, :] -
+            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) + 
+        np.outer(np.conj(Bs1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] +
+            np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) + 
+        np.outer(np.conj(As1[il, :]), Bs2[il, :])*I_alpha(-chis2[il, :] -
             np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1]) +
-        np.outer(np.conj(Bs1[il, :]), As2[il, :])*I_alpha(chis2[il, :] +\
+        np.outer(np.conj(Bs1[il, :]), As2[il, :])*I_alpha(chis2[il, :] +
             np.conj(chis1[il, :][:, np.newaxis]), d_array[il-1])  )
+    # raise Exception
 
     # Final pre-factor      
     mat = mat * np.outer(oms1**2, oms2**2) * (qq[indmat])

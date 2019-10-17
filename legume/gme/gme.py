@@ -1,9 +1,7 @@
 import numpy as np
-from scipy.interpolate import interp1d
 
 import time
 from itertools import zip_longest
-from functools import reduce
 
 from .slab_modes import guided_modes, rad_modes
 from . import matrix_elements

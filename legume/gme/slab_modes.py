@@ -345,15 +345,10 @@ def normalization_coeff(omega, g, eps_array, d_array, ABref, pol='TE'):
         term1 = (np.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
         term2 = (np.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
         term3 = (
-                (As[1:-1] * As[1:-1].conj()) * \
-                I_alpha(chi_array[1:-1]-chi_array[1:-1].conj(),d_array) + \
-                (Bs[1:-1] * Bs[1:-1].conj()) * \
-                I_alpha(chi_array[1:-1].conj()-chi_array[1:-1],d_array) + \
-                (As[1:-1].conj() * Bs[1:-1]) * \
-                I_alpha(-chi_array[1:-1]-chi_array[1:-1].conj(),d_array) + \
-                (As[1:-1] * Bs[1:-1].conj()) * \
-                I_alpha(chi_array[1:-1]+chi_array[1:-1].conj(),d_array)
-                )
+                (np.abs(As[1:-1])**2 + np.abs(Bs[1:-1])**2) * \
+                I_alpha(chi_array[1:-1]-chi_array[1:-1].conj(),d_array) + 
+                (As[1:-1].conj() * Bs[1:-1] + As[1:-1] * Bs[1:-1].conj()) * \
+                I_alpha(-chi_array[1:-1]-chi_array[1:-1].conj(),d_array)  )
         return term1 + term2 + np.sum(term3)
     elif pol == 'TE':
         term1 = (np.abs(chi_array[0])**2 + g**2) * \
@@ -361,17 +356,11 @@ def normalization_coeff(omega, g, eps_array, d_array, ABref, pol='TE'):
         term2 = (np.abs(chi_array[-1])**2 + g**2) * \
             (np.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
         term3 = (np.abs(chi_array[1:-1])**2 + g**2) * (
-                (As[1:-1] * As[1:-1].conj()) * \
-                I_alpha(chi_array[1:-1]-chi_array[1:-1].conj(), d_array) + \
-                (Bs[1:-1] * Bs[1:-1].conj()) * \
-                I_alpha(chi_array[1:-1].conj()-chi_array[1:-1], d_array)
-                ) - \
-                (np.abs(chi_array[1:-1])**2 - g**2) * (
-                (As[1:-1].conj() * Bs[1:-1]) * \
-                I_alpha(-chi_array[1:-1]-chi_array[1:-1].conj(), d_array) + \
-                (As[1:-1] * Bs[1:-1].conj()) * \
-                I_alpha(chi_array[1:-1]+chi_array[1:-1].conj(), d_array)
-                )
+                (np.abs(As[1:-1])**2 + np.abs(Bs[1:-1])**2) * \
+                I_alpha(chi_array[1:-1]-chi_array[1:-1].conj(), d_array)) + \
+                (g**2 - np.abs(chi_array[1:-1])**2) * (
+                (As[1:-1].conj() * Bs[1:-1] + As[1:-1] * Bs[1:-1].conj()) * \
+                I_alpha(-chi_array[1:-1]-chi_array[1:-1].conj(), d_array)  )
         return term1 + term2 + np.sum(term3)
     else:
         raise Exception('Polarization should be TE or TM.')
