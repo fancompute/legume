@@ -50,6 +50,7 @@ class NumpyBackend(Backend):
     toeplitz_block = staticmethod(toeplitz_block)
     roll = staticmethod(np.roll)
     where = staticmethod(np.where)
+    argwhere = staticmethod(np.argwhere)
     triu = staticmethod(np.triu)
     amax = staticmethod(np.amax)
     max = staticmethod(np.max)
@@ -76,6 +77,7 @@ class NumpyBackend(Backend):
     outer = staticmethod(np.outer)
     conj = staticmethod(np.conj)
     var = staticmethod(np.var)
+    power = staticmethod(np.power)
 
     def is_array(self, arr):
         """ check if an object is an array """
@@ -101,6 +103,7 @@ class AutogradBackend(Backend):
     toeplitz_block = staticmethod(toeplitz_block_ag)
     roll = staticmethod(npa.roll)
     where = staticmethod(npa.where)
+    argwhere = staticmethod(npa.argwhere)
     triu = staticmethod(npa.triu)
     amax = staticmethod(npa.amax)
     max = staticmethod(npa.max)
@@ -127,6 +130,7 @@ class AutogradBackend(Backend):
     outer = staticmethod(npa.outer)
     conj = staticmethod(npa.conj)
     var = staticmethod(npa.var)
+    power = staticmethod(npa.power)
 
     # constructors
     array = staticmethod(npa.array)

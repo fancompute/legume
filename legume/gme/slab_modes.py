@@ -131,7 +131,8 @@ def chi(omega, g, epses):
     Output
         k_z
     '''
-    return np.sqrt(epses*omega**2 - g**2, dtype=np.complex)
+    sqarg = bd.array(epses*omega**2 - g**2, dtype=bd.complex)
+    return bd.where(bd.real(sqarg) >=0, bd.sqrt(sqarg), 1j*bd.sqrt(-sqarg))
 
 def chi_vec(omegas, g, eps):
     '''
@@ -152,11 +153,11 @@ def S_T_matrices_TM(omega, g, eps_array, d_array):
     S22 = S11
     S21 = S12
     S_matrices = 0.5 / (chi_array[1:]/eps_array[1:]).reshape(-1,1,1) * \
-        np.array([[S11,S12],[S21,S22]]).transpose([2,0,1])
-    T11 = np.exp(1j*chi_array[1:-1]*d_array/2)
-    T22 = np.exp(-1j*chi_array[1:-1]*d_array/2)
-    T_matrices = np.array([[T11,np.zeros_like(T11)],
-        [np.zeros_like(T11),T22]]).transpose([2,0,1])
+        bd.array([[S11,S12],[S21,S22]]).transpose([2,0,1])
+    T11 = bd.exp(1j*chi_array[1:-1]*d_array/2)
+    T22 = bd.exp(-1j*chi_array[1:-1]*d_array/2)
+    T_matrices = bd.array([[T11,bd.zeros(T11.shape)],
+        [bd.zeros(T11.shape),T22]]).transpose([2,0,1])
     return S_matrices, T_matrices
 
 def D22_TM(omega, g, eps_array, d_array):
@@ -192,11 +193,11 @@ def S_T_matrices_TE(omega, g, eps_array, d_array):
     S22 = S11
     S21 = S12
     S_matrices = 0.5 / chi_array[1:].reshape(-1,1,1) * \
-        np.array([[S11,S12],[S21,S22]]).transpose([2,0,1])
-    T11 = np.exp(1j*chi_array[1:-1]*d_array/2)
-    T22 = np.exp(-1j*chi_array[1:-1]*d_array/2)
-    T_matrices = np.array([[T11,np.zeros_like(T11)],
-        [np.zeros_like(T11),T22]]).transpose([2,0,1])
+        bd.array([[S11,S12],[S21,S22]]).transpose([2,0,1])
+    T11 = bd.exp(1j*chi_array[1:-1]*d_array/2)
+    T22 = bd.exp(-1j*chi_array[1:-1]*d_array/2)
+    T_matrices = bd.array([[T11,bd.zeros(T11.shape)],
+        [bd.zeros(T11.shape),T22]]).transpose([2,0,1])
     return S_matrices, T_matrices
 
 def D22_TE(omega, g, eps_array, d_array):
@@ -381,45 +382,46 @@ def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
     Output
     Xs, Ys          : X, Y coefficients of the modes in every layer
     '''
+    Xs, Ys = [], []
 
-    Xs = np.zeros((eps_array.size, g_array.size), dtype=np.complex128)
-    Ys = np.zeros((eps_array.size, g_array.size), dtype=np.complex128)
     for ig, g in enumerate(g_array):
         g_val = max([g, 1e-10])
         # Get the scattering and transfer matrices
         if pol.lower()=='te' and clad==0:
-            S_mat, T_mat = S_T_matrices_TE(omega, g_val, np.flip(eps_array), 
-                            np.flip(d_array))
+            S_mat, T_mat = S_T_matrices_TE(omega, g_val, eps_array[::-1], 
+                            d_array[::-1])
         elif pol.lower()=='te' and clad==1:
             S_mat, T_mat = S_T_matrices_TE(omega, g_val, eps_array, d_array)
         elif pol.lower()=='tm' and clad==0:
-            S_mat, T_mat = S_T_matrices_TM(omega, g_val, np.flip(eps_array), 
-                            np.flip(d_array))
+            S_mat, T_mat = S_T_matrices_TM(omega, g_val, eps_array[::-1], 
+                            d_array[::-1])
         elif pol.lower()=='tm' and clad==1:
             S_mat, T_mat = S_T_matrices_TM(omega, g_val, eps_array, d_array)
         
         # Compute the transfer matrix coefficients
-        coeffs = np.zeros((2, eps_array.size), dtype=np.complex128)
-        coeffs[:, 0] = [0, 1]
-        coeffs[:, 1] = T_mat[0].dot(S_mat[0].dot(coeffs[:, 0]))
+        coeffs = [bd.array([0, 1])]
+        coeffs.append(bd.dot(T_mat[0], bd.dot(S_mat[0], coeffs[0])))
         for i, S in enumerate(S_mat[1:-1]):
             T2 = T_mat[i+1]
             T1 = T_mat[i]
-            coeffs[:, i+2] = T2.dot(S.dot(T1.dot(coeffs[:, i+1])))
-        coeffs[:, -1] = S_mat[-1].dot(T_mat[-1].dot(coeffs[:, -2]))
+            coeffs.append(bd.dot(T2, bd.dot(S, bd.dot(T1, coeffs[-1]))))
+        coeffs.append(bd.dot(S_mat[-1], bd.dot(T_mat[-1], coeffs[-1])))
+        coeffs = bd.array(coeffs, dtype=bd.complex).transpose()
 
         coeffs = coeffs / coeffs[1, -1] 
         if pol=='te':
             c_ind = [0, -1]
-            coeffs = coeffs/np.sqrt(eps_array[c_ind[clad]])
-
+            coeffs = coeffs/bd.sqrt(eps_array[c_ind[clad]])
         # Assign correctly based on which cladding the modes radiate to
         if clad == 0:
-            Xs[:, ig] = np.flip(coeffs[0, :])
-            Ys[:, ig] = np.flip(coeffs[1, :])
+            Xs.append(coeffs[0, ::-1].ravel())
+            Ys.append(coeffs[1, ::-1].ravel())
         elif clad == 1:
-            Xs[:, ig] = coeffs[1, :]
-            Ys[:, ig] = coeffs[0, :]
+            Xs.append(coeffs[1, :].ravel())
+            Ys.append(coeffs[0, :].ravel())
+
+    Xs = bd.array(Xs, dtype=bd.complex).transpose()
+    Ys = bd.array(Ys, dtype=bd.complex).transpose()
 
     '''
     (Xs, Ys) corresponds to the X, W coefficients for TE radiative modes in 
