@@ -137,7 +137,7 @@ def rad_te_te(eps_array, d_array, eps_inv_mat, indmode1, oms1,
     '''
     Coupling of TE guided modes to TE radiative modes
     '''
-
+    
     # Contribution from lower cladding
     indmat = np.ix_(indmode1, indmoder)
     mat = eps_inv_mat[0][indmat]* \

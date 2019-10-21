@@ -115,7 +115,7 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
                                 AB, pol)
             # print(norm)
  
-            coeffs.append(AB / np.sqrt(norm))
+            coeffs.append(AB / bd.sqrt(norm))
         else:
             raise ValueError("Polarization should be 'TE' or 'TM'")
 
@@ -323,7 +323,7 @@ def AB_matrices(omega, g, eps_array, d_array, chi_array=None, pol='TE'):
         raise Exception("Polarization should be 'TE' or 'TM'.")
     A0 = 0
     B0 = 1 
-    AB0 = np.array([A0, B0]).reshape(-1,1)
+    AB0 = bd.array([A0, B0]).reshape(-1,1)
 
     ABs = [AB0, T_matrices[0].dot(S_matrices[0].dot(AB0))] ### A, B coeff for each layer
     for i,S in enumerate(S_matrices[1:]):
@@ -331,7 +331,7 @@ def AB_matrices(omega, g, eps_array, d_array, chi_array=None, pol='TE'):
         if i < len(S_matrices)-2:
             term = T_matrices[i+1].dot(term)
         ABs.append(term)
-    return np.array(ABs)
+    return bd.array(ABs)
 
 def normalization_coeff(omega, g, eps_array, d_array, ABref, pol='TE'):
     '''
@@ -343,26 +343,26 @@ def normalization_coeff(omega, g, eps_array, d_array, ABref, pol='TE'):
     As = ABref[:, 0].ravel()
     Bs = ABref[:, 1].ravel()
     if pol == 'TM': 
-        term1 = (np.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
-        term2 = (np.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
+        term1 = (bd.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
+        term2 = (bd.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
         term3 = (
-                (np.abs(As[1:-1])**2 + np.abs(Bs[1:-1])**2) * \
+                (bd.abs(As[1:-1])**2 + bd.abs(Bs[1:-1])**2) * \
                 I_alpha(chi_array[1:-1]-chi_array[1:-1].conj(),d_array) + 
                 (As[1:-1].conj() * Bs[1:-1] + As[1:-1] * Bs[1:-1].conj()) * \
                 I_alpha(-chi_array[1:-1]-chi_array[1:-1].conj(),d_array)  )
-        return term1 + term2 + np.sum(term3)
+        return term1 + term2 + bd.sum(term3)
     elif pol == 'TE':
-        term1 = (np.abs(chi_array[0])**2 + g**2) * \
-            (np.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
-        term2 = (np.abs(chi_array[-1])**2 + g**2) * \
-            (np.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
-        term3 = (np.abs(chi_array[1:-1])**2 + g**2) * (
-                (np.abs(As[1:-1])**2 + np.abs(Bs[1:-1])**2) * \
+        term1 = (bd.abs(chi_array[0])**2 + g**2) * \
+            (bd.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
+        term2 = (bd.abs(chi_array[-1])**2 + g**2) * \
+            (bd.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
+        term3 = (bd.abs(chi_array[1:-1])**2 + g**2) * (
+                (bd.abs(As[1:-1])**2 + bd.abs(Bs[1:-1])**2) * \
                 I_alpha(chi_array[1:-1]-chi_array[1:-1].conj(), d_array)) + \
-                (g**2 - np.abs(chi_array[1:-1])**2) * (
+                (g**2 - bd.abs(chi_array[1:-1])**2) * (
                 (As[1:-1].conj() * Bs[1:-1] + As[1:-1] * Bs[1:-1].conj()) * \
                 I_alpha(-chi_array[1:-1]-chi_array[1:-1].conj(), d_array)  )
-        return term1 + term2 + np.sum(term3)
+        return term1 + term2 + bd.sum(term3)
     else:
         raise Exception('Polarization should be TE or TM.')
 
@@ -382,8 +382,8 @@ def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
     Output
     Xs, Ys          : X, Y coefficients of the modes in every layer
     '''
-    Xs, Ys = [], []
 
+    Xs, Ys = [], []
     for ig, g in enumerate(g_array):
         g_val = max([g, 1e-10])
         # Get the scattering and transfer matrices
@@ -422,6 +422,11 @@ def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
 
     Xs = bd.array(Xs, dtype=bd.complex).transpose()
     Ys = bd.array(Ys, dtype=bd.complex).transpose()
+
+    # Fix the dimension if g_array is an empty list
+    if len(g_array)==0:
+        Xs = bd.ones((eps_array.size, 1))*Xs
+        Ys = bd.ones((eps_array.size, 1))*Ys
 
     '''
     (Xs, Ys) corresponds to the X, W coefficients for TE radiative modes in 
