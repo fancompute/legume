@@ -57,7 +57,5 @@ If you think the GME run might not be fully converged, I suggest changing the pa
 
 - First and foremost, make sure you have a high enough `gmax`, which is defined upon initialization of `GuidedModeExp`.
 - Then, `options['gmode_inds']` selects the indexes of the guided bands to be included in the calculation. These alternate between TE and TM defined with respect to the propagation direction. (Note: this classification is not valid in a 2D PhC but is still valid in a grating).
-- Then, start tweaking the guided modes computation itself:
-  - first try increasing `options['gmode_npts']`
-  - then try decreasing `options['gmode_step']`
-  - finally you could also try decreasing `options[gmode_tol]`
+  - Note that after including more modes in `gmode_inds`, you should test again the convergence w.r.t. `gmax`.
+- Finally, you could try tweaking the guided modes computation itself e.g. by decreasing  `options['gmode_step']` and `options[gmode_tol]`, but in almost all cases you shouldn't see a change (let me know if you do, because it means something weird is happening)
