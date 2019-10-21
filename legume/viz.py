@@ -289,15 +289,18 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
     else:
         raise ValueError("Specify exactly one of 'x', 'y', or 'z'.")
 
-    f1 = plt.figure()
     sp = len(component)
+    f1, axs = plt.subplots(1, sp, constrained_layout=True)
     for ic, comp in enumerate(component):
         f = fi[comp]
         if periodic==False:
             f *= kenv
         
         extent = [grid1[0], grid1[-1], grid2[0], grid2[-1]]
-        ax = f1.add_subplot(1, sp, ic+1)
+        if sp > 1:
+            ax = axs[ic]
+        else:
+            ax = axs
 
         if val=='re' or val=='im':
             Z = np.real(f) if val=='re' else np.imag(f)
@@ -320,6 +323,10 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
 
         if cbar==True:
             f1.colorbar(im, ax=ax)
-        ax.set_title("%s(%s_%s)" % (val, field, comp))
-        f1.suptitle("%s-plane at %s = %1.4f" %(pl, o, v))
+
+        title_str = ""
+        title_str += "%s$(%s_{%s%d})$ at $k_{%d}$\n" % (val.capitalize(), field, comp, mind, kind)
+        title_str += "%s-plane at $%s = %1.2f$\n" % (pl, o, v)
+        title_str += "$f = %.2f$ $Q = %.2E$\n" % (gme.freqs[kind, mind], gme.freqs[kind, mind]/2/gme.freqs_im[kind, mind])
+        ax.set_title(title_str)
         plt.show()
