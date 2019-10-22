@@ -1,5 +1,6 @@
 import numpy as np
 from autograd.numpy.numpy_boxes import ArrayBox
+import time
 
 def adam_optimize(objective, params, jac, step_size=1e-2, Nsteps=100, bounds=None, 
                     options={'direction': 'min'}):
@@ -22,20 +23,23 @@ def adam_optimize(objective, params, jac, step_size=1e-2, Nsteps=100, bounds=Non
 
     for iteration in range(Nsteps):
 
+        t_start = time.time()
         if jac==True:
             of, grad = objective(params)
         else:
             of = objective(params)
             grad = jac(params)
+        t_elapsed = time.time() - t_start
 
         of_list.append(of._value if type(of) is ArrayBox else of) 
 
+        disp_str = "Epoch: %3d/%3d | Duration: %.2f secs" % (iteration+1, Nsteps, t_elapsed)
         if 'disp' in opt_keys:
-            print("At iteration %d :" %(iteration))
             if 'of' in options['disp']:
-                print("Objective value is:  ", of_list[-1])
+                disp_str += " | Value: %5e" % (of_list[-1])
             if 'params' in options['disp']:
-                print("Parameters are:      ", params)
+                disp_str += " | Parameters: %s" % params
+        print(disp_str)
 
         if iteration == 0:
             mopt = np.zeros(grad.shape)
