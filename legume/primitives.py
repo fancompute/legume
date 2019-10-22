@@ -102,75 +102,41 @@ def vjp_maker_eigh(ans, x, UPLO='L'):
 defvjp(eigh_ag, vjp_maker_eigh)
 
 '''=========== NUMPY.INTERP =========== '''
-"""Implementation taken from an un-resolved pull request
-https://github.com/HIPS/autograd/pull/194
-"""
+'''This implementation might not be covering the full scope of the numpy.interp
+function, but it covers everything we need
+'''
 
-def interp_ag(x, xp, yp, left=None, right=None, period=None):
-    """ A partial rewrite of interp that is differentiable against yp """
-    if period is not None:
-        xp = npa.concatenate([[xp[-1] - period], xp, [xp[0] + period]])
-        yp = npa.concatenate([npa.array([yp[-1]]), yp, npa.array([yp[0]])])
-        return _interp(x % period, xp, yp, left, right, None)
+interp_ag = primitive(np.interp)
 
-    if left is None: left = yp[0]
-    if right is None: right = yp[-1]
+def vjp_maker_interp(ans, x, xp, yp):
+    '''Construct the vjp of interp(x, xp, yp) w.r.t. yp
+    '''
 
-    xp = npa.concatenate([[xp[0]], xp, [xp[-1]]])
+    def vjp(g):
+        dydyp = np.zeros((x.size, xp.size))
+        for ix in range(x.size):
+            indx = np.searchsorted(xp, x[ix]) - 1
+            dydyp[ix, indx] = 1 - (x[ix] - xp[indx])/(xp[indx+1] - xp[indx])
+            dydyp[ix, indx+1] = (x[ix] - xp[indx])/(xp[indx+1] - xp[indx])
+        return np.dot(g, dydyp)
+    return vjp
 
-    yp = npa.concatenate([npa.array([left]), yp, npa.array([right])])
-    m = make_matrix(x, xp)
-    y = npa.inner(m, yp)
-    return y
-
-# The following are internal functions
-def W(r, D):
-    """ Convolution kernel for linear interpolation.
-        D is the differences of xp.
-    """
-    mask = D == 0
-    D[mask] = 1.0
-    Wleft = 1.0 + r[1:] / D
-    Wright = 1.0 - r[:-1] / D
-    # edges
-    Wleft = np.where(mask, 0, Wleft)
-    Wright = np.where(mask, 0, Wright)
-    Wleft = np.concatenate([[0], Wleft])
-    Wright = np.concatenate([Wright, [0]])
-    W = np.where(r < 0, Wleft, Wright)
-    W = np.where(r == 0, 1.0, W)
-    W = np.where(W < 0, 0, W)
-    return W
-
-def make_matrix(x, xp):
-    D = np.diff(xp)
-    w = []
-    v0 = np.zeros(len(xp))
-    v0[0] = 1.0
-    v1 = np.zeros(len(xp))
-    v1[-1] = 1.0
-    for xi in x:
-        # left, use left
-        if xi < xp[0]: v = v0
-        # right , use right
-        elif xi > xp[-1]: v = v1
-        else:
-            v = W(xi - xp, D)
-            v[0] = 0
-            v[-1] = 0
-        w.append(v)
-    return np.array(w)
+defvjp(interp_ag, None, None, vjp_maker_interp)
 
 
 '''=========== SOLVE OF f(x, y) = 0 W.R.T. X =========== '''
 fsolve_ag = primitive(fsolve)
 
-def vjp_maker_fsolve(Nargs=3):
+def vjp_maker_fsolve(f, Nargs):
     '''
     Gradient of dx/dargs where x is found through fsolve. The gradient of f 
     w.r.t. both x and each of the args must be computable with autograd
     '''
     vjp_makers = [None, None, None]
+    dfdx = grad(f, 0)
+    dfdargs = []
+    for ia in range(Nargs):
+        dfdargs.append(grad(f, ia+1))
 
     def vjp_single_arg(ia):
 
@@ -178,8 +144,8 @@ def vjp_maker_fsolve(Nargs=3):
             dfdx = grad(f, 0)
 
             def vjp(g):       
-                dfdy = grad(f, ia + 1)
-                return np.dot(g, 1/dfdx(ans, *args) * dfdy(ans, *args))
+                dfdy = dfdargs[ia]
+                return np.dot(g, -1/dfdx(ans, *args) * dfdy(ans, *args))
 
             return vjp
 
@@ -189,4 +155,3 @@ def vjp_maker_fsolve(Nargs=3):
         vjp_makers.append(vjp_single_arg(ia=ia))
     return tuple(vjp_makers)
 
-defvjp(fsolve_ag, *vjp_maker_fsolve())

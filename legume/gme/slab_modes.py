@@ -93,6 +93,12 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
     else:
         raise ValueError("Polarization should be 'TE' or 'TM'.")
 
+    # Define the vjp for the fsolve function
+    if repr(bd) == 'AutogradBackend':
+        from autograd.extend import defvjp
+        from legume.primitives import vjp_maker_fsolve
+        defvjp(bd.fsolve, *vjp_maker_fsolve(D22real, 3))
+
     # Making sure the bounds go all the way to omega_ub
     omega_bounds = np.append(np.arange(omega_lb, omega_ub, step), omega_ub) 
 
