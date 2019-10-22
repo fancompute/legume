@@ -5,9 +5,25 @@ from .gme import GuidedModeExp
 from .phc import PhotCryst
 
 
-# TODO: Make this more general
-def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o', Q=False, 
-    cmap='viridis', size=20, edgecolor='w', Q_clip=1e10):
+def bands(gme, Q=False, Q_clip=1e10, cone=True, conecolor='#eeeeee', ax=None, figsize=(4,5), 
+    Q_cmap='viridis', markersize=6, markeredgecolor='w', markeredgewidth=1.5):
+    """Visualize the computed bands and, optionally, the quality factor from a GME object
+
+    Required arguments:
+    gme             -- The GME object whose bands should be visualized
+
+    Keyword arguments:
+    cone            -- Boolean specifying whether the light cone should be shaded
+    conecolor       -- Color string specifying the color of the light cone
+    Q               -- Boolean specifying whether the quality factor should be visualized on the bands
+    Q_clip          -- Value to clip the Q colormap
+    ax              -- Matplotlib axis handle for plotting, if None, a new figure is created
+    figsize         -- If creating a new figure, this size is used
+    Q_cmap          -- Colormap used to visualize quality factor
+    markersize      -- Band marker size
+    markeredgecolor -- Band marker edge border color
+    markeredgewidth -- Band marker edge border width
+    """
 
     if np.all(gme.kpoints[0,:]==0) and not np.all(gme.kpoints[1,:]==0) \
         or np.all(gme.kpoints[1,:]==0) and not np.all(gme.kpoints[0,:]==0):
@@ -18,8 +34,10 @@ def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o', Q=False,
 
     X = np.tile(X0.reshape(len(X0),1), (1, gme.freqs.shape[1]))
 
+    show = False
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
+        show = True
     if Q:
         if len(gme.freqs_im) == 0:
             freqs_im = []
@@ -34,26 +52,25 @@ def bands(gme, lightcone=True, ax=None, figsize=(4,5), ls='o', Q=False,
         Q_max = np.max(Q[Q<Q_clip])
 
         p = ax.scatter(X.flatten(), gme.freqs.flatten(), 
-                            c=Q, cmap=cmap, s=size, vmax=Q_max, 
-                            norm=mpl.colors.LogNorm(), edgecolors=edgecolor)
+                            c=Q, cmap=Q_cmap, s=markersize**2, vmax=Q_max, 
+                            norm=mpl.colors.LogNorm(), edgecolors=markeredgecolor, linewidth=markeredgewidth)
         plt.colorbar(p, ax=ax, label="Radiative quality factor", extend="max")
     else:
-        ax.plot(X, gme.freqs, ls, c="#1f77b4", label="", ms=4, mew=1)
+        ax.plot(X, gme.freqs, 'o', c="#1f77b4", label="", ms=markersize, mew=markeredgewidth, mec=markeredgecolor)
 
-    if lightcone:
+    if cone:
         eps_clad = [gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg]
         vec_LL = np.sqrt(np.square(gme.kpoints[0, :]) + 
             np.square(gme.kpoints[1, :])) / 2 / np.pi / np.sqrt(max(eps_clad))
         ax.fill_between(X0, vec_LL,  max(100, vec_LL.max(), gme.freqs[:].max()), 
-                        facecolor="#eeeeee", zorder=0)
+                        facecolor=conecolor, zorder=0)
 
     ax.set_xlim(left=0, right=max(X0))
     ax.set_ylim(bottom=0.0, top=gme.freqs[:].max())
-    # ax.set_xticks([])
     ax.set_xlabel('Wave vector')
     ax.set_ylabel('Frequency')
 
-    plt.show()
+    if show: plt.show()
 
     return ax
 
@@ -272,15 +289,18 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
     else:
         raise ValueError("Specify exactly one of 'x', 'y', or 'z'.")
 
-    f1 = plt.figure()
     sp = len(component)
+    f1, axs = plt.subplots(1, sp, constrained_layout=True)
     for ic, comp in enumerate(component):
         f = fi[comp]
         if periodic==False:
             f *= kenv
         
         extent = [grid1[0], grid1[-1], grid2[0], grid2[-1]]
-        ax = f1.add_subplot(1, sp, ic+1)
+        if sp > 1:
+            ax = axs[ic]
+        else:
+            ax = axs
 
         if val=='re' or val=='im':
             Z = np.real(f) if val=='re' else np.imag(f)
@@ -303,6 +323,10 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
 
         if cbar==True:
             f1.colorbar(im, ax=ax)
-        ax.set_title("%s(%s_%s)" % (val, field, comp))
-        f1.suptitle("%s-plane at %s = %1.4f" %(pl, o, v))
+
+        title_str = ""
+        title_str += "%s$(%s_{%s%d})$ at $k_{%d}$\n" % (val.capitalize(), field, comp, mind, kind)
+        title_str += "%s-plane at $%s = %1.2f$\n" % (pl, o, v)
+        title_str += "$f = %.2f$ $Q = %.2E$\n" % (gme.freqs[kind, mind], gme.freqs[kind, mind]/2/gme.freqs_im[kind, mind])
+        ax.set_title(title_str)
         plt.show()

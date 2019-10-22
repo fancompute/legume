@@ -15,7 +15,7 @@ parser.add_argument('-W', default=0.50, type=float)
 parser.add_argument('-H', default=0.25, type=float)
 parser.add_argument('-D', default=0.25, type=float)
 parser.add_argument('-epsr', default=12, type=float)
-parser.add_argument('-nk', default=100, type=int)
+parser.add_argument('-nk', default=10, type=int)
 args = parser.parse_args()
 
 options = {'gmode_inds': np.arange(0, 6), 'gmode_npts': args.gmode_npts, 'numeig': args.neig, 'verbose': args.verbose}
@@ -66,14 +66,17 @@ gme_spe.run(kpoints=path.kpoints, **options)
 
 # Plot
 fig, axs = plt.subplots(1,3,constrained_layout=True)
-legume.viz.bands(gme_ce, ls='.', ax=axs[0])
-axs[0].plot(data_ce[:,0]/2, data_ce[:, 1:], 'o', markeredgecolor='k', color='none', label="COMSOL")
-axs[0].set_title("Complete etch")
+ax = legume.viz.bands(gme_ce, ax=axs[0], Q=True)
+ax.plot(data_ce[:,0]/2, data_ce[:, 1:], 'o', markeredgecolor='k', color='none', label="COMSOL")
+ax.set_title("Complete etch")
 
-legume.viz.bands(gme_pe, ls='.', ax=axs[1])
+legume.viz.bands(gme_pe, ax=axs[1], Q=True)
 axs[1].plot(data_pe[:,0]/2, data_pe[:, 1:], 'o', markeredgecolor='k', color='none', label="COMSOL")
 axs[1].set_title("Partial etch")
 
-legume.viz.bands(gme_spe, ls='.', ax=axs[2])
+legume.viz.bands(gme_spe, ax=axs[2], Q=True)
 axs[2].plot(data_spe[:,0]/2, data_spe[:, 1:], 'o', markeredgecolor='k', color='none', label="COMSOL")
 axs[2].set_title("Symmetric partial etch")
+
+legume.viz.field(gme_ce, 'H', 0, 1, y=0, periodic=False, component='xyz', val='re', cbar=False, N1=200, N2=200)
+legume.viz.field(gme_ce, 'E', 0, 1, y=0, periodic=False, component='xyz', val='re', cbar=False, N1=200, N2=200)
