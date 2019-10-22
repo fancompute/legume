@@ -40,14 +40,8 @@ def bands(gme, Q=False, Q_clip=1e10, cone=True, conecolor='#eeeeee', ax=None, fi
         show = True
     if Q:
         if len(gme.freqs_im) == 0:
-            freqs_im = []
-            for kind in range(len(X0)):
-                (freq_im, _, _) = gme.compute_rad(kind=kind, 
-                                        minds=range(gme.numeig))
-                freqs_im.append(freq_im)
-        else:
-            freqs_im = gme.freqs_im
-        freqs_im = np.array(freqs_im).flatten() + 1e-16
+            gme.run_im()
+        freqs_im = np.array(gme.freqs_im).flatten() + 1e-16
         Q = gme.freqs.flatten()/2/freqs_im
         Q_max = np.max(Q[Q<Q_clip])
 
