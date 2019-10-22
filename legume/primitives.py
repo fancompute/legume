@@ -141,7 +141,6 @@ def vjp_maker_fsolve(f, Nargs):
     def vjp_single_arg(ia):
 
         def vjp_maker(ans, f, lb, ub, *args):
-            dfdx = grad(f, 0)
 
             def vjp(g):       
                 dfdy = dfdargs[ia]

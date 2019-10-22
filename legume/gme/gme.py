@@ -99,6 +99,9 @@ class GuidedModeExp(object):
             # Should the imaginary parts of the frequencies also be computed
             'compute_im'   : True,
 
+            # Whether to compute 'exact' gradients, or 'approx' (faster)
+            'gradients'    : 'exact',
+
             # Using the 'average' or the 'background' permittivity of the layers
             # in the guided mode computation
             'eps_eff'      : 'average',
@@ -230,9 +233,13 @@ class GuidedModeExp(object):
         reshape_list = lambda x: [list(filter(lambda y: y is not None, i)) \
                         for i in zip_longest(*x)]
 
+        if self.gradients == 'exact':
+            (e_a, d_a) = (self.eps_array, self.d_array)
+        elif self.gradients == 'approx':
+            (e_a, d_a) = (self.eps_array_val, self.d_array_val)
+
         if self.gmode_te.size > 0:
-            (omegas_te, coeffs_te) = guided_modes(g_array,
-                    self.eps_array, self.d_array, 
+            (omegas_te, coeffs_te) = guided_modes(g_array, e_a, d_a, 
                     step=self.gmode_step, n_modes=1 + np.amax(self.gmode_te)//2, 
                     tol=self.gmode_tol, pol='TE')
             omte = reshape_list(omegas_te)
@@ -240,8 +247,7 @@ class GuidedModeExp(object):
             self.coeffs_te.append(reshape_list(coeffs_te))
             
         if self.gmode_tm.size > 0:
-            (omegas_tm, coeffs_tm) = guided_modes(g_array, 
-                    self.eps_array, self.d_array, 
+            (omegas_tm, coeffs_tm) = guided_modes(g_array, e_a, d_a, 
                     step=self.gmode_step, n_modes=1 + np.amax(self.gmode_tm)//2, 
                     tol=self.gmode_tol, pol='TM')
             self.omegas_tm.append(reshape_list(omegas_tm))
