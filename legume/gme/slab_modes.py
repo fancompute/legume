@@ -1,6 +1,6 @@
 import numpy as np
-from scipy.optimize import brentq
 from legume.backend import backend as bd
+from legume.utils import get_value
 
 '''===========HELPER FUNCTIONS FOR Z-INTEGRATION============'''
 def I_alpha(a, d): # integrate exp(iaz)dz from -d/2 to d/2
@@ -42,14 +42,15 @@ def guided_modes(g_array, eps_array, d_array, n_modes=1,
         g_val = max([g, 1e-4])
         compute_g = True
 
-        om_lb = g_val/np.sqrt(eps_array[1:-1].max())
-        om_ub = g_val/np.sqrt(max(eps_array[0],eps_array[-1]))
+        eps_val = get_value(eps_array)
+        om_lb = g_val/np.sqrt(eps_val[1:-1]).max()
+        om_ub = g_val/np.sqrt(max(eps_val[0], eps_val[-1]))
         if ig > 0:
             if len(omegas) == n_modes:
                 # Dispersion cannot be faster than speed of light;
                 # step is added just to be on the safe side
-                om_ub = min(om_ub, 
-                    omegas[-1] + step + (g_array[ig] - g_array[ig-1]))
+                om_ub = min(om_ub, get_value(omegas[-1]) + step + 
+                                        (g_array[ig] - g_array[ig-1]))
             '''
             Check if the guided mode needs to be computed at all; when using the
             gmode_compute = 'exact' option, there might be identical g-points
@@ -73,19 +74,21 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
     Currently, we do 'bisection' in all the regions of interest until n_modes 
     target is met. For alternative variations, see guided_modes_draft.py
     '''
+    eps_val = get_value(eps_array)
+    d_val = get_value(d_array)
     if omega_lb is None:
-        omega_lb = g/np.sqrt(eps_array[1:-1].max())
+        omega_lb = g/np.sqrt(eps_val[1:-1].max())
     if omega_ub is None:
-        omega_ub = g/np.sqrt(max(eps_array[0],eps_array[-1]))
+        omega_ub = g/np.sqrt(max(eps_val[0],eps_val[-1]))
 
     omega_lb = omega_lb*(1+tol)
     omega_ub = omega_ub*(1-tol)
 
     if pol.lower()=='te':
-        D22real = lambda x,*args: D22_TE(x,*args).real
+        D22real = lambda x,*args: bd.real(D22_TE(x,*args))
         D22test = lambda x,*args: D22s_vec(x,*args,pol='TE').real
     elif pol.lower()=='tm':
-        D22real = lambda x,*args: D22_TM(x,*args).real
+        D22real = lambda x,*args: bd.real(D22_TM(x,*args))
         D22test = lambda x,*args: D22s_vec(x,*args,pol='TM').real
     else:
         raise ValueError("Polarization should be 'TE' or 'TM'.")
@@ -96,7 +99,7 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
     omega_solutions = [] ## solving for D22_real
     coeffs = []
 
-    D22s = D22test(omega_bounds, g, eps_array, d_array).real
+    D22s = D22test(omega_bounds, g, eps_val, d_val).real
     sign_change = np.where(D22s[0:-1]*D22s[1:] < 0)[0]
     lb = omega_bounds[0]
 
@@ -105,7 +108,7 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
             break
         lb = omega_bounds[i]
         ub = omega_bounds[i+1]
-        omega = brentq(D22real,lb,ub,args=(g,eps_array,d_array))
+        omega = bd.fsolve(D22real, lb, ub, g, eps_array, d_array)
         omega_solutions.append(omega)
         chi_array = chi(omega, g, eps_array)
         if pol.lower()=='te' or pol.lower()=='tm':              
@@ -177,7 +180,7 @@ def D22_TM(omega, g, eps_array, d_array):
     D = S_matrices[0,:,:]
     for i,S in enumerate(S_matrices[1:]):
         T = T_matrices[i]
-        D = S.dot(T.dot(T.dot(D)))
+        D = bd.dot(S, bd.dot(T, bd.dot(T, D)))
     return D[1,1]
 
 def S_T_matrices_TE(omega, g, eps_array, d_array):
@@ -217,7 +220,7 @@ def D22_TE(omega, g, eps_array, d_array):
     D = S_matrices[0,:,:]
     for i,S in enumerate(S_matrices[1:]):
         T = T_matrices[i]
-        D = S.dot(T.dot(T.dot(D)))
+        D = bd.dot(S, bd.dot(T, bd.dot(T, D)))
     return D[1,1]
 
 def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
@@ -325,11 +328,12 @@ def AB_matrices(omega, g, eps_array, d_array, chi_array=None, pol='TE'):
     B0 = 1 
     AB0 = bd.array([A0, B0]).reshape(-1,1)
 
-    ABs = [AB0, T_matrices[0].dot(S_matrices[0].dot(AB0))] ### A, B coeff for each layer
+    # A, B coeff for each layer
+    ABs = [AB0, bd.dot(T_matrices[0], bd.dot(S_matrices[0], AB0))]
     for i,S in enumerate(S_matrices[1:]):
-        term = S_matrices[i+1].dot(T_matrices[i].dot(ABs[-1]))
+        term = bd.dot(S_matrices[i+1], bd.dot(T_matrices[i], ABs[-1]))
         if i < len(S_matrices)-2:
-            term = T_matrices[i+1].dot(term)
+            term = bd.dot(T_matrices[i+1], term)
         ABs.append(term)
     return bd.array(ABs)
 
@@ -343,25 +347,26 @@ def normalization_coeff(omega, g, eps_array, d_array, ABref, pol='TE'):
     As = ABref[:, 0].ravel()
     Bs = ABref[:, 1].ravel()
     if pol == 'TM': 
-        term1 = (bd.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
-        term2 = (bd.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
+        term1 = (bd.abs(Bs[0])**2) * J_alpha(chi_array[0]-bd.conj(chi_array[0]))
+        term2 = (bd.abs(As[-1])**2) * \
+                    J_alpha(chi_array[-1]-bd.conj(chi_array[-1]))
         term3 = (
                 (bd.abs(As[1:-1])**2 + bd.abs(Bs[1:-1])**2) * \
-                I_alpha(chi_array[1:-1]-chi_array[1:-1].conj(),d_array) + 
-                (As[1:-1].conj() * Bs[1:-1] + As[1:-1] * Bs[1:-1].conj()) * \
-                I_alpha(-chi_array[1:-1]-chi_array[1:-1].conj(),d_array)  )
+                I_alpha(chi_array[1:-1]-bd.conj(chi_array[1:-1]),d_array) + 
+                (bd.conj(As[1:-1]) * Bs[1:-1] + As[1:-1] * bd.conj(Bs[1:-1])) *
+                I_alpha(-chi_array[1:-1]-bd.conj(chi_array[1:-1]),d_array)  )
         return term1 + term2 + bd.sum(term3)
     elif pol == 'TE':
         term1 = (bd.abs(chi_array[0])**2 + g**2) * \
-            (bd.abs(Bs[0])**2) * J_alpha(chi_array[0]-chi_array[0].conj())
+            (bd.abs(Bs[0])**2) * J_alpha(chi_array[0]-bd.conj(chi_array[0]))
         term2 = (bd.abs(chi_array[-1])**2 + g**2) * \
-            (bd.abs(As[-1])**2) * J_alpha(chi_array[-1]-chi_array[-1].conj())
+            (bd.abs(As[-1])**2) * J_alpha(chi_array[-1]-bd.conj(chi_array[-1]))
         term3 = (bd.abs(chi_array[1:-1])**2 + g**2) * (
                 (bd.abs(As[1:-1])**2 + bd.abs(Bs[1:-1])**2) * \
-                I_alpha(chi_array[1:-1]-chi_array[1:-1].conj(), d_array)) + \
+                I_alpha(chi_array[1:-1]-bd.conj(chi_array[1:-1]), d_array)) + \
                 (g**2 - bd.abs(chi_array[1:-1])**2) * (
-                (As[1:-1].conj() * Bs[1:-1] + As[1:-1] * Bs[1:-1].conj()) * \
-                I_alpha(-chi_array[1:-1]-chi_array[1:-1].conj(), d_array)  )
+                (bd.conj(As[1:-1]) * Bs[1:-1] + As[1:-1] * bd.conj(Bs[1:-1])) *
+                I_alpha(-chi_array[1:-1]-bd.conj(chi_array[1:-1]), d_array)  )
         return term1 + term2 + bd.sum(term3)
     else:
         raise Exception('Polarization should be TE or TM.')

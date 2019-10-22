@@ -5,6 +5,7 @@ NOTE: there should be no autograd functions here, only plain numpy/scipy
 
 import numpy as np
 from scipy.linalg import toeplitz
+from scipy.optimize import brentq
 
 def ftinv(ft_coeff, gvec, xgrid, ygrid):
     ''' 
@@ -124,6 +125,13 @@ def get_value(x):
         return x._value
     else:
         return x
+
+def fsolve(f, lb, ub, *args):
+    '''
+    Solve for scalar f(x, *args) = 0 w.r.t. scalar x within lb < x < ub
+    '''
+    args_value = tuple([get_value(arg) for arg in args])
+    return brentq(f, lb, ub, args=args_value)
 
 def RedhefferStar(SA,SB): #SA and SB are both 2x2 matrices;
     assert type(SA) == np.ndarray, 'not np.matrix'

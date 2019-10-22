@@ -15,8 +15,8 @@ import numpy as np
 import scipy as sp
 
 # Import some specially written functions
-from .utils import toeplitz_block
-from .primitives import toeplitz_block_ag, eigh_ag
+from .utils import toeplitz_block, fsolve
+from .primitives import toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag
 
 # Import autograd if available
 try:
@@ -56,6 +56,8 @@ class NumpyBackend(Backend):
     max = staticmethod(np.max)
     min = staticmethod(np.min)
     sort = staticmethod(np.sort)
+    interp = staticmethod(np.interp)
+    fsolve = staticmethod(fsolve)
 
     # math functions
     exp = staticmethod(np.exp)
@@ -109,6 +111,8 @@ class AutogradBackend(Backend):
     max = staticmethod(npa.max)
     min = staticmethod(npa.min)
     sort = staticmethod(npa.sort)
+    interp = staticmethod(interp_ag)
+    fsolve = staticmethod(fsolve_ag)
 
     # math functions
     exp = staticmethod(npa.exp)

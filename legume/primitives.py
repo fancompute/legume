@@ -1,9 +1,10 @@
 import numpy as np
 from functools import partial
-from .utils import toeplitz_block
+from .utils import toeplitz_block, get_value, fsolve
 
 from autograd.extend import primitive, defvjp
-from autograd import vector_jacobian_product
+from autograd import grad, vector_jacobian_product
+import autograd.numpy as npa
 
 ''' Define here various primitives needed for the main code 
 To use with both numpy and autograd backends, define the autograd primitive of 
@@ -105,36 +106,24 @@ defvjp(eigh_ag, vjp_maker_eigh)
 https://github.com/HIPS/autograd/pull/194
 """
 
-def interp_vjp(x, xp, yp, left, right, period, g):
-    func = vector_jacobian_product(_interp, argnum=2)
-    return func(x, xp, yp, left, right, period, g)
-
-@primitive
 def interp_ag(x, xp, yp, left=None, right=None, period=None):
     """ A partial rewrite of interp that is differentiable against yp """
     if period is not None:
-        xp = anp.concatenate([[xp[-1] - period], xp, [xp[0] + period]])
-        yp = anp.concatenate([anp.array([yp[-1]]), yp, anp.array([yp[0]])])
+        xp = npa.concatenate([[xp[-1] - period], xp, [xp[0] + period]])
+        yp = npa.concatenate([npa.array([yp[-1]]), yp, npa.array([yp[0]])])
         return _interp(x % period, xp, yp, left, right, None)
 
     if left is None: left = yp[0]
     if right is None: right = yp[-1]
 
-    xp = anp.concatenate([[xp[0]], xp, [xp[-1]]])
+    xp = npa.concatenate([[xp[0]], xp, [xp[-1]]])
 
-    yp = anp.concatenate([anp.array([left]), yp, anp.array([right])])
+    yp = npa.concatenate([npa.array([left]), yp, npa.array([right])])
     m = make_matrix(x, xp)
-    y = anp.inner(m, yp)
+    y = npa.inner(m, yp)
     return y
 
-defvjp(lambda g, ans, vs, gvs, x, xp, yp, left=None, right=None, period=None:
-    interp_vjp(x, xp, yp, left, right, period, g), argnum=2)
-
-
 # The following are internal functions
-
-import numpy as np
-
 def W(r, D):
     """ Convolution kernel for linear interpolation.
         D is the differences of xp.
@@ -171,3 +160,33 @@ def make_matrix(x, xp):
             v[-1] = 0
         w.append(v)
     return np.array(w)
+
+
+'''=========== SOLVE OF f(x, y) = 0 W.R.T. X =========== '''
+fsolve_ag = primitive(fsolve)
+
+def vjp_maker_fsolve(Nargs=3):
+    '''
+    Gradient of dx/dargs where x is found through fsolve. The gradient of f 
+    w.r.t. both x and each of the args must be computable with autograd
+    '''
+    vjp_makers = [None, None, None]
+
+    def vjp_single_arg(ia):
+
+        def vjp_maker(ans, f, lb, ub, *args):
+            dfdx = grad(f, 0)
+
+            def vjp(g):       
+                dfdy = grad(f, ia + 1)
+                return np.dot(g, 1/dfdx(ans, *args) * dfdy(ans, *args))
+
+            return vjp
+
+        return vjp_maker
+
+    for ia in range(Nargs):
+        vjp_makers.append(vjp_single_arg(ia=ia))
+    return tuple(vjp_makers)
+
+defvjp(fsolve_ag, *vjp_maker_fsolve())
