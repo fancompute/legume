@@ -16,7 +16,8 @@ import scipy as sp
 
 # Import some specially written functions
 from .utils import toeplitz_block, fsolve
-from .primitives import toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag
+from .primitives import (toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag, 
+                        eigsh_ag)
 
 # Import autograd if available
 try:
@@ -76,6 +77,7 @@ class NumpyBackend(Backend):
     imag = staticmethod(np.imag)
     inv = staticmethod(np.linalg.inv)
     eigh = staticmethod(np.linalg.eigh)
+    eigsh = staticmethod(sp.sparse.linalg.eigsh)
     outer = staticmethod(np.outer)
     conj = staticmethod(np.conj)
     var = staticmethod(np.var)
@@ -131,6 +133,7 @@ class AutogradBackend(Backend):
     imag = staticmethod(npa.imag)
     inv = staticmethod(npa.linalg.inv)
     eigh = staticmethod(eigh_ag)
+    eigsh = staticmethod(eigsh_ag)
     outer = staticmethod(npa.outer)
     conj = staticmethod(npa.conj)
     var = staticmethod(npa.var)

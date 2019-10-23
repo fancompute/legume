@@ -102,6 +102,13 @@ class GuidedModeExp(object):
             # Whether to compute 'exact' gradients, or 'approx' (faster)
             'gradients'    : 'exact',
 
+            # Eigenvalue solver, 'eigh' (numpy.linalg.eigh) or 'eigsh'
+            # (scipy.sparse.linalg.eigsh)
+            'eig_solver'   : 'eigh',
+
+            # Target eigenvalue if using the 'eigsh' solver 
+            'eigs_sigma'   : None,
+
             # Using the 'average' or the 'background' permittivity of the layers
             # in the guided mode computation
             'eps_eff'      : 'average',
@@ -126,6 +133,10 @@ class GuidedModeExp(object):
         for key in options.keys():
             if key not in default_options.keys():
                 raise ValueError("Unknown run() argument '%s'" % key)
+        
+        if options['eigs_sigma'] is not None and options['eig_solver']=='eigh':
+            print("Warning: ignoring 'eigs_sigma' supplied in options "
+                            "when using 'eig_solver' = 'eigh'")
 
         # Store the dictionary of all options
         self.run_options = options
@@ -405,13 +416,19 @@ class GuidedModeExp(object):
             if self.numeig > mat.shape[0]:
                 raise ValueError("Requested number of eigenvalues 'numeig' "
                     "larger than total size of basis set. Reduce 'numeig' or "
-                    "increase 'gmax'. ")
+                    "increase 'gmax'")
 
             # Diagonalize using numpy.linalg.eigh() for now; should maybe switch 
             # to scipy.sparse.linalg.eigsh() in the future
             # NB: we shift the matrix by np.eye to avoid problems at the zero-
             # frequency mode at Gamma
-            (freq2, evec) = bd.eigh(mat + bd.eye(mat.shape[0]))
+            if self.eig_solver == 'eigh':
+                (freq2, evec) = bd.eigh(mat + bd.eye(mat.shape[0]))
+            elif self.eig_solver == 'eigsh':
+                (freq2, evec) = bd.eigsh(mat + bd.eye(mat.shape[0]), 
+                                            self.numeig, sigma=self.eigs_sigma)
+            else:
+                raise ValueError("'eig_solver' can be 'eigh' or 'eigsh'")
             freq = bd.sort(bd.sqrt(bd.abs(freq2[:self.numeig]
                         - bd.ones(self.numeig))))
             freqs.append(freq)
