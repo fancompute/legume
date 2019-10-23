@@ -2,7 +2,7 @@ import numpy as np
 from functools import partial
 from .utils import toeplitz_block, get_value, fsolve
 
-from autograd.extend import primitive, defvjp
+from autograd.extend import primitive, defvjp, vspace
 from autograd import grad, vector_jacobian_product
 import autograd.numpy as npa
 
@@ -127,23 +127,20 @@ defvjp(interp_ag, None, None, vjp_maker_interp)
 '''=========== SOLVE OF f(x, y) = 0 W.R.T. X =========== '''
 fsolve_ag = primitive(fsolve)
 
-def vjp_maker_fsolve(f, Nargs):
+def vjp_maker_fsolve(f, gradf, Nargs):
     '''
     Gradient of dx/dargs where x is found through fsolve. The gradient of f 
     w.r.t. both x and each of the args must be computable with autograd
     '''
     vjp_makers = [None, None, None]
-    dfdx = grad(f, 0)
-    dfdargs = []
-    for ia in range(Nargs):
-        dfdargs.append(grad(f, ia+1))
+    dfdx = gradf[0]
 
     def vjp_single_arg(ia):
 
         def vjp_maker(ans, f, lb, ub, *args):
 
             def vjp(g):       
-                dfdy = dfdargs[ia]
+                dfdy = gradf[ia+1]
                 return np.dot(g, -1/dfdx(ans, *args) * dfdy(ans, *args))
 
             return vjp
@@ -153,4 +150,37 @@ def vjp_maker_fsolve(f, Nargs):
     for ia in range(Nargs):
         vjp_makers.append(vjp_single_arg(ia=ia))
     return tuple(vjp_makers)
+
+@primitive
+def fsolve_grad(f, gradf, lb, ub, *args):
+    '''Extend fsolve to also accept the gradient of the function with respect
+    to all input parameters x and args
+    '''
+    return fsolve(f, lb, ub, *args)
+
+def vjp_maker_fsolve_vjp(f, vjpf, Nargs):
+    '''
+    Gradient of dx/dargs where x is found through fsolve. The gradient of f 
+    w.r.t. both x and each of the args must be computable with autograd
+    '''
+    vjp_makers = [None, None, None]
+
+    def vjp_single_arg(ia):
+
+        def vjp_maker(ans, f, lb, ub, *args):
+
+            def vjp(g):
+                dfdx = vjpf[0](vspace(ans).ones(), *args)[1]
+                dfdy = vjpf[ia+1](vspace(ans).ones(), *args)[1]
+                # print(dfdx, dfdy)
+                return np.dot(g, -1/dfdx * dfdy)
+
+            return vjp
+
+        return vjp_maker
+
+    for ia in range(Nargs):
+        vjp_makers.append(vjp_single_arg(ia=ia))
+    return tuple(vjp_makers)
+
 
