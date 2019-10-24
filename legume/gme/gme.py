@@ -528,7 +528,7 @@ class GuidedModeExp(object):
         if self.gradients == 'exact':
             (e_a, d_a) = (self.eps_array, self.d_array)
         elif self.gradients == 'approx':
-            (e_a, d_a) = (self.eps_array_val, self.d_array_val)
+            (e_a, d_a) = (self.eps_array_val, self.d_array)
 
         for im1 in range(self.gmode_include[-1].size):
             mode1 = self.gmode_include[-1][im1]
