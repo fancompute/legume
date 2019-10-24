@@ -133,6 +133,14 @@ def fsolve(f, lb, ub, *args):
     args_value = tuple([get_value(arg) for arg in args])
     return brentq(f, lb, ub, args=args_value)
 
+def find_nearest(array, value, N):
+    '''
+    Find the indexes of the N elements in an array nearest to a given value
+    (Not the most efficient way but this is not a coding interview...)
+    ''' 
+    idx = np.abs(array - value).argsort()
+    return idx[:N]
+
 def RedhefferStar(SA,SB): #SA and SB are both 2x2 matrices;
     assert type(SA) == np.ndarray, 'not np.matrix'
     assert type(SB) == np.ndarray, 'not np.matrix'

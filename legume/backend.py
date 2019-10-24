@@ -57,6 +57,7 @@ class NumpyBackend(Backend):
     max = staticmethod(np.max)
     min = staticmethod(np.min)
     sort = staticmethod(np.sort)
+    argsort = staticmethod(np.argsort)
     interp = staticmethod(np.interp)
     fsolve = staticmethod(fsolve)
 
@@ -113,6 +114,7 @@ class AutogradBackend(Backend):
     max = staticmethod(npa.max)
     min = staticmethod(npa.min)
     sort = staticmethod(npa.sort)
+    argsort = staticmethod(npa.argsort)
     interp = staticmethod(interp_ag)
     fsolve = staticmethod(fsolve_ag)
 

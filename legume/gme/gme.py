@@ -6,7 +6,7 @@ from itertools import zip_longest
 from .slab_modes import guided_modes, rad_modes
 from . import matrix_elements
 from legume.backend import backend as bd
-from legume.utils import get_value, ftinv
+from legume.utils import get_value, ftinv, find_nearest
 
 class GuidedModeExp(object):
     '''
@@ -107,7 +107,7 @@ class GuidedModeExp(object):
             'eig_solver'   : 'eigh',
 
             # Target eigenvalue if using the 'eigsh' solver 
-            'eigs_sigma'   : None,
+            'eig_sigma'    : 0.,
 
             # Using the 'average' or the 'background' permittivity of the layers
             # in the guided mode computation
@@ -133,10 +133,6 @@ class GuidedModeExp(object):
         for key in options.keys():
             if key not in default_options.keys():
                 raise ValueError("Unknown run() argument '%s'" % key)
-        
-        if options['eigs_sigma'] is not None and options['eig_solver']=='eigh':
-            print("Warning: ignoring 'eigs_sigma' supplied in options "
-                            "when using 'eig_solver' = 'eigh'")
 
         # Store the dictionary of all options
         self.run_options = options
@@ -418,25 +414,33 @@ class GuidedModeExp(object):
                     "larger than total size of basis set. Reduce 'numeig' or "
                     "increase 'gmax'")
 
-            # Diagonalize using numpy.linalg.eigh() for now; should maybe switch 
-            # to scipy.sparse.linalg.eigsh() in the future
             # NB: we shift the matrix by np.eye to avoid problems at the zero-
             # frequency mode at Gamma
             if self.eig_solver == 'eigh':
-                (freq2, evec) = bd.eigh(mat + bd.eye(mat.shape[0]))
+                (freq2, evecs) = bd.eigh(mat + bd.eye(mat.shape[0]))
+                freq1 = bd.sqrt(bd.abs(freq2 - bd.ones(mat.shape[0])))/2/np.pi
+                i_near = find_nearest(get_value(freq1), 
+                                        self.eig_sigma, self.numeig)
+                i_sort = bd.argsort(freq1[i_near])
+                freq = freq1[i_near[i_sort]]
+                evec = evecs[:, i_near[i_sort]]
             elif self.eig_solver == 'eigsh':
-                (freq2, evec) = bd.eigsh(mat + bd.eye(mat.shape[0]), 
-                                            self.numeig, sigma=self.eigs_sigma)
+                (freq2, evecs) = bd.eigsh(mat + bd.eye(mat.shape[0]), 
+                                        self.numeig, 
+                                        sigma=(self.eig_sigma*2*np.pi)**2)
+                freq1 = bd.sqrt(bd.abs(freq2 - bd.ones(self.numeig)))/2/np.pi
+                i_sort = bd.argsort(freq1)
+                freq = freq1[i_sort]
+                evec = evecs[:, i_sort]
             else:
                 raise ValueError("'eig_solver' can be 'eigh' or 'eigsh'")
-            freq = bd.sort(bd.sqrt(bd.abs(freq2[:self.numeig]
-                        - bd.ones(self.numeig))))
+            
             freqs.append(freq)
-            eigvecs.append(evec[:, :self.numeig])
+            eigvecs.append(evec)
 
         # Store the eigenfrequencies taking the standard reduced frequency 
         # convention for the units (2pi a/c)
-        self.freqs = bd.array(freqs)/2/np.pi
+        self.freqs = bd.array(freqs)
         self.eigvecs = eigvecs
 
         print_vb("%1.4f seconds total time to run"% (time.time()-t_start))
