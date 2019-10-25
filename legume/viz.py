@@ -344,7 +344,7 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
             f1.colorbar(im, ax=ax, shrink=0.5)
 
         title_str = ""
-<<<<<<< HEAD
+
         title_str += "%s$(%s_{%s%d})$ at $k_{%d}$\n" % (val.capitalize(), 
                                     field.capitalize(), comp, mind, kind)
         title_str += "%s-plane at $%s = %1.2f$\n" % (pl, o, v)
@@ -352,11 +352,7 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
         if gme.freqs_im != []:
             title_str += " $Q = %.2E$\n" % (gme.freqs[kind, mind]/2/
                                             gme.freqs_im[kind, mind])
-=======
-        title_str += "%s$(%s_{%s%d})$ at $k = $%.2f\n" % (val.capitalize(), field.capitalize(), comp, mind, k_val)
-        title_str += "$f = %.2f$ $Q = %.2E$\n" % (gme.freqs[kind, mind], gme.freqs[kind, mind]/2/gme.freqs_im[kind, mind])
-        title_str += "%s-plane at $%s = %1.2f$\n" % (pl, o, v)
->>>>>>> f8a8f5579420bd5e8b072bd93ade5aebf7a109ae
+
         ax.set_title(title_str)
         plt.show()
 
