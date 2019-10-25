@@ -73,8 +73,6 @@ class Lattice(object):
         if periods == None:
             if self.type == 'square' or self.type == 'rectangular':
                 periods = [1, 1]
-            elif self.type == 'hexagonal':
-                periods = [2, 1]
             else:
                 periods = [2, 2]
         elif np.array(periods).shape == 1:
