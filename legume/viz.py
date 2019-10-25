@@ -245,18 +245,33 @@ def reciprocal(gme):
     plt.show()
 
 def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
-            component='xyz', val='re', N1=100, N2=100, cbar=True, eps=True):
-    '''
-    Plot the 'field' ('H' or 'D') at the plane defined by 'x', 'y', or 'z', 
-    for mode number mind at k-vector kind. 
-    'comp' can be: 'x', 'y', 'z' or a combination thereof, e.g. 'xz' (a 
-    separate plot is created for each component)
-    'val' can be: 're', 'im', 'abs'
-    '''
+            component='xyz', val='re', N1=100, N2=100, cbar=True, eps=True, eps_levels=None):
+    """Visualize the field components of a mode over a slice in x, y, or z
+
+    Required arguments:
+    gme             -- The GME object
+    field           -- The field quantity, should be one of 'H', 'D', or 'E'
+    kind            -- The wave vector index of the mode
+    mind            -- The mode index
+    x, y, or z      -- Coordinate of the slice in either x, y, or z. One and only one of
+                       these should be specified
+
+    Keyword arguments:
+    periodic        -- Whether the periodic portion or the full field should be plotted
+    component       -- Component of the vector field to plot
+    val             -- Field value to plot, either 're', 'im', or 'abs'
+    N1              -- Number of grid points to sample in first spatial dim
+    N2              -- Number of grid points to sample in second spatial dim
+    cbar            -- Whether to include a colorbar
+    eps             -- Whether an outline of the permittivity should be overlaid
+    eps_levels      -- The contour levels for the permittivity
+    """
 
     field = field.lower()
     val = val.lower()
     component = component.lower()
+
+    k_val = np.sqrt(np.square(gme.kpoints[0, kind]) + np.square(gme.kpoints[1, kind]))/2/np.pi
 
     # Get the field fourier components
     if z is not None and x is None and y is None:
@@ -322,12 +337,14 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
                         origin='lower')
 
         if eps==True:
-            ax.contour(grid1, grid2, epsr, 1, colors='k', linewidths=1)
+            lcs = 'k' if val.lower() in ['re', 'im'] else 'w'
+            ax.contour(grid1, grid2, epsr, 0 if eps_levels is None else eps_levels, colors=lcs, linewidths=1, alpha=0.5)
 
         if cbar==True:
-            f1.colorbar(im, ax=ax)
+            f1.colorbar(im, ax=ax, shrink=0.5)
 
         title_str = ""
+<<<<<<< HEAD
         title_str += "%s$(%s_{%s%d})$ at $k_{%d}$\n" % (val.capitalize(), 
                                     field.capitalize(), comp, mind, kind)
         title_str += "%s-plane at $%s = %1.2f$\n" % (pl, o, v)
@@ -335,6 +352,11 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
         if gme.freqs_im != []:
             title_str += " $Q = %.2E$\n" % (gme.freqs[kind, mind]/2/
                                             gme.freqs_im[kind, mind])
+=======
+        title_str += "%s$(%s_{%s%d})$ at $k = $%.2f\n" % (val.capitalize(), field.capitalize(), comp, mind, k_val)
+        title_str += "$f = %.2f$ $Q = %.2E$\n" % (gme.freqs[kind, mind], gme.freqs[kind, mind]/2/gme.freqs_im[kind, mind])
+        title_str += "%s-plane at $%s = %1.2f$\n" % (pl, o, v)
+>>>>>>> f8a8f5579420bd5e8b072bd93ade5aebf7a109ae
         ax.set_title(title_str)
         plt.show()
 

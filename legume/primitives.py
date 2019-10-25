@@ -13,6 +13,16 @@ a numpy function fnc as fnc_ag, and then define the vjp'''
 
 def T(x): return np.swapaxes(x, -1, -2)
 
+'''=========== NP.SQRT STABLE AROUND 0 =========== '''
+sqrt_ag = primitive(np.sqrt)
+
+def vjp_maker_sqrt(ans, x):
+    def vjp(g):
+        return np.where(np.abs(x) > 1e-20, g * 0.5 * x**-0.5, 0.)
+    return vjp
+
+defvjp(sqrt_ag, vjp_maker_sqrt)
+
 '''=========== TOEPLITZ-BLOCK =========== '''
 
 toeplitz_block_ag = primitive(toeplitz_block)

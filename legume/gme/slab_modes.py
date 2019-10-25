@@ -135,9 +135,10 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 
     return (omega_solutions, coeffs)
 
-def chi(omega, g, epses):
+def chi(omega, g, eps):
     '''
     Function to compute k_z
+    Either omega is an array and eps is a number, or vice versa
     Input
         omega           : frequency * 2π , in units of light speed / unit length
         epses           : slab permittivity array
@@ -145,8 +146,9 @@ def chi(omega, g, epses):
     Output
         k_z
     '''
-    sqarg = bd.array(epses*omega**2 - g**2, dtype=bd.complex)
-    return bd.where(bd.real(sqarg) >=0, bd.sqrt(sqarg), 1j*bd.sqrt(-sqarg))
+    sqarg = bd.array(eps*omega**2 - g**2, dtype=bd.complex)
+    return bd.where(bd.real(sqarg) >=0, bd.sqrt(sqarg),
+                         1j*bd.sqrt(-sqarg))
 
 def chi_vec(omegas, g, eps):
     '''
@@ -271,8 +273,8 @@ def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
         thickness d and permittivity of the slab eps1 and the next layer eps2
         '''
 
-        chis1 = chi_vec(omegas, g, eps1)
-        chis2 = chi_vec(omegas, g, eps2)
+        chis1 = chi(omegas, g, eps1)
+        chis2 = chi(omegas, g, eps2)
 
         if pol.lower() == 'te':
             (S11, S12, S21, S22) = S_TE(eps1, eps2, chis1, chis2)
@@ -296,8 +298,8 @@ def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
 
     # Starting matrix array is constructed from S0
     (eps1, eps2) = (eps_array[0], eps_array[1])
-    chis1 = chi_vec(omegas, g, eps1)
-    chis2 = chi_vec(omegas, g, eps2)
+    chis1 = chi(omegas, g, eps1)
+    chis2 = chi(omegas, g, eps2)
 
     if pol.lower() == 'te':
         (S11, S12, S21, S22) = S_TE(eps1, eps2, chis1, chis2)
