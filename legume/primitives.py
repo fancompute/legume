@@ -12,7 +12,16 @@ To use with both numpy and autograd backends, define the autograd primitive of
 a numpy function fnc as fnc_ag, and then define the vjp'''
 
 def T(x): return np.swapaxes(x, -1, -2)
-_dot = partial(np.einsum, '...ij,...jk->...ik')
+
+'''=========== NP.SQRT STABLE AROUND 0 =========== '''
+sqrt_ag = primitive(np.sqrt)
+
+def vjp_maker_sqrt(ans, x):
+    def vjp(g):
+        return np.where(np.abs(x) > 1e-20, g * 0.5 * x**-0.5, 0.)
+    return vjp
+
+defvjp(sqrt_ag, vjp_maker_sqrt)
 
 '''=========== TOEPLITZ-BLOCK =========== '''
 
@@ -72,10 +81,10 @@ def vjp_maker_eigh(ans, x, UPLO='L'):
     
     def vjp(g):
         wg, vg = g          # Gradient w.r.t. eigenvalues, eigenvectors.
-        w_repeated = np.repeat(w[..., np.newaxis], N, axis=-1)
+        w_repeated = np.repeat(w[:, np.newaxis], N, axis=-1)
 
         # Eigenvalue part
-        vjp_temp = _dot(vc * wg[..., np.newaxis, :], T(v)) 
+        vjp_temp = np.dot(vc * wg[np.newaxis, :], T(v)) 
 
         # Add eigenvector part only if non-zero backward signal is present.
         # This can avoid NaN results for degenerate cases if the function 
@@ -83,7 +92,7 @@ def vjp_maker_eigh(ans, x, UPLO='L'):
         if np.any(vg):
             off_diag = np.ones((N, N)) - np.eye(N)
             F = off_diag / (T(w_repeated) - w_repeated + np.eye(N))
-            vjp_temp += _dot(_dot(vc, F * _dot(T(v), vg)), T(v))
+            vjp_temp += np.dot(np.dot(vc, F * np.dot(T(v), vg)), T(v))
 
         # eigh always uses only the lower or the upper part of the matrix
         # we also have to make sure broadcasting works
@@ -103,6 +112,18 @@ def vjp_maker_eigh(ans, x, UPLO='L'):
 defvjp(eigh_ag, vjp_maker_eigh)
 
 '''=========== SCIPY.SPARSE.LINALG.EIGSH =========== '''
+'''We define this here without the `einsum` notation that's used in autograd.
+This allows broadcasting (which we don't care about), but is slower 
+(which we do)
+'''
+
+inv_ag = primitive(np.linalg.inv)
+
+def vjp_maker_inv(ans, x):
+    return lambda g: -np.dot(np.dot(T(ans), g), T(ans))
+defvjp(inv_ag, vjp_maker_inv)
+
+'''=========== SCIPY.SPARSE.LINALG.EIGSH =========== '''
 
 eigsh_ag = primitive(sp.linalg.eigsh)
 
@@ -117,7 +138,7 @@ def vjp_maker_eigsh(ans, x, numeig=10, sigma=0.):
         w_repeated = np.repeat(w[..., np.newaxis], numeig, axis=-1)
 
         # Eigenvalue part
-        vjp_temp = _dot(vc * wg[..., np.newaxis, :], T(v)) 
+        vjp_temp = np.dot(vc * wg[..., np.newaxis, :], T(v)) 
 
         # Add eigenvector part only if non-zero backward signal is present.
         # This can avoid NaN results for degenerate cases if the function 
@@ -125,7 +146,7 @@ def vjp_maker_eigsh(ans, x, numeig=10, sigma=0.):
         if np.any(vg):
             off_diag = np.ones((numeig, numeig)) - np.eye(numeig)
             F = off_diag / (T(w_repeated) - w_repeated + np.eye(numeig))
-            vjp_temp += _dot(_dot(vc, F * _dot(T(v), vg)), T(v))
+            vjp_temp += np.dot(np.dot(vc, F * np.dot(T(v), vg)), T(v))
 
         return vjp_temp
 

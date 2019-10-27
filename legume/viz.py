@@ -5,19 +5,24 @@ from .gme import GuidedModeExp
 from .phc import PhotCryst
 
 
-def bands(gme, Q=False, Q_clip=1e10, cone=True, conecolor='#eeeeee', ax=None, figsize=(4,5), 
+def bands(gme, Q=False, Q_clip=1e10, cone=True, conecolor='#eeeeee', ax=None, 
+    figsize=(4,5), 
     Q_cmap='viridis', markersize=6, markeredgecolor='w', markeredgewidth=1.5):
-    """Visualize the computed bands and, optionally, the quality factor from a GME object
+    """Visualize the computed bands and, optionally, the quality factor from a 
+    GME object
 
     Required arguments:
     gme             -- The GME object whose bands should be visualized
 
     Keyword arguments:
-    cone            -- Boolean specifying whether the light cone should be shaded
+    cone            -- Boolean specifying whether the light cone should be 
+                        shaded
     conecolor       -- Color string specifying the color of the light cone
-    Q               -- Boolean specifying whether the quality factor should be visualized on the bands
+    Q               -- Boolean specifying whether the quality factor should be 
+                        visualized on the bands
     Q_clip          -- Value to clip the Q colormap
-    ax              -- Matplotlib axis handle for plotting, if None, a new figure is created
+    ax              -- Matplotlib axis handle for plotting, if None, a new 
+                        figure is created
     figsize         -- If creating a new figure, this size is used
     Q_cmap          -- Colormap used to visualize quality factor
     markersize      -- Band marker size
@@ -46,11 +51,13 @@ def bands(gme, Q=False, Q_clip=1e10, cone=True, conecolor='#eeeeee', ax=None, fi
         Q_max = np.max(Q[Q<Q_clip])
 
         p = ax.scatter(X.flatten(), gme.freqs.flatten(), 
-                            c=Q, cmap=Q_cmap, s=markersize**2, vmax=Q_max, 
-                            norm=mpl.colors.LogNorm(), edgecolors=markeredgecolor, linewidth=markeredgewidth)
+                        c=Q, cmap=Q_cmap, s=markersize**2, vmax=Q_max, 
+                        norm=mpl.colors.LogNorm(), edgecolors=markeredgecolor, 
+                        linewidth=markeredgewidth)
         plt.colorbar(p, ax=ax, label="Radiative quality factor", extend="max")
     else:
-        ax.plot(X, gme.freqs, 'o', c="#1f77b4", label="", ms=markersize, mew=markeredgewidth, mec=markeredgecolor)
+        ax.plot(X, gme.freqs, 'o', c="#1f77b4", label="", ms=markersize, 
+                    mew=markeredgewidth, mec=markeredgecolor)
 
     if cone:
         eps_clad = [gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg]
@@ -127,7 +134,8 @@ def eps_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None,
 
     plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
-def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True, cmap='Greys', gridspec=None, fig=None, figsize=(4,8)):
+def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True, 
+                cmap='Greys', gridspec=None, fig=None, figsize=(4,8)):
     '''
     Plot the permittivity of the PhC cross-sections
     '''
@@ -141,7 +149,7 @@ def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True, cmap='Gr
 
     (eps_min, eps_max) = phc.get_eps_bounds()
 
-    if cladding:
+    if cladding==True:
         all_layers = [phc.claddings[0]] + phc.layers + [phc.claddings[1]]
     else:
         all_layers = phc.layers
@@ -153,7 +161,8 @@ def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True, cmap='Gr
     elif gridspec is not None and fig is not None:
         gs = mpl.gridspec.GridSpecFromSubplotSpec(N_layers+1, 2, gridspec)
     else:
-        raise ValueError("Parameters gridspec and fig should be both specified or both unspecified")
+        raise ValueError("Parameters gridspec and fig should be both specified "
+                            "or both unspecified")
 
     ax1 = fig.add_subplot(gs[0, 0])
     ax2 = fig.add_subplot(gs[0, 1])
@@ -335,9 +344,15 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
             f1.colorbar(im, ax=ax, shrink=0.5)
 
         title_str = ""
-        title_str += "%s$(%s_{%s%d})$ at $k = $%.2f\n" % (val.capitalize(), field.capitalize(), comp, mind, k_val)
-        title_str += "$f = %.2f$ $Q = %.2E$\n" % (gme.freqs[kind, mind], gme.freqs[kind, mind]/2/gme.freqs_im[kind, mind])
+
+        title_str += "%s$(%s_{%s%d})$ at $k_{%d}$\n" % (val.capitalize(), 
+                                    field.capitalize(), comp, mind, kind)
         title_str += "%s-plane at $%s = %1.2f$\n" % (pl, o, v)
+        title_str += "$f = %.2f$" % (gme.freqs[kind, mind])
+        if gme.freqs_im != []:
+            title_str += " $Q = %.2E$\n" % (gme.freqs[kind, mind]/2/
+                                            gme.freqs_im[kind, mind])
+
         ax.set_title(title_str)
         plt.show()
 

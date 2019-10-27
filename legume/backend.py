@@ -17,7 +17,7 @@ import scipy as sp
 # Import some specially written functions
 from .utils import toeplitz_block, fsolve
 from .primitives import (toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag, 
-                        eigsh_ag)
+                        eigsh_ag, inv_ag, sqrt_ag)
 
 # Import autograd if available
 try:
@@ -121,7 +121,7 @@ class AutogradBackend(Backend):
     # math functions
     exp = staticmethod(npa.exp)
     bessel1 = staticmethod(spa.special.j1)
-    sqrt = staticmethod(npa.sqrt)
+    sqrt = staticmethod(sqrt_ag)
     divide = staticmethod(npa.divide)
     abs = staticmethod(npa.abs)
     square = staticmethod(npa.square)
@@ -133,7 +133,7 @@ class AutogradBackend(Backend):
     dot = staticmethod(npa.dot)
     real = staticmethod(npa.real)
     imag = staticmethod(npa.imag)
-    inv = staticmethod(npa.linalg.inv)
+    inv = staticmethod(inv_ag)
     eigh = staticmethod(eigh_ag)
     eigsh = staticmethod(eigsh_ag)
     outer = staticmethod(npa.outer)

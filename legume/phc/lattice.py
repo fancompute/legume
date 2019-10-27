@@ -55,21 +55,33 @@ class Lattice(object):
                     "or defined through two primitive vectors.")
 
         elif len(args) == 2:
-            self.type = 'custom'
             a1 = bd.hstack((bd.array(args[0]), 0))
             a2 = bd.hstack((bd.array(args[1]), 0))
+            if np.inner(a1, a2) == 0:
+                self.type = 'rectangular'
+            else:
+                self.type = 'custom'
 
         return (a1, a2)
 
-    def xy_grid(self, Nx=100, Ny=100):
+    def xy_grid(self, Nx=100, Ny=100, periods=None):
         ''' 
         Define an xy-grid for visualization purposes based on the lattice
-        vectors of the PhC (not sure if it works for very weird lattices)
+        vectors of the PhC.'periods' is a number or a list of two numbers that 
+        defines how many periods in the x- and y-directions are included
         '''
-        ymax = np.abs(max([self.a1[1], self.a2[1]]))
+        if periods == None:
+            if self.type == 'square' or self.type == 'rectangular':
+                periods = [1, 1]
+            else:
+                periods = [2, 2]
+        elif np.array(periods).shape == 1:
+            periods = periods[0]*np.ones((2, ))
+
+        ymax = np.abs(max([self.a1[1], self.a2[1]]))*periods[1]/2
         ymin = -ymax
 
-        xmax = np.abs(max([self.a1[0], self.a2[0]]))
+        xmax = np.abs(max([self.a1[0], self.a2[0]]))*periods[0]/2
         xmin = -xmax
 
         return (np.linspace(xmin, xmax, Nx), np.linspace(ymin, ymax, Ny))
