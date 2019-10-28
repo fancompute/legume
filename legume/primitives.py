@@ -18,7 +18,8 @@ sqrt_ag = primitive(np.sqrt)
 
 def vjp_maker_sqrt(ans, x):
     def vjp(g):
-        return np.where(np.abs(x) > 1e-20, g * 0.5 * x**-0.5, 0.)
+        return g * 0.5 * (x + 1e-10)**0.5/(x + 1e-10)
+        # return np.where(np.abs(x) > 1e-10, g * 0.5 * x**-0.5, 0.)
     return vjp
 
 defvjp(sqrt_ag, vjp_maker_sqrt)
