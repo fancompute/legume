@@ -3,7 +3,7 @@ from autograd.numpy.numpy_boxes import ArrayBox
 from scipy.optimize import minimize
 import time
 
-class Minimizer(object):
+class Minimize(object):
     """Wrapping up custom and SciPy optimizers in a common class
     """
 
