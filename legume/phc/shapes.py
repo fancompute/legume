@@ -10,9 +10,9 @@ class Shape(object):
         - is_inside: checks if points (x, y) are inside the shape
     and 
     '''
-    def __init__(self, eps=1):
+    def __init__(self, eps=1.):
         self.eps = eps
-        self.area = bd.real(self.compute_ft(bd.array([[0], [0]])))
+        self.area = bd.real(self.compute_ft(bd.array([[0.], [0.]])))
 
     def __repr__(self):
         return "Shape"
@@ -40,7 +40,7 @@ class Circle(Shape):
     '''
     Define class for a circular shape
     '''
-    def __init__(self, eps=1, x_cent=0, y_cent=0, r=0):
+    def __init__(self, eps=1., x_cent=0., y_cent=0., r=0.):
         self.x_cent = x_cent
         self.y_cent = y_cent
         self.r = r
@@ -74,15 +74,15 @@ class Poly(Shape):
     '''
     Define class for a polygonal shape
     '''
-    def __init__(self, eps=1, x_edges=0, y_edges=0):
+    def __init__(self, eps=1., x_edges=0., y_edges=0.):
         # Make extra sure that the last point of the polygon is the same as the 
         # first point
 
-        self.x_edges = bd.hstack((x_edges, x_edges[0]))
-        self.y_edges = bd.hstack((y_edges, y_edges[0]))
+        self.x_edges = bd.hstack((bd.array(x_edges), x_edges[0]))
+        self.y_edges = bd.hstack((bd.array(y_edges), y_edges[0]))
         super().__init__(eps)
 
-        if self.compute_ft([[0], [0]]) < 0:
+        if self.compute_ft([[0.], [0.]]) < 0:
             raise ValueError("The edges defined by x_edges and y_edges must be"
             " specified in counter-clockwise order")
 
@@ -137,7 +137,7 @@ class Poly(Shape):
                     bd.dot(gy, a2j * bd.roll(xj, -1, axis=1))
             denom = gy * (gx + bd.dot(gy, a2j))
             ftemp = bd.sum(bd.exp(1j*bgtemp) * (bd.exp(1j*agtemp2) - \
-                    bd.exp(1j*agtemp1)) * 
+                    bd.exp(1j*agtemp1)) * \
                     denom / (bd.square(denom) + 1e-50) , axis=1)
             ft = bd.where(ind_gx0, ftemp, ft)
 
