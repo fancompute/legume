@@ -95,8 +95,6 @@ class PhotCryst(object):
 
         eps_r = np.zeros(a_shape)
 
-        # eps_r[zmesh < self.layers[0].z_min] = self.eps_l
-        # eps_r[zmesh >= self.layers[-1].z_max] = self.eps_u
         a1 = self.lattice.a1
         a2 = self.lattice.a2
 
@@ -111,8 +109,8 @@ class PhotCryst(object):
                             np.square(np.max(abs(ymesh))))/a_p) + 1
 
             for shape in layer.shapes:
-                for n1 in range(-nmax, nmax):
-                    for n2 in range(-nmax, nmax):
+                for n1 in range(-nmax, nmax+1):
+                    for n2 in range(-nmax, nmax+1):
                         in_shape = shape.is_inside(xmesh + 
                             n1*a1[0] + n2*a2[0], ymesh + 
                             n1*a1[1] + n2*a2[1])

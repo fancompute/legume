@@ -245,7 +245,8 @@ def reciprocal(gme):
     plt.show()
 
 def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
-            component='xyz', val='re', N1=100, N2=100, cbar=True, eps=True, eps_levels=None):
+            component='xyz', val='re', N1=100, N2=100, cbar=True, eps=True, 
+            eps_levels=None):
     """Visualize the field components of a mode over a slice in x, y, or z
 
     Required arguments:
@@ -253,11 +254,12 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
     field           -- The field quantity, should be one of 'H', 'D', or 'E'
     kind            -- The wave vector index of the mode
     mind            -- The mode index
-    x, y, or z      -- Coordinate of the slice in either x, y, or z. One and only one of
-                       these should be specified
+    x, y, or z      -- Coordinate of the slice in either x, y, or z. One and 
+                        only one of these should be specified
 
     Keyword arguments:
-    periodic        -- Whether the periodic portion or the full field should be plotted
+    periodic        -- Whether the periodic portion or the full field should be 
+                        plotted
     component       -- Component of the vector field to plot
     val             -- Field value to plot, either 're', 'im', or 'abs'
     N1              -- Number of grid points to sample in first spatial dim
@@ -270,8 +272,6 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
     field = field.lower()
     val = val.lower()
     component = component.lower()
-
-    k_val = np.sqrt(np.square(gme.kpoints[0, kind]) + np.square(gme.kpoints[1, kind]))/2/np.pi
 
     # Get the field fourier components
     if z is not None and x is None and y is None:
@@ -338,7 +338,8 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
 
         if eps==True:
             lcs = 'k' if val.lower() in ['re', 'im'] else 'w'
-            ax.contour(grid1, grid2, epsr, 0 if eps_levels is None else eps_levels, colors=lcs, linewidths=1, alpha=0.5)
+            ax.contour(grid1, grid2, epsr, 0 if eps_levels is None else \
+                        eps_levels, colors=lcs, linewidths=1, alpha=0.5)
 
         if cbar==True:
             f1.colorbar(im, ax=ax, shrink=0.5)
@@ -354,6 +355,6 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
                                             gme.freqs_im[kind, mind])
 
         ax.set_title(title_str)
-        plt.show()
+    plt.show()
 
     return f1
