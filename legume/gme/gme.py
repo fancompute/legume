@@ -286,8 +286,14 @@ class GuidedModeExp(object):
             T2 = layer.compute_ft(G2)
 
             # Store T1 and T2
-            self.T1.append(T1)
-            self.T2.append(T2)
+            if bd.amax(bd.abs(bd.imag(T1))) < 1e-10*bd.amax(bd.abs(bd.real(T1))):
+                self.T1.append(bd.real(T1))
+            else:
+                self.T1.append(T1)
+            if bd.amax(bd.abs(bd.imag(T2))) < 1e-10*bd.amax(bd.abs(bd.real(T2))):
+                self.T2.append(bd.real(T2))
+            else:
+                self.T2.append(T2)
 
         # Store the g-vectors to which T1 and T2 correspond
         self.G1 = G1
@@ -594,15 +600,15 @@ class GuidedModeExp(object):
         often be the case, specifically when there is in-plane inversion
         symmetry in the PhC elementary cell
         '''
-        if bd.amax(bd.abs(bd.imag(mat))) < 1e-10*bd.amax(bd.abs(bd.real(mat))):
-            mat = bd.real(mat)
+        # if bd.amax(bd.abs(bd.imag(mat))) < 1e-10*bd.amax(bd.abs(bd.real(mat))):
+        #     mat = bd.real(mat)
+        #     print(mat.dtype)
 
         '''
         Make the matrix Hermitian (note that only upper part of the blocks, i.e.
         (im2 >= im1) was computed
         '''
         mat = bd.triu(mat) + bd.transpose(bd.conj(bd.triu(mat, 1)))
-        self.mat = mat  
 
         return mat
 
@@ -840,9 +846,12 @@ class GuidedModeExp(object):
                         Hx = Hxy * qx[indmode]
                         Hy = Hxy * qy[indmode]
 
-                Hx_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*Hx
-                Hy_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*Hy
-                Hz_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*Hz
+                Hx_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
+                                    Hx/bd.sqrt(self.phc.lattice.ec_area)
+                Hy_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
+                                    Hy/bd.sqrt(self.phc.lattice.ec_area)
+                Hz_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
+                                    Hz/bd.sqrt(self.phc.lattice.ec_area)
                 count += self.modes_numg[kind][im1]
 
             return (Hx_ft, Hy_ft, Hz_ft)
@@ -911,9 +920,12 @@ class GuidedModeExp(object):
                         Dz = -1 / omega * gnorm[indmode] * \
                             (As[lind, :]*zp + Bs[lind, :]*zn)
 
-                Dx_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*Dx
-                Dy_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*Dy
-                Dz_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*Dz
+                Dx_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
+                                    Dx/bd.sqrt(self.phc.lattice.ec_area)
+                Dy_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
+                                    Dy/bd.sqrt(self.phc.lattice.ec_area)
+                Dz_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
+                                    Dz/bd.sqrt(self.phc.lattice.ec_area)
                 count += self.modes_numg[kind][im1]
 
             if field.lower()=='d':
