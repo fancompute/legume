@@ -83,6 +83,37 @@ class ShapesLayer(Layer):
 
         return FT
 
+    def get_eps(self, points):
+        '''
+        Compute the permittivity of the layer over a 'points' tuple containing
+        a meshgrid in x, y defined by arrays of same shape
+        '''
+        xmesh, ymesh = points
+        if ymesh.shape != xmesh.shape:
+            raise ValueError(
+                    "xmesh and ymesh must have the same shape")
+
+        eps_r = self.eps_b * bd.ones(xmesh.shape)
+
+        # Slightly hacky way to include the periodicity
+        a1 = self.lattice.a1
+        a2 = self.lattice.a2
+
+        a_p = min([np.linalg.norm(a1), 
+                   np.linalg.norm(a2)])
+        nmax = np.int_(np.sqrt(np.square(np.max(abs(xmesh))) + 
+                        np.square(np.max(abs(ymesh))))/a_p) + 1
+
+        for shape in self.shapes:
+            for n1 in range(-nmax, nmax+1):
+                for n2 in range(-nmax, nmax+1):
+                    in_shape = shape.is_inside(xmesh + 
+                        n1*a1[0] + n2*a2[0], ymesh + 
+                        n1*a1[1] + n2*a2[1])
+                    eps_r[in_shape] = utils.get_value(shape.eps)
+
+        return eps_r
+
 class FreeformLayer(Layer):
     '''
     Layer with permittivity defined by a freeform distribution on a grid

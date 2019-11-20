@@ -85,11 +85,11 @@ class PhotCryst(object):
     def get_eps(self, points):
         '''
         Compute the permittivity of the PhC at a set of points defined by
-        a tuple of x, y, z positions which are same-size arrays
+        a tuple of x, y, z positions which are same-shape arrays
         '''
         (xmesh, ymesh, zmesh) = points
         a_shape = xmesh.shape
-        if (ymesh.shape != a_shape) or (ymesh.shape != a_shape):
+        if (ymesh.shape != a_shape) or (zmesh.shape != a_shape):
             raise ValueError(
                     "xmesh, ymesh and zmesh must have the same shape")
 
@@ -100,21 +100,8 @@ class PhotCryst(object):
 
         for layer in self.layers + self.claddings:
             zlayer = (zmesh >= layer.z_min) * (zmesh < layer.z_max)
-            eps_r[zlayer] = layer.eps_b
-
-            # Slightly hacky way to include the periodicity
-            a_p = min([np.linalg.norm(a1), 
-                       np.linalg.norm(a2)])
-            nmax = np.int_(np.sqrt(np.square(np.max(abs(xmesh))) + 
-                            np.square(np.max(abs(ymesh))))/a_p) + 1
-
-            for shape in layer.shapes:
-                for n1 in range(-nmax, nmax+1):
-                    for n2 in range(-nmax, nmax+1):
-                        in_shape = shape.is_inside(xmesh + 
-                            n1*a1[0] + n2*a2[0], ymesh + 
-                            n1*a1[1] + n2*a2[1])
-                        eps_r[in_shape*zlayer] = utils.get_value(shape.eps)
+            if np.sum(zlayer) > 0:
+                eps_r[zlayer] = layer.get_eps((xmesh[zlayer], ymesh[zlayer]))
 
         return eps_r
 

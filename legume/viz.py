@@ -3,6 +3,7 @@ import matplotlib as mpl
 import numpy as np
 from .gme import GuidedModeExp
 from .phc import PhotCryst
+from .pwe import PlaneWaveExp
 
 
 def bands(gme, Q=False, Q_clip=1e10, cone=True, conecolor='#eeeeee', ax=None, 
@@ -144,8 +145,8 @@ def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True,
     elif isinstance(struct, PhotCryst):
         phc = struct
     else:
-        raise ValueError("'struct' should be a PhotCryst or a "
-                                "GuidedModeExp instance")
+        raise ValueError("'struct' should be a 'PhotCryst' or a "
+                                "'GuidedModeExp' instance")
 
     (eps_min, eps_max) = phc.get_eps_bounds()
 
@@ -191,18 +192,29 @@ def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True,
             ax[indl].set_title("xy in layer %d" % indl)
     plt.show()
 
-def structure_ft(gme, Nx=100, Ny=100, cladding=False):
+def structure_ft(struct, Nx=100, Ny=100, cladding=False):
     '''
     Plot the permittivity of the PhC cross-sections as computed from an 
     inverse Fourier transform with the GME reciprocal lattice vectors.
     '''
-    (xgrid, ygrid) = gme.phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
+    if isinstance(struct, GuidedModeExp):
+        str_type = 'gme'
+    elif isinstance(struct, PlaneWaveExp):
+        str_type = 'pwe'
+    else:
+        raise ValueError("'struct' should be a 'PlaneWaveExp' or a "
+                                "'GuidedModeExp' instance")
 
     if cladding==True:
-        all_layers = [gme.phc.claddings[0]] + gme.phc.layers + \
-                        [gme.phc.claddings[1]]
+        if str_type == 'pwe':
+            print("Warning: ignoring 'cladding=True' for PlaneWaveExp "
+                   "structure.")
+            all_layers = [struct.layer]
+        else:
+            all_layers = [struct.phc.claddings[0]] + struct.phc.layers + \
+                        [struct.phc.claddings[1]]
     else:
-        all_layers = gme.phc.layers
+        all_layers = struct.phc.layers if str_type == 'gme' else [struct.layer]
     N_layers = len(all_layers)
 
     fig, ax = plt.subplots(1, N_layers, constrained_layout=True)
@@ -211,8 +223,8 @@ def structure_ft(gme, Nx=100, Ny=100, cladding=False):
     (eps_min, eps_max) = (all_layers[0].eps_b, all_layers[0].eps_b)
     ims = []
     for (indl, layer) in enumerate(all_layers):
-        (eps_r, _, _) = gme.get_eps_xy(z=(layer.z_min + layer.z_max)/2, 
-                                        Nx=Nx, Ny=Ny)
+        (eps_r, xgrid, ygrid) = struct.get_eps_xy(Nx=Nx, Ny=Ny,
+                                z=(layer.z_min + layer.z_max)/2)
 
         eps_min = min([eps_min, np.amin(np.real(eps_r))])
         eps_max = max([eps_max, np.amax(np.real(eps_r))])
@@ -235,22 +247,22 @@ def structure_ft(gme, Nx=100, Ny=100, cladding=False):
     plt.colorbar(ims[-1])
     plt.show()
 
-def reciprocal(gme):
+def reciprocal(exp):
     '''
-    Plot the reciprocal lattice of a GME object
+    Plot the reciprocal lattice of a GME or PWE object
     '''
     fig, ax = plt.subplots(1, constrained_layout=True)
-    plt.plot(gme.gvec[0, :], gme.gvec[1, :], 'bx')
+    plt.plot(exp.gvec[0, :], exp.gvec[1, :], 'bx')
     ax.set_title("Reciprocal lattice")
     plt.show()
 
-def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
+def field(struct, field, kind, mind, x=None, y=None, z=None, periodic=True,
             component='xyz', val='re', N1=100, N2=100, cbar=True, eps=True, 
             eps_levels=None):
     """Visualize the field components of a mode over a slice in x, y, or z
 
     Required arguments:
-    gme             -- The GME object
+    struct          -- A GME or PWE object
     field           -- The field quantity, should be one of 'H', 'D', or 'E'
     kind            -- The wave vector index of the mode
     mind            -- The mode index
@@ -269,41 +281,67 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
     eps_levels      -- The contour levels for the permittivity
     """
 
+    if isinstance(struct, GuidedModeExp):
+        str_type = 'gme'
+    elif isinstance(struct, PlaneWaveExp):
+        str_type = 'pwe'
+    else:
+        raise ValueError("'struct' should be a 'PlaneWaveExp' or a "
+                                "'GuidedModeExp' instance")
+
     field = field.lower()
     val = val.lower()
     component = component.lower()
 
     # Get the field fourier components
-    if z is not None and x is None and y is None:
-        (fi, grid1, grid2) = gme.get_field_xy(field, kind, mind, z, 
-                                            component, N1, N2)
-        if eps==True:
-            epsr = gme.phc.get_eps(np.meshgrid(
+    if (x is None and y is None and z is None and str_type == 'pwe') or \
+        (z is not None and x is None and y is None):
+
+        zval = 0. if z == None else z
+        (fi, grid1, grid2) = struct.get_field_xy(field, kind, mind, z,
+                                         component, N1, N2)
+        if eps == True:
+            if str_type == 'pwe':
+                epsr = struct.layer.get_eps(np.meshgrid(
+                            grid1, grid2)).squeeze()
+
+            else:
+                epsr = struct.phc.get_eps(np.meshgrid(
                             grid1, grid2, np.array(z))).squeeze()
-        pl, o, v = 'xy', 'z', z
+
+        pl, o, v = 'xy', 'z', zval
         if periodic==False:
-            kenv = np.exp(1j*grid1*gme.kpoints[0, kind] + 
-                            1j*grid2*gme.kpoints[1, kind])
+            kenv = np.exp(1j*grid1*struct.kpoints[0, kind] + 
+                            1j*grid2*struct.kpoints[1, kind])
+
     elif x is not None and z is None and y is None:
-        (fi, grid1, grid2) = gme.get_field_yz(field, kind, mind, x, 
+        if str_type == 'pwe':
+            raise NotImplementedError("Only plotting in the xy-plane is "
+                "supported for PlaneWaveExp structures.")
+
+        (fi, grid1, grid2) = struct.get_field_yz(field, kind, mind, x, 
                                             component, N1, N2)
         if eps==True:
-            epsr = gme.phc.get_eps(np.meshgrid(
+            epsr = struct.phc.get_eps(np.meshgrid(
                             np.array(x), grid1, grid2)).squeeze().transpose()
         pl, o, v = 'yz', 'x', x
         if periodic==False:
-            kenv = np.exp(1j*grid1*gme.kpoints[1, kind] +
-                            1j*x*gme.kpoints[0, kind])
+            kenv = np.exp(1j*grid1*struct.kpoints[1, kind] +
+                            1j*x*struct.kpoints[0, kind])
     elif y is not None and z is None and x is None:
-        (fi, grid1, grid2) = gme.get_field_xz(field, kind, mind, y, 
+        if str_type == 'pwe':
+            raise NotImplementedError("Only plotting in the xy-plane is "
+                "supported for PlaneWaveExp structures.")
+
+        (fi, grid1, grid2) = struct.get_field_xz(field, kind, mind, y, 
                                             component, N1, N2)
         if eps==True:
-            epsr = gme.phc.get_eps(np.meshgrid(
+            epsr = struct.phc.get_eps(np.meshgrid(
                             grid1, np.array(y), grid2)).squeeze().transpose()
         pl, o, v = 'xz', 'y', y
         if periodic==False:
-            kenv = np.exp(1j*grid1*gme.kpoints[0, kind] +
-                            1j*y*gme.kpoints[1, kind])
+            kenv = np.exp(1j*grid1*struct.kpoints[0, kind] +
+                            1j*y*struct.kpoints[1, kind])
     else:
         raise ValueError("Specify exactly one of 'x', 'y', or 'z'.")
 
@@ -349,10 +387,11 @@ def field(gme, field, kind, mind, x=None, y=None, z=None, periodic=True,
         title_str += "%s$(%s_{%s%d})$ at $k_{%d}$\n" % (val.capitalize(), 
                                     field.capitalize(), comp, mind, kind)
         title_str += "%s-plane at $%s = %1.2f$\n" % (pl, o, v)
-        title_str += "$f = %.2f$" % (gme.freqs[kind, mind])
-        if gme.freqs_im != []:
-            title_str += " $Q = %.2E$\n" % (gme.freqs[kind, mind]/2/
-                                            gme.freqs_im[kind, mind])
+        title_str += "$f = %.2f$" % (struct.freqs[kind, mind])
+        if str_type == 'gme':
+            if struct.freqs_im != []:
+                title_str += " $Q = %.2E$\n" % (struct.freqs[kind, mind]/2/
+                                            struct.freqs_im[kind, mind])
 
         ax.set_title(title_str)
     plt.show()

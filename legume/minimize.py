@@ -55,7 +55,7 @@ class Minimize(object):
         print(disp_str)
 
     def adam(self, pstart, Nepochs=50, bounds=None, disp_p=False, 
-                step_size=1e-2, beta1=0.9, beta2=0.999):
+                step_size=1e-2, beta1=0.9, beta2=0.999, args=()):
         """Performs Nepoch steps of ADAM minimization with parameters step_size,
         beta1, beta2.
         'bounds' can be 'None', a list of two elements, or a scipy.minimize-like
@@ -78,10 +78,10 @@ class Minimize(object):
 
             self.t_store = time.time()
             if self.jac==True:
-                of, grad = self.objective(self.params)
+                of, grad = self.objective(self.params, *args)
             else:
-                of = self.objective(self.params)
-                grad = self.jac(self.params)
+                of = self.objective(self.params, *args)
+                grad = self.jac(self.params, *args)
             t_elapsed = time.time() - self.t_store
 
             self.of_list.append(self._get_value(of)) 
@@ -120,7 +120,7 @@ class Minimize(object):
         return (grad_adam, mopt, vopt)
 
     def lbfgs(self, pstart, Nepochs=50, bounds=None, disp_p=False,
-                maxfun=15000, args=()):
+                maxfun=15000, args=(), res_store=False):
         """Wraps the SciPy LBFGS minimizer in a way that displays intermediate
         information and stores intermediate values of the parameters and the
         objective function.
@@ -171,4 +171,7 @@ class Minimize(object):
                  'iprint': -1,
                  'maxls': 20})
 
-        return (res.x, self.of_list)
+        if res_store == False:
+            return (res.x, self.of_list)
+        else:
+            return (res.x, self.of_list, res)

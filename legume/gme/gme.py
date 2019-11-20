@@ -411,7 +411,7 @@ class GuidedModeExp(object):
         t_rad = 0
         freqs = []
         freqs_im = []
-        eigvecs = []
+        self.eigvecs = []
         for ik, k in enumerate(kpoints.T):
             print_vb("Running k-point %d of %d" % (ik+1, kpoints.shape[1]))
             mat = self.construct_mat(kind=ik)
@@ -442,12 +442,11 @@ class GuidedModeExp(object):
                 raise ValueError("'eig_solver' can be 'eigh' or 'eigsh'")
             
             freqs.append(freq)
-            eigvecs.append(evec)
+            self.eigvecs.append(evec)
 
         # Store the eigenfrequencies taking the standard reduced frequency 
         # convention for the units (2pi a/c)
         self.freqs = bd.array(freqs)
-        self.eigvecs = eigvecs
 
         print_vb("%1.4f seconds total time to run"% (time.time()-t_start))
         if self.gmode_compute.lower() == 'exact':
@@ -591,8 +590,7 @@ class GuidedModeExp(object):
         self.modes_numg.append(modes_numg) 
 
         # Stack all the blocks together
-        mat_rows = [bd.hstack(mb) for mb in mat_blocks]
-        mat = bd.vstack(mat_rows)
+        mat = bd.vstack([bd.hstack(mb) for mb in mat_blocks])
 
         '''
         If the matrix is within numerical precision to real symmetric, 
@@ -608,9 +606,7 @@ class GuidedModeExp(object):
         Make the matrix Hermitian (note that only upper part of the blocks, i.e.
         (im2 >= im1) was computed
         '''
-        mat = bd.triu(mat) + bd.transpose(bd.conj(bd.triu(mat, 1)))
-
-        return mat
+        return bd.triu(mat) + bd.transpose(bd.conj(bd.triu(mat, 1)))
 
     def run_im(self):
         '''
@@ -940,8 +936,8 @@ class GuidedModeExp(object):
     def get_field_xy(self, field, kind, mind, z,
                     component='xyz', Nx=100, Ny=100):
         '''
-        Get the 'field' ('H' or 'D') at an xy-plane at position z for mode 
-        number mind at k-vector kind.
+        Get the 'field' ('H', 'D', or 'E') at an xy-plane at position z for mode 
+        number 'mind' at k-vector 'kind'.
         Returns a dictionary with the ['x'], ['y'], and ['z'] components of the 
         corresponding field; only the ones requested in 'comp' are computed 
         '''

@@ -112,9 +112,9 @@ def vjp_maker_eigh(ans, x, UPLO='L'):
 
 defvjp(eigh_ag, vjp_maker_eigh)
 
-'''=========== SCIPY.SPARSE.LINALG.EIGSH =========== '''
+'''=========== MATRIX INVERSE =========== '''
 '''We define this here without the `einsum` notation that's used in autograd.
-This allows broadcasting (which we don't care about), but is slower 
+`einsum` allows broadcasting (which we don't care about), but is slower 
 (which we do)
 '''
 
