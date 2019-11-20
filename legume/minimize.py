@@ -55,13 +55,22 @@ class Minimize(object):
         print(disp_str)
 
     def adam(self, pstart, Nepochs=50, bounds=None, disp_p=False, 
-                step_size=1e-2, beta1=0.9, beta2=0.999, args=()):
-        """Performs Nepoch steps of ADAM minimization with parameters step_size,
-        beta1, beta2.
-        'bounds' can be 'None', a list of two elements, or a scipy.minimize-like
-        list of tuples each containing two elements
-        The 'bounds' are set abruptly after the update step by snapping the 
-        parameters that lie outside to the bounds value
+                step_size=1e-2, beta1=0.9, beta2=0.999, args=(),
+                pass_self=False):
+        """Performs 'Nepoch' steps of ADAM minimization with parameters 
+        'step_size', 'beta1', 'beta2'
+
+        Additional arguments:
+        bounds          -- can be 'None', a list of two elements, or a 
+            scipy.minimize-like list of tuples each containing two elements
+            The 'bounds' are set abruptly after the update step by snapping the 
+            parameters that lie outside to the bounds value
+        disp_p          -- if True, the current parameters are displayed at 
+            every iteration
+        args            -- extra arguments passed to the objective function
+        pass_self       -- if True, then the objective function should take
+            of(params, args, opt), where opt is an instance of the Minimize 
+            class defined here. Useful for scheduling
         """
         self.params = pstart
         self.bounds = self._parse_bounds(bounds)
@@ -72,6 +81,11 @@ class Minimize(object):
         self.iteration = 0
         self.t_store = time.time()
         self.of_list = []
+
+        if pass_self == True:
+            arglist = list(args)
+            arglist.append(self)
+            args = tuple(arglist)
 
         for iteration in range(Nepochs):
             self.iteration += 1
@@ -120,13 +134,24 @@ class Minimize(object):
         return (grad_adam, mopt, vopt)
 
     def lbfgs(self, pstart, Nepochs=50, bounds=None, disp_p=False,
-                maxfun=15000, args=(), res_store=False):
+                maxfun=15000, args=(), pass_self=False, res_store=False):
         """Wraps the SciPy LBFGS minimizer in a way that displays intermediate
         information and stores intermediate values of the parameters and the
         objective function.
-        'bounds' can be 'None', a list of two elements, or a scipy.minimize-like
-        list of tuples each containing two elements
-        'disp_p' == True makes the parameters be displayed at each iteration
+
+        Nepochs         -- Maximum number of iterations
+        bounds          -- can be 'None', a list of two elements, or a 
+            scipy.minimize-like list of tuples each containing two elements
+            The 'bounds' are set abruptly after the update step by snapping the 
+            parameters that lie outside to the bounds value
+        disp_p          -- if True, the current parameters are displayed at 
+            every iteration
+        maxfun          -- Maximum number of function evaluations
+        args            -- extra arguments passed to the objective function
+        pass_self       -- if True, then the objective function should take
+            of(params, args, opt), where opt is an instance of the Minimize 
+            class defined here. Useful for scheduling
+        res_store       -- if True, will also return the SciPy OptimizeResult
         """
 
         self.params = pstart
@@ -143,6 +168,11 @@ class Minimize(object):
             """Modify the objective function slightly to allow storing
             intermediate objective values without re-evaluating the function
             """
+            if pass_self == True:
+                arglist = list(args)
+                arglist.append(self)
+                args = tuple(arglist)
+
             out = list(self.objective(params, *args, **kwargs))
             self.of_last = self._get_value(out[0])
             return tuple(out)
