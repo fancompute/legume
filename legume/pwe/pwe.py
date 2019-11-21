@@ -101,6 +101,14 @@ class PlaneWaveExp(object):
         self.compute_ft()
         self.compute_eps_inv()
 
+        print(self.T1.shape,self.T2.shape)
+        print('G1=','np.'+repr(self.G1))
+        print('G2=','np.'+repr(self.G2))
+        print('T1=','np.'+repr(self.T1))
+        print('T2=','np.'+repr(self.T2))
+        print('epsinv=','np.'+repr(self.eps_inv_mat))
+
+
         freqs = []
         self.eigvecs = []
         for ik, k in enumerate(kpoints.T):
@@ -142,7 +150,9 @@ class PlaneWaveExp(object):
 
         # For now we just use the numpy inversion. Later on we could 
         # implement the Toeplitz-Block-Toeplitz inversion (faster)
-        eps_mat = bd.toeplitz_block(self.n2g, self.T1, self.T2)
+        # eps_mat = bd.toeplitz_block(self.n2g, self.T1, self.T2)
+        eps_mat = bd.toeplitz_block2(self.T1, self.n1g, self.n2g)
+        print('nmax',self.n1g,self.n2g)
         self.eps_inv_mat = bd.inv(eps_mat)
 
     def ft_field_xy(self, field, kind, mind):

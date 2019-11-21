@@ -15,7 +15,7 @@ import numpy as np
 import scipy as sp
 
 # Import some specially written functions
-from .utils import toeplitz_block, fsolve
+from .utils import toeplitz_block, fsolve, toeplitz_block2
 from .primitives import (toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag, 
                         eigsh_ag, inv_ag, sqrt_ag)
 
@@ -49,6 +49,7 @@ class NumpyBackend(Backend):
     vstack = staticmethod(np.vstack)
     transpose = staticmethod(np.transpose)
     toeplitz_block = staticmethod(toeplitz_block)
+    toeplitz_block2 = staticmethod(toeplitz_block2)
     roll = staticmethod(np.roll)
     where = staticmethod(np.where)
     argwhere = staticmethod(np.argwhere)

@@ -115,7 +115,50 @@ def toeplitz_block(n, T1, T2):
     return np.triu(Tmat) + np.conj(np.transpose(np.triu(Tmat,1)))
 
     return np.triu(Tmat) + np.conj(np.transpose(np.triu(Tmat,1)))
+def toeplitz_block2(T1, n1g,n2g): ## P for y direction, Q for x direction; 
+    ## n1g for y, n2g for x
+    Af = np.zeros([2*n1g-1,2*n2g-1],dtype=np.complex)
+    Af[n1g-1:,n2g-1:] = T1.reshape([n1g,n2g])
+    for i,ii in enumerate(Af): ## to account for some different convention
+        for j, jj in enumerate(ii):
+            if (i+j) %2 ==1:
+                Af[i,j] *= -1
+    Af[n1g-1:,:n2g] = np.flip(Af[n1g-1:,n2g-1:],axis=1)
+    Af[:n1g,:] = np.flip(Af[n1g-1:,:],axis=0)
+    P = n1g//2; Q = n2g//2;
+    print('Af=','np.'+repr(Af))
+    print(Af.shape,P,Q)
+    econv = convmat2D(Af,P,Q)
+    # return np.linalg.inv(econv)
+    return econv
+    # return Af
+def convmat2D(Af, P,Q):
+    N = Af.shape;
+    NH = (2*P+1) * (2*Q+1) ;
+    p = list(range(-P, P + 1)); #array of size 2Q+1
+    q = list(range(-Q, Q + 1));
 
+    ## do fft
+    # Af = (1 / np.prod(N)) * np.fft.fftshift(np.fft.fft2(A));
+    # natural question is to ask what does Af consist of..., what is the normalization for?
+
+    # central indices marking the (0,0) order
+    p0 = int((N[0] / 2)); #Af grid is Nx, Ny
+    q0 = int((N[1] / 2)); #no +1 offset or anything needed because the array is orders from -P to P
+
+    C = np.zeros((NH, NH))
+    C = C.astype(complex);
+    for qrow in range(2*Q+1): #remember indices in the arrary are only POSITIVE
+        for prow in range(2*P+1): #outer sum
+            # first term locates z plane, 2nd locates y column, prow locates x
+            row = (prow) * (2*Q+1) + qrow; #natural indexing
+            for qcol in range(2*Q+1): #inner sum
+                for pcol in range(2*P+1):
+                    col = (pcol) * (2*Q+1) + qcol; #natural indexing
+                    pfft = p[prow] - p[pcol]; #get index in Af; #index may be negative.
+                    qfft = q[qrow] - q[qcol];
+                    C[row, col] = Af[p0 + pfft, q0 + qfft]; #index may be negative.
+    return C;
 def get_value(x):
     '''
     This is for when using the 'autograd' backend and you want to detach an 
