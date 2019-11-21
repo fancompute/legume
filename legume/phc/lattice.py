@@ -51,7 +51,7 @@ class Lattice(object):
                 a1 = bd.array([0.5, bd.sqrt(3)/2, 0])
                 a2 = bd.array([0.5, -bd.sqrt(3)/2, 0])
             else:
-                raise ValueError("Lattice can be 'square' or 'hexagonal, " \
+                raise ValueError("Lattice can be 'square' or 'hexagonal, "
                     "or defined through two primitive vectors.")
 
         elif len(args) == 2:
@@ -141,7 +141,7 @@ class Lattice(object):
                 if self.type == 'square':
                     return np.array([np.pi, 0])
                 else:
-                    raise ValueError("'X'-point is only defined for lattice "\
+                    raise ValueError("'X'-point is only defined for lattice "
                         "initialized as 'square'.")
 
             if pt.lower() == 'm':
@@ -150,14 +150,14 @@ class Lattice(object):
                 elif self.type == 'hexagonal':
                     return np.array([np.pi, np.pi/np.sqrt(3)])
                 else:
-                    raise ValueError("'М'-point is only defined for lattice " \
+                    raise ValueError("'М'-point is only defined for lattice "
                         "initialized as 'square' or 'hexagonal'.")
 
             if pt.lower() == 'k':
                 if self.type == 'hexagonal':
                     return np.array([4/3*np.pi, 0])
                 else:
-                    raise ValueError("'K'-point is only defined for lattice " \
+                    raise ValueError("'K'-point is only defined for lattice "
                         "initialized as 'hexagonal'.")
                     
         raise ValueError("Something was wrong with BZ point definition")

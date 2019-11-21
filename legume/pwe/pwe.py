@@ -203,84 +203,23 @@ class PlaneWaveExp(object):
             return (Hx_ft, Hy_ft, Hz_ft)
 
         elif field.lower()=='d' or field.lower()=='e':
-            count = 0
-            [Dx_ft, Dy_ft, Dz_ft] = [bd.zeros(gnorm.shape, dtype=np.complex128)
-                                     for i in range(3)]
-            for im1 in range(self.gmode_include[kind].size):
-                mode1 = self.gmode_include[kind][im1]
-                (indmode, oms, As, Bs, chis) = \
-                            self._get_guided(gnorm, kind, mode1)
+            if self.pol == 'te':
+                Dx_ft = 1j / omega * evec * qx
+                Dy_ft = 1j / omega * evec * qy
+                Dz_ft = bd.zeros(gnorm.shape)
 
-                # TE-component
-                if mode1%2==0:
-                    Dz = bd.zeros(indmode.shape)
-                    # Do claddings separately
-                    if lind==0:
-                        D = 1j * Bs[0, :] * oms**2 / omega * \
-                            self.eps_array[0] * bd.exp(-1j*chis[0, :] * \
-                            (z-self.phc.claddings[0].z_max))
-                        Dx = D * qx[indmode]
-                        Dy = D * qy[indmode]
-                    elif lind==self.eps_array.size-1:
-                        D = 1j * As[-1, :] * oms**2 / omega * \
-                            self.eps_array[-1] * bd.exp(1j*chis[-1, :] * \
-                            (z-self.phc.claddings[1].z_min))
-                        Dx = D * qx[indmode]
-                        Dy = D * qy[indmode]
-                    else:
-                        z_cent = (self.phc.layers[lind-1].z_min + 
-                                    self.phc.layers[lind-1].z_max) / 2
-                        zp = bd.exp(1j*chis[lind, :]*(z-z_cent))
-                        zn = bd.exp(-1j*chis[lind, :]*(z-z_cent))
-                        Dxy = 1j*oms**2 / omega * \
-                            self.eps_array[lind] * \
-                            (As[lind, :]*zp + Bs[lind, :]*zn)
-                        Dx = Dxy * qx[indmode]
-                        Dy = Dxy * qy[indmode]
-
-                # TM-component
-                elif mode1%2==1:
-                    if lind==0:
-                        D = 1j / omega * Bs[0,:] * \
-                            bd.exp(-1j*chis[0,:] * \
-                            (z-self.phc.claddings[0].z_max))
-                        Dx = D * 1j*chis[0,:] * px[indmode]
-                        Dy = D * 1j*chis[0,:] * py[indmode]
-                        Dz = D * 1j*gnorm[indmode]
-                    elif lind==self.eps_array.size-1:
-                        D = 1j / omega * As[-1,:] * \
-                            bd.exp(1j*chis[-1, :] * \
-                            (z-self.phc.claddings[1].z_min))
-                        Dx = -D * 1j*chis[-1, :] * px[indmode]
-                        Dy = -D * 1j*chis[-1, :] * py[indmode]
-                        Dz = D * 1j*gnorm[indmode]
-                    else:
-                        z_cent = (self.phc.layers[lind-1].z_min + 
-                                    self.phc.layers[lind-1].z_max) / 2
-                        zp = bd.exp(1j*chis[lind, :]*(z-z_cent))
-                        zn = bd.exp(-1j*chis[lind, :]*(z-z_cent))
-                        Dxy = 1 / omega * chis[lind, :] * \
-                            (As[lind, :]*zp - Bs[lind, :]*zn)
-                        Dx = Dxy * px[indmode]
-                        Dy = Dxy * py[indmode]
-                        Dz = -1 / omega * gnorm[indmode] * \
-                            (As[lind, :]*zp + Bs[lind, :]*zn)
-
-                Dx_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
-                                    Dx/bd.sqrt(self.phc.lattice.ec_area)
-                Dy_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
-                                    Dy/bd.sqrt(self.phc.lattice.ec_area)
-                Dz_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
-                                    Dz/bd.sqrt(self.phc.lattice.ec_area)
-                count += self.modes_numg[kind][im1]
+            elif self.pol == 'tm':
+                Dx_ft = bd.zeros(gnorm.shape)
+                Dy_ft = bd.zeros(gnorm.shape)
+                Dz_ft = 1j / omega * evec
 
             if field.lower()=='d':
                 return (Dx_ft, Dy_ft, Dz_ft)
             else:
                 # Get E-field by convolving FT(1/eps) with FT(D)
-                Ex_ft = self.eps_inv_mat[lind].dot(Dx_ft)
-                Ey_ft = self.eps_inv_mat[lind].dot(Dy_ft)
-                Ez_ft = self.eps_inv_mat[lind].dot(Dz_ft)
+                Ex_ft = bd.dot(self.eps_inv_mat, Dx_ft)
+                Ey_ft = bd.dot(self.eps_inv_mat, Dy_ft)
+                Ez_ft = bd.dot(self.eps_inv_mat, Dz_ft)
                 return (Ex_ft, Ey_ft, Ez_ft)
 
 
