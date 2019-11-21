@@ -928,9 +928,9 @@ class GuidedModeExp(object):
                 return (Dx_ft, Dy_ft, Dz_ft)
             else:
                 # Get E-field by convolving FT(1/eps) with FT(D)
-                Ex_ft = bd.dot(self.eps_inv_mat, Dx_ft)
-                Ey_ft = bd.dot(self.eps_inv_mat, Dy_ft)
-                Ez_ft = bd.dot(self.eps_inv_mat, Dz_ft)
+                Ex_ft = bd.dot(self.eps_inv_mat[lind], Dx_ft)
+                Ey_ft = bd.dot(self.eps_inv_mat[lind], Dy_ft)
+                Ez_ft = bd.dot(self.eps_inv_mat[lind], Dz_ft)
                 return (Ex_ft, Ey_ft, Ez_ft)
 
     def get_field_xy(self, field, kind, mind, z,
