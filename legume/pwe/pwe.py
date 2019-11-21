@@ -55,11 +55,11 @@ class PlaneWaveExp(object):
         Compute the unique FT coefficients of the permittivity, eps(g-g')
         '''
         (n1max, n2max) = (self.n1g, self.n2g)
-        G1 = self.gvec - self.gvec[:, [0]]
+        G1 = - self.gvec + self.gvec[:, [0]]
         G2 = np.zeros((2, n1max*n2max))
 
         for ind1 in range(n1max):
-            G2[:, ind1*n2max:(ind1+1)*n2max] = self.gvec[:, [ind1*n2max]] - \
+            G2[:, ind1*n2max:(ind1+1)*n2max] = - self.gvec[:, [ind1*n2max]] + \
                             self.gvec[:, range(n2max)]
 
         # Compute and store T1 and T2
@@ -142,7 +142,7 @@ class PlaneWaveExp(object):
 
         # For now we just use the numpy inversion. Later on we could 
         # implement the Toeplitz-Block-Toeplitz inversion (faster)
-        eps_mat = bd.toeplitz_block(self.n2g, self.T1, self.T2)
+        eps_mat = bd.toeplitz_block(self.n1g, self.T1, self.T2)
         self.eps_inv_mat = bd.inv(eps_mat)
 
     def ft_field_xy(self, field, kind, mind):
