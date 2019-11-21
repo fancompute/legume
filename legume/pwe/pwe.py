@@ -62,30 +62,9 @@ class PlaneWaveExp(object):
             G2[:, ind1*n2max:(ind1+1)*n2max] = self.gvec[:, [ind1*n2max]] - \
                             self.gvec[:, range(n2max)]
 
-        T1 = bd.zeros(self.gvec.shape[1])
-        T2 = bd.zeros(self.gvec.shape[1])
-        eps_avg = self.eps_eff
-        
-        for shape in self.layer.shapes:
-            # Note: compute_ft() returns the FT of a function that is one 
-            # inside the shape and zero outside
-            T1 = T1 + (shape.eps - self.eps_eff)*shape.compute_ft(G1)
-            T2 = T2 + (shape.eps - self.eps_eff)*shape.compute_ft(G2)
-            eps_avg = eps_avg + (shape.eps - self.eps_eff) * shape.area / \
-                            self.layer.lattice.ec_area
-
-        # Apply some final coefficients
-        # Note the hacky way to set the zero element so as to work with
-        # 'autograd' backend
-        ind0 = bd.arange(T1.size) < 1  
-        T1 = T1 / self.layer.lattice.ec_area
-        T1 = T1*(1-ind0) + eps_avg*ind0
-        T2 = T2 / self.layer.lattice.ec_area
-        T2 = T2*(1-ind0) + eps_avg*ind0
-
-        # Store T1 and T2
-        self.T1 = T1
-        self.T2 = T2
+        # Compute and store T1 and T2
+        self.T1 = self.layer.compute_ft(G1)
+        self.T2 = self.layer.compute_ft(G2)
 
         # Store the g-vectors to which T1 and T2 correspond
         self.G1 = G1
