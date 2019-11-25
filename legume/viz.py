@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
 from .gme import GuidedModeExp
-from .phc import PhotCryst
+from .phc import PhotCryst, Circle
 from .pwe import PlaneWaveExp
 
 
@@ -90,6 +90,18 @@ def plot_eps(eps_r, clim=None, ax=None, extent=None, cmap='Greys', cbar=False):
         
     return im
 
+def plot_circle(x, y, r, ax=None, color='b', lw=1, npts=51):
+
+    if ax is None:
+        fig, ax = plt.subplots(1, constrained_layout=True)
+
+    phi = np.linspace(0, 2*np.pi, npts)
+    xs = x + r * np.cos(phi)
+    ys = y + r * np.sin(phi)
+    pl = ax.plot(xs, ys, c=color, lw=lw)
+
+    return pl
+
 def eps_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
              cbar=False, cmap='Greys'):
     '''
@@ -134,6 +146,43 @@ def eps_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None,
     extent = [ygrid[0], ygrid[-1], zgrid[0], zgrid[-1]]
 
     plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+
+def shapes(layer, ax=None, npts=101, color='k', lw=1, pad=True):
+    '''Plot all the shapes in a ShapesLayer object 'layer'
+    npts      -- number of points for discretization of circles
+    pad       -- if True, will add an extra elementary cell on each side
+    '''
+
+    (xext, yext) = layer.lattice.xy_grid(Nx=2, Ny=2)
+    if ax is None:
+        fig, ax = plt.subplots(1, constrained_layout=True)
+
+    if pad == True:
+        a1 = layer.lattice.a1
+        a2 = layer.lattice.a2
+        xy_p = [a1, -a1, a2, -a2]
+
+    for shape in layer.shapes:
+        if type(shape) == Circle:
+            x = shape.x_cent
+            y = shape.y_cent
+            r = shape.r
+            plot_circle(x, y, r, ax=ax, color=color, lw=lw, npts=npts)
+            if pad == True:
+                for (x_p, y_p) in xy_p:
+                    plot_circle(x + x_p, y + y_p, r,
+                                ax=ax, color=color, lw=lw, npts=npts)
+        else:
+            # Everything else should be a Poly subclass
+            ax.plot(shape.x_edges, shape.y_edges, c=color, lw=lw)
+            if pad == True:
+                for (x_p, y_p) in xy_p:
+                    ax.plot(shape.x_edges + x_p, shape.y_edges + y_p,
+                            c=color, lw=lw)
+    ax.set_xlim(xext)
+    ax.set_ylim(yext)
+    ax.set_aspect('equal')
+    plt.show()
 
 def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True, 
                 cmap='Greys', gridspec=None, fig=None, figsize=(4,8)):
