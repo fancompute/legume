@@ -40,10 +40,8 @@ def bands(gme, Q=False, Q_clip=1e10, cone=True, conecolor='#eeeeee', ax=None,
 
     X = np.tile(X0.reshape(len(X0),1), (1, gme.freqs.shape[1]))
 
-    show = False
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
-        show = True
     if Q:
         if len(gme.freqs_im) == 0:
             gme.run_im()
@@ -72,7 +70,7 @@ def bands(gme, Q=False, Q_clip=1e10, cone=True, conecolor='#eeeeee', ax=None,
     ax.set_xlabel('Wave vector')
     ax.set_ylabel('Frequency')
 
-    if show: plt.show()
+    # plt.show()
 
     return ax
 
@@ -182,7 +180,7 @@ def shapes(layer, ax=None, npts=101, color='k', lw=1, pad=True):
     ax.set_xlim(xext)
     ax.set_ylim(yext)
     ax.set_aspect('equal')
-    plt.show()
+    # plt.show()
 
 def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True, 
                 cmap='Greys', gridspec=None, fig=None, figsize=(4,8)):
@@ -239,7 +237,7 @@ def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True,
                 ax[-1].set_title("xy in upper cladding")
         else:
             ax[indl].set_title("xy in layer %d" % indl)
-    plt.show()
+    # plt.show()
 
 def structure_ft(struct, Nx=100, Ny=100, cladding=False):
     '''
@@ -294,7 +292,7 @@ def structure_ft(struct, Nx=100, Ny=100, cladding=False):
     for il in range(N_layers):
         ims[il].set_clim(vmin=eps_min, vmax=eps_max)
     plt.colorbar(ims[-1])
-    plt.show()
+    # plt.show()
 
 def reciprocal(exp):
     '''
@@ -303,7 +301,7 @@ def reciprocal(exp):
     fig, ax = plt.subplots(1, constrained_layout=True)
     plt.plot(exp.gvec[0, :], exp.gvec[1, :], 'bx')
     ax.set_title("Reciprocal lattice")
-    plt.show()
+    # plt.show()
 
 def field(struct, field, kind, mind, x=None, y=None, z=None, periodic=True,
             component='xyz', val='re', N1=100, N2=100, cbar=True, eps=True, 
@@ -443,6 +441,6 @@ def field(struct, field, kind, mind, x=None, y=None, z=None, periodic=True,
                                             struct.freqs_im[kind, mind])
 
         ax.set_title(title_str)
-    plt.show()
+    # plt.show()
 
     return f1
