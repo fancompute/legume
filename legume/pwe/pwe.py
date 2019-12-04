@@ -108,8 +108,8 @@ class PlaneWaveExp(object):
             if self.pol == 'te':
                 mat = bd.dot(bd.transpose(k[:, bd.newaxis] + self.gvec), 
                                 (k[:, bd.newaxis] + self.gvec))
-                mat = mat * self.eps_inv_mat #/ bd.outer(kgnorm[:, bd.newaxis], 
-                                              #      kgnorm[bd.newaxis, :])
+                mat = mat * self.eps_inv_mat 
+                
             elif self.pol == 'tm':
                 Gk = bd.sqrt(bd.square(k[0] + self.gvec[0, :]) + \
                         bd.square(k[1] + self.gvec[1, :]))

@@ -134,7 +134,7 @@ class Minimize(object):
         return (grad_adam, mopt, vopt)
 
     def lbfgs(self, pstart, Nepochs=50, bounds=None, disp_p=False,
-                maxfun=15000, args=(), pass_self=False, res_store=False):
+                maxfun=15000, args=(), pass_self=False, res=False):
         """Wraps the SciPy LBFGS minimizer in a way that displays intermediate
         information and stores intermediate values of the parameters and the
         objective function.
@@ -151,7 +151,7 @@ class Minimize(object):
         pass_self       -- if True, then the objective function should take
             of(params, args, opt), where opt is an instance of the Minimize 
             class defined here. Useful for scheduling
-        res_store       -- if True, will also return the SciPy OptimizeResult
+        res             -- if True, will also return the SciPy OptimizeResult
         """
 
         self.params = pstart
@@ -189,7 +189,7 @@ class Minimize(object):
             self.params = xk
             self._disp(t_elapsed)
 
-        res = minimize(of, self.params, args=args, method='L-BFGS-B',
+        res_opt = minimize(of, self.params, args=args, method='L-BFGS-B',
             jac=self.jac, bounds=self.bounds, tol=None, callback=cb,
             options={'disp': False,
                  'maxcor': 10,
@@ -201,7 +201,7 @@ class Minimize(object):
                  'iprint': -1,
                  'maxls': 20})
 
-        if res_store == False:
-            return (res.x, self.of_list)
+        if res == False:
+            return (res_opt.x, self.of_list)
         else:
-            return (res.x, self.of_list, res)
+            return (res_opt.x, self.of_list, res_opt)
