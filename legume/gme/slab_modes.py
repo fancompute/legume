@@ -93,16 +93,16 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
     else:
         raise ValueError("Polarization should be 'TE' or 'TM'.")
 
-    # Define the vjp for the fsolve function
-    if repr(bd) == 'AutogradBackend':
-        from autograd.extend import defvjp
-        from autograd import grad
-        from legume.primitives import vjp_maker_fsolve
-        gradD22 = []
-        for iarg in range(4):
-            gradD22.append(grad(D22real, iarg))
+    # # Define the vjp for the fsolve function
+    # if repr(bd) == 'AutogradBackend':
+    #     from autograd.extend import defvjp
+    #     from autograd import grad
+    #     from legume.primitives import vjp_maker_fsolve
+    #     gradD22 = []
+    #     for iarg in range(4):
+    #         gradD22.append(grad(D22real, iarg))
 
-        defvjp(bd.fsolve, *vjp_maker_fsolve(D22real, gradD22, 3))
+    #     defvjp(bd.fsolve, *vjp_maker_fsolve(D22real, gradD22, 3))
 
     # Making sure the bounds go all the way to omega_ub
     omega_bounds = np.append(np.arange(omega_lb, omega_ub, step), omega_ub) 
@@ -119,7 +119,17 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
             break
         lb = omega_bounds[i]
         ub = omega_bounds[i+1]
-        omega = bd.fsolve(D22real, lb, ub, g, eps_array, d_array)
+        fsolve_D22 = lambda lb, ub, g, eps_array, d_array : \
+                    bd.fsolve(D22real, lb, ub, g, eps_array, d_array)
+
+        if repr(bd) == 'AutogradBackend':
+            from autograd.extend import defvjp, primitive
+            from legume.primitives import vjp_maker_fsolve
+            fsolve_D22 = primitive(fsolve_D22)
+            defvjp(fsolve_D22, *vjp_maker_fsolve(D22real, 
+                            [False, True, True]))
+
+        omega = fsolve_D22(lb, ub, g, eps_array, d_array)
         omega_solutions.append(omega)
         chi_array = chi(omega, g, eps_array)
         if pol.lower()=='te' or pol.lower()=='tm':              

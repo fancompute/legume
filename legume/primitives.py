@@ -180,29 +180,41 @@ defvjp(interp_ag, None, None, vjp_maker_interp)
 
 '''=========== SOLVE OF f(x, y) = 0 W.R.T. X =========== '''
 fsolve_ag = primitive(fsolve)
+'''fsolve_ag(fun, lb, ub, *args) solves fun(x, *args) = 0 for lb <= x <= ub
+    x and the output of fun are both scalar
+    args can be anything
+'''
 
-def vjp_maker_fsolve(f, gradf, Nargs):
+def vjp_maker_fsolve(f, ginds):
     '''
-    Gradient of dx/dargs where x is found through fsolve. The gradient of f 
-    w.r.t. both x and each of the args must be computable with autograd
+    Defines the vjp through dx/darg where x is found through fsolve_ag and arg
+    is one of the function args. 
+        - ginds : Boolean list defining which args will be differentiated.
+        grad(f, gind) must exist for all gind==True in ginds
+        grad(f, 0), i.e. the gradient w.r.t. x, must also exist
     '''
-    vjp_makers = [None, None, None]
-    dfdx = gradf[0]
+    vjp_makers = [None, None] # Gradients w.r.t lb and ub are not computed
+    dfdx = grad(f, 0)
 
     def vjp_single_arg(ia):
 
-        def vjp_maker(ans, f, lb, ub, *args):
+        def vjp_maker(ans, *args):
+            fargs = args[2:]
 
             def vjp(g):       
-                dfdy = gradf[ia+1]
-                return np.dot(g, -1/dfdx(ans, *args) * dfdy(ans, *args))
+                dfdy = grad(f, ia + 1)
+                return np.dot(g, -1/dfdx(ans, *fargs) * dfdy(ans, *fargs))
 
             return vjp
 
         return vjp_maker
 
-    for ia in range(Nargs):
-        vjp_makers.append(vjp_single_arg(ia=ia))
+    for (ia, gind) in enumerate(ginds):
+        if gind==True:
+            vjp_makers.append(vjp_single_arg(ia=ia))
+        else:
+            vjp_makers.append(None)
+
     return tuple(vjp_makers)
 
 

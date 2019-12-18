@@ -36,7 +36,7 @@ class ShapesLayer(Layer):
         self.eps_b = eps_b
 
         # Initialize average permittivity - needed for guided-mode computation
-        self.eps_avg = np.array(eps_b)
+        self.eps_avg = bd.array(eps_b)
 
         # Initialize an empty list of shapes
         self.layer_type = 'shapes'
