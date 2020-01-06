@@ -185,25 +185,32 @@ fsolve_ag = primitive(fsolve)
     args can be anything
 '''
 
-def vjp_maker_fsolve(f, ginds):
+def vjp_maker_fsolve(ginds):
     '''
-    Defines the vjp through dx/darg where x is found through fsolve_ag and arg
-    is one of the function args. 
+    Factory function defining the vjp_makers for a generic fsolve_ag with 
+    multiple extra arguments
+
+    Output: a list of vjp_makers for backproping through dx/darg where x is 
+    found through fsolve_ag and arg is one of the function args. 
+    Input: 
         - ginds : Boolean list defining which args will be differentiated.
         grad(f, gind) must exist for all gind==True in ginds
         grad(f, 0), i.e. the gradient w.r.t. x, must also exist
     '''
-    vjp_makers = [None, None] # Gradients w.r.t lb and ub are not computed
-    dfdx = grad(f, 0)
+
+    # Gradients w.r.t fun, lb and ub are not computed
+    vjp_makers = [None, None, None] 
 
     def vjp_single_arg(ia):
 
         def vjp_maker(ans, *args):
-            fargs = args[2:]
+            f = args[0]
+            fargs = args[3:]
+            dfdx = grad(f, 0)(ans, *fargs)
+            dfdy = grad(f, ia+1)(ans, *fargs)
 
             def vjp(g):       
-                dfdy = grad(f, ia + 1)
-                return np.dot(g, -1/dfdx(ans, *fargs) * dfdy(ans, *fargs))
+                return np.dot(g, -1/dfdx * dfdy)
 
             return vjp
 
@@ -217,4 +224,6 @@ def vjp_maker_fsolve(f, ginds):
 
     return tuple(vjp_makers)
 
-
+# NB: This definition is for the specific fsolve with three arguments
+# used for the guided modes!!!
+defvjp(fsolve_ag, *vjp_maker_fsolve([False, True, True]))

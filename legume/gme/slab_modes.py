@@ -119,17 +119,8 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
             break
         lb = omega_bounds[i]
         ub = omega_bounds[i+1]
-        fsolve_D22 = lambda lb, ub, g, eps_array, d_array : \
-                    bd.fsolve(D22real, lb, ub, g, eps_array, d_array)
 
-        if repr(bd) == 'AutogradBackend':
-            from autograd.extend import defvjp, primitive
-            from legume.primitives import vjp_maker_fsolve
-            fsolve_D22 = primitive(fsolve_D22)
-            defvjp(fsolve_D22, *vjp_maker_fsolve(D22real, 
-                            [False, True, True]))
-
-        omega = fsolve_D22(lb, ub, g, eps_array, d_array)
+        omega = bd.fsolve_D22(D22real, lb, ub, g, eps_array, d_array)
         omega_solutions.append(omega)
         chi_array = chi(omega, g, eps_array)
         if pol.lower()=='te' or pol.lower()=='tm':              

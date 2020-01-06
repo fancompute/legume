@@ -16,7 +16,7 @@ import scipy as sp
 
 # Import some specially written functions
 from .utils import toeplitz_block, fsolve
-from .primitives import (toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag, 
+from .primitives import (toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag,
                         eigsh_ag, inv_ag, sqrt_ag)
 
 # Import autograd if available
@@ -59,7 +59,7 @@ class NumpyBackend(Backend):
     sort = staticmethod(np.sort)
     argsort = staticmethod(np.argsort)
     interp = staticmethod(np.interp)
-    fsolve = staticmethod(fsolve)
+    fsolve_D22 = staticmethod(fsolve)
 
     # math functions
     exp = staticmethod(np.exp)
@@ -116,7 +116,7 @@ class AutogradBackend(Backend):
     sort = staticmethod(npa.sort)
     argsort = staticmethod(npa.argsort)
     interp = staticmethod(interp_ag)
-    fsolve = staticmethod(fsolve_ag)
+    fsolve_D22 = staticmethod(fsolve_ag)
 
     # math functions
     exp = staticmethod(npa.exp)
