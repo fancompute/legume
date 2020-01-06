@@ -185,7 +185,7 @@ fsolve_ag = primitive(fsolve)
     args can be anything
 '''
 
-def vjp_maker_fsolve(ginds):
+def vjp_factory_fsolve(ginds):
     '''
     Factory function defining the vjp_makers for a generic fsolve_ag with 
     multiple extra arguments
@@ -226,4 +226,4 @@ def vjp_maker_fsolve(ginds):
 
 # NB: This definition is for the specific fsolve with three arguments
 # used for the guided modes!!!
-defvjp(fsolve_ag, *vjp_maker_fsolve([False, True, True]))
+defvjp(fsolve_ag, *vjp_factory_fsolve([False, True, True]))
