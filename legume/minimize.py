@@ -164,6 +164,10 @@ class Minimize(object):
         self.t_store = time.time()
         self.of_list = []
 
+        # Get initial of value
+        of, _ = self.objective(self.params, *args)
+        self.of_list.append(self._get_value(of)) 
+
         def of(params, *args, **kwargs):
             """Modify the objective function slightly to allow storing
             intermediate objective values without re-evaluating the function
