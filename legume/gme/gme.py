@@ -12,13 +12,15 @@ class GuidedModeExp(object):
     '''
     Main simulation class of the guided-mode expansion
     '''
-    def __init__(self, phc, gmax=3):
+    def __init__(self, phc, gmax=3, truncate_g='tbt'):
         # Object of class Phc which will be simulated
         self.phc = phc
         # Number of layers
         self.N_layers = len(phc.layers)
         # Maximum reciprocal lattice wave-vector length in units of 2pi/a
         self.gmax = gmax
+        # Truncation of the reciprocal lattice vectors, 'toeplitz' or 'circle'
+        self.truncate_g = truncate_g
 
         # Number of G points included for every mode, will be defined after run
         self.modes_numg = []
@@ -35,8 +37,13 @@ class GuidedModeExp(object):
 
         # Initialize the reciprocal lattice vectors and compute the FT of all
         # the layers of the PhC
-        self._init_reciprocal()
-        self.compute_ft()
+        if self.truncate_g == 'tbt':
+            self._init_reciprocal_tbt()
+            self.compute_ft_tbt()
+        elif self.truncate_g == 'circle':
+            self._init_reciprocal_circle()
+            self.compute_ft_circle()
+        else: raise ValueError("'truncate_g' must be 'tbt' or 'circle'.")
 
     def __repr__(self):
         rep = 'GuidedModeExp(\n'
@@ -46,18 +53,18 @@ class GuidedModeExp(object):
         rep += repr(self.phc) + '\n)'
         return rep
 
-    def _init_reciprocal(self):
+    def _init_reciprocal_tbt(self):
         '''
-        Initialize reciprocal lattice vectors based on self.phc and self.gmax
+        Initialize reciprocal lattice vectors with a parallelogram truncation
+        such that the eps matrix is toeplitz-block-toeplitz
         '''
         n1max = np.int_((2*np.pi*self.gmax)/np.linalg.norm(self.phc.lattice.b1))
         n2max = np.int_((2*np.pi*self.gmax)/np.linalg.norm(self.phc.lattice.b2))
 
         # This constructs the reciprocal lattice in a way that is suitable
         # for Toeplitz-Block-Toeplitz inversion of the permittivity in the main
-        # code. However, one caveat is that the hexagonal lattice symmetry is 
-        # not preserved. For that, the option to construct a hexagonal mesh in 
-        # reciprocal space could is needed.
+        # code. This might be faster, but doesn't have a nice rotation symmetry
+        # in the case of e.g. hexagonal lattice. 
         inds1 = np.tile(np.arange(-n1max, n1max + 1), (2*n2max + 1, 1))  \
                          .reshape((2*n2max + 1)*(2*n1max + 1), order='F')
         inds2 = np.tile(np.arange(-n2max, n2max + 1), 2*n1max + 1)
@@ -72,6 +79,25 @@ class GuidedModeExp(object):
         # Note: gvec.shape[1] = n1g*n2g
         self.n1g = 2*n1max + 1
         self.n2g = 2*n2max + 1
+
+    def _init_reciprocal_circle(self):
+        '''
+        Initialize reciprocal lattice vectors with circular truncation.
+        '''
+        n1max = np.int_((4*np.pi*self.gmax)/np.linalg.norm(self.phc.lattice.b1))
+        n2max = np.int_((4*np.pi*self.gmax)/np.linalg.norm(self.phc.lattice.b2))
+
+        inds1 = np.tile(np.arange(-n1max, n1max + 1), (2*n2max + 1, 1))  \
+                         .reshape((2*n2max + 1)*(2*n1max + 1), order='F')
+        inds2 = np.tile(np.arange(-n2max, n2max + 1), 2*n1max + 1)
+
+        gvec = self.phc.lattice.b1[:, np.newaxis].dot(inds1[np.newaxis, :]) + \
+                self.phc.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
+        gnorm = np.sqrt(gvec[0, :]**2 + gvec[1, :]**2)
+        gvec = gvec[:, gnorm <= 2*np.pi*self.gmax]
+
+        # Save the reciprocal lattice vectors
+        self.gvec = gvec
 
     def _run_options(self, options):
         default_options = {
@@ -262,10 +288,10 @@ class GuidedModeExp(object):
             self.omegas_tm.append(reshape_list(omegas_tm))
             self.coeffs_tm.append(reshape_list(coeffs_tm))     
 
-    def compute_ft(self):
+    def compute_ft_tbt(self):
         '''
         Compute the unique FT coefficients of the permittivity, eps(g-g') for
-        every layer in the PhC.
+        every layer in the PhC, assuming TBT-initialized reciprocal lattice
         '''
         (n1max, n2max) = (self.n1g, self.n2g)
         G1 = - self.gvec + self.gvec[:, [0]]
@@ -298,6 +324,23 @@ class GuidedModeExp(object):
         # Store the g-vectors to which T1 and T2 correspond
         self.G1 = G1
         self.G2 = G2
+
+    def compute_ft_circle(self):
+        '''
+        Compute the unique FT coefficients of the permittivity, eps(g-g') for
+        every layer in the PhC, assuming circle-initialized reciprocal lattice
+        '''
+        ggridx = (self.gvec[0, :][np.newaxis, :] - 
+                    self.gvec[0, :][:, np.newaxis]).ravel()
+        ggridy = (self.gvec[1, :][np.newaxis, :] - 
+                    self.gvec[1, :][:, np.newaxis]).ravel()
+
+        self.eps_ft = []
+        for layer in [self.phc.claddings[0]] + self.phc.layers + \
+                            [self.phc.claddings[1]]:
+            eps_ft = layer.compute_ft(np.vstack((ggridx, ggridy)))
+            self.eps_ft.append(bd.reshape(eps_ft, 
+                        (self.gvec[0, :].size, self.gvec[0, :].size)))
 
     def get_eps_xy(self, z, Nx=100, Ny=100):
         '''
@@ -401,7 +444,6 @@ class GuidedModeExp(object):
 
         # Compute inverse matrix of FT of permittivity
         t = time.time()
-        self.compute_ft()   # Just in case something changed after __init__()
         self.compute_eps_inv()
         print_vb("%1.4f seconds for inverse matrix of Fourier-space "
             "permittivity"% (time.time()-t))
@@ -468,11 +510,15 @@ class GuidedModeExp(object):
         # List of inverse permittivity matrices for every layer
         self.eps_inv_mat = []
 
-        for it, T1 in enumerate(self.T1):
-            # For now we just use the numpy inversion. Later on we could 
-            # implement the Toeplitz-Block-Toeplitz inversion (faster)
-            eps_mat = bd.toeplitz_block(self.n1g, T1, self.T2[it])
-            self.eps_inv_mat.append(bd.inv(eps_mat))
+        if self.truncate_g == 'tbt':
+            for it, T1 in enumerate(self.T1):
+                # For now we just use the numpy inversion. Later on we could 
+                # implement the Toeplitz-Block-Toeplitz inversion (faster)
+                eps_mat = bd.toeplitz_block(self.n1g, T1, self.T2[it])
+                self.eps_inv_mat.append(bd.inv(eps_mat))
+        elif self.truncate_g == 'circle':
+            for eps_mat in self.eps_ft:
+                self.eps_inv_mat.append(bd.inv(eps_mat))
 
     def construct_mat(self, kind):
         '''

@@ -16,13 +16,13 @@ import scipy as sp
 
 # Import some specially written functions
 from .utils import toeplitz_block, fsolve
-from .primitives import (toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag,
-                        eigsh_ag, inv_ag, sqrt_ag)
 
 # Import autograd if available
 try:
     import autograd.numpy as npa
     import autograd.scipy as spa
+    from .primitives import (toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag,
+                        eigsh_ag, inv_ag, sqrt_ag)
     AG_AVAILABLE = True
 except ImportError:
     AG_AVAILABLE = False

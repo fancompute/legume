@@ -1,7 +1,5 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from legume.utils import ftinv
-import legume.viz as viz
 from legume.backend import backend as bd
 
 class PlaneWaveExp(object):
