@@ -19,7 +19,7 @@ class GuidedModeExp(object):
         self.N_layers = len(phc.layers)
         # Maximum reciprocal lattice wave-vector length in units of 2pi/a
         self.gmax = gmax
-        # Truncation of the reciprocal lattice vectors, 'toeplitz' or 'circle'
+        # Truncation of the reciprocal lattice vectors, 'tbt' or 'abs'
         self.truncate_g = truncate_g
 
         # Number of G points included for every mode, will be defined after run
@@ -40,10 +40,10 @@ class GuidedModeExp(object):
         if self.truncate_g == 'tbt':
             self._init_reciprocal_tbt()
             self.compute_ft_tbt()
-        elif self.truncate_g == 'circle':
-            self._init_reciprocal_circle()
-            self.compute_ft_circle()
-        else: raise ValueError("'truncate_g' must be 'tbt' or 'circle'.")
+        elif self.truncate_g == 'abs':
+            self._init_reciprocal_abs()
+            self.compute_ft_abs()
+        else: raise ValueError("'truncate_g' must be 'tbt' or 'abs'.")
 
     def __repr__(self):
         rep = 'GuidedModeExp(\n'
@@ -80,7 +80,7 @@ class GuidedModeExp(object):
         self.n1g = 2*n1max + 1
         self.n2g = 2*n2max + 1
 
-    def _init_reciprocal_circle(self):
+    def _init_reciprocal_abs(self):
         '''
         Initialize reciprocal lattice vectors with circular truncation.
         '''
@@ -262,6 +262,12 @@ class GuidedModeExp(object):
         Compute the guided modes using the slab_modes module, reshape the 
         results appropriately and store
         '''
+
+        # Expand boundaries a bit to make sure we get all the modes
+        # Note that the 'exact' computation still uses interpolation, 
+        # but the grid is defined by the actual gk values
+        g_array -= 1e-6
+        g_array[-1] += 2e-6
         self.g_array.append(g_array)
         self.gmode_te = self.gmode_inds[np.remainder(self.gmode_inds, 2) == 0]
         self.gmode_tm = self.gmode_inds[np.remainder(self.gmode_inds, 2) != 0]
@@ -325,10 +331,10 @@ class GuidedModeExp(object):
         self.G1 = G1
         self.G2 = G2
 
-    def compute_ft_circle(self):
+    def compute_ft_abs(self):
         '''
         Compute the unique FT coefficients of the permittivity, eps(g-g') for
-        every layer in the PhC, assuming circle-initialized reciprocal lattice
+        every layer in the PhC, assuming abs-initialized reciprocal lattice
         '''
         ggridx = (self.gvec[0, :][np.newaxis, :] - 
                     self.gvec[0, :][:, np.newaxis]).ravel()
@@ -516,7 +522,7 @@ class GuidedModeExp(object):
                 # implement the Toeplitz-Block-Toeplitz inversion (faster)
                 eps_mat = bd.toeplitz_block(self.n1g, T1, self.T2[it])
                 self.eps_inv_mat.append(bd.inv(eps_mat))
-        elif self.truncate_g == 'circle':
+        elif self.truncate_g == 'abs':
             for eps_mat in self.eps_ft:
                 self.eps_inv_mat.append(bd.inv(eps_mat))
 
@@ -534,11 +540,6 @@ class GuidedModeExp(object):
         if self.gmode_compute.lower() == 'exact':
             t = time.time()
             g_array = np.sort(gk)
-            # Expand boundaries a bit to make sure we get all the modes
-            # Note that the 'exact' computation still uses interpolation, 
-            # but the grid is defined by the actual gk values
-            g_array[0] -= 1e-6
-            g_array[-1] += 1e-6
             self.compute_guided(g_array)
             self.t_guided += time.time() - t
 
@@ -665,6 +666,7 @@ class GuidedModeExp(object):
         freqs_i = [] # Imaginary part of frequencies
         cl = []      # Coupling constants to lower-cladding radiative modes
         cu = []      # Coupling constants to upper-cladding radiative modes
+
         for kind in range(len(self.freqs)):
             minds = np.arange(0, self.numeig)
             (freqs_im, coup_l, coup_u) = self.compute_rad(kind, minds)
@@ -694,7 +696,7 @@ class GuidedModeExp(object):
                 "stored eigenmodes" % self.numeig)
         
         # G + k vectors
-        gkx = self.gvec[0, :] + self.kpoints[0, kind] + 1e-10
+        gkx = self.gvec[0, :] + self.kpoints[0, kind] - 1e-10
         gky = self.gvec[1, :] + self.kpoints[1, kind]
         gk = np.sqrt(np.square(gkx) + np.square(gky))
 
@@ -711,13 +713,15 @@ class GuidedModeExp(object):
                         bd.argwhere(gk**2 <= \
                     self.phc.claddings[1].eps_avg*omr**2).ravel()
                         ]
-
             gkr = [gk[indmode] for indmode in indmoder]
+
+            # Coupling constants to TE/TM modes in lower and upper cladding
             rad_coup = {'te': [bd.zeros((indmode.size, ), dtype=bd.complex)
                             for indmode in indmoder],
                         'tm': [bd.zeros((indmode.size, ), dtype=bd.complex) 
                             for indmode in indmoder]}
 
+            # Compute leaky modes
             [Xs, Ys, chis] = [{'te': [], 'tm': []} for i in range(3)]
             for clad_ind in [0, 1]:
                 for pol in ['te', 'tm']:
@@ -742,6 +746,7 @@ class GuidedModeExp(object):
                 for clad_ind in [0, 1]:         
                     # Radiation to TE-polarized states
                     if mode1%2 == 0:
+                        # TE-TE coupling
                         qq = (np.outer(gkx[indmode1], gkx[indmoder[clad_ind]])
                             + np.outer(gky[indmode1], gky[indmoder[clad_ind]]))\
                             / np.outer(gk[indmode1], gk[indmoder[clad_ind]])
@@ -751,6 +756,7 @@ class GuidedModeExp(object):
                             indmoder[clad_ind], omr, Xs['te'][clad_ind], 
                             Ys['te'][clad_ind], chis['te'][clad_ind], qq)
                     else:
+                        # TM-TE coupling
                         pq = (np.outer(gkx[indmode1], gky[indmoder[clad_ind]])
                             - np.outer(gky[indmode1], gkx[indmoder[clad_ind]]))\
                             / np.outer(gk[indmode1], gk[indmoder[clad_ind]])
@@ -766,6 +772,7 @@ class GuidedModeExp(object):
 
                     # Radiation to TM-polarized states
                     if mode1%2 == 0:
+                        # TE-TM coupling
                         qp = (np.outer(gky[indmode1], gkx[indmoder[clad_ind]])
                             - np.outer(gkx[indmode1], gky[indmoder[clad_ind]]))\
                             / np.outer(gk[indmode1], gk[indmoder[clad_ind]])
@@ -775,6 +782,7 @@ class GuidedModeExp(object):
                             indmoder[clad_ind], omr, Xs['tm'][clad_ind], 
                             Ys['tm'][clad_ind], chis['tm'][clad_ind], qp)
                     else:
+                        # TM-TM coupling
                         pp = (np.outer(gkx[indmode1], gkx[indmoder[clad_ind]])
                             + np.outer(gky[indmode1], gky[indmoder[clad_ind]]))\
                             / np.outer(gk[indmode1], gk[indmoder[clad_ind]])
@@ -783,14 +791,20 @@ class GuidedModeExp(object):
                             self.eps_inv_mat, gk, indmode1, oms1, As1, Bs1, 
                             chis1, indmoder[clad_ind], omr, Xs['tm'][clad_ind], 
                             Ys['tm'][clad_ind], chis['tm'][clad_ind], pp)
+
+                    # Multiply the overlap and the expansion coefficients
                     rad = rad*bd.conj(evec[count:
                         count+self.modes_numg[kind][im1]][:, np.newaxis])
+                    # Add everything up
                     rad_coup['tm'][clad_ind] += bd.sum(rad, axis=0)
                 count += self.modes_numg[kind][im1]
+
+            # Density of states of leaky modes
             rad_dos = [self.phc.claddings[i].eps_avg/bd.sqrt(
                     self.phc.claddings[i].eps_avg*omr**2 - gkr[i]**2) / \
                     4 / np.pi for i in [0, 1]]
-            rad_t = 0 # will sum up contributions from all the channels
+
+            rad_t = 0 # variable suming up contributions from all the channels
             (c_l, c_u) = ({}, {})
             for pol in ['te', 'tm']:
                 c_l[pol] = rad_coup[pol][0]
@@ -800,9 +814,10 @@ class GuidedModeExp(object):
                     np.pi*bd.sum(bd.square(bd.abs(c_u[pol]))*rad_dos[1])
             rad_tot.append(bd.imag(bd.sqrt(omr**2 + 1j*rad_t)))
 
-            # NB: think about the normalization of the couplings!
+            # TODO: think about the normalization of the couplings!
             coup_l.append(c_l)
             coup_u.append(c_u)
+
         # Compute radiation rate in units of frequency  
         freqs_im = bd.array(rad_tot)/2/np.pi
         return (freqs_im, coup_l, coup_u)
