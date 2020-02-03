@@ -50,7 +50,8 @@ def mat_te_te(eps_array, d_array, eps_inv_mat, indmode1, oms1,
         )
 
     # Final pre-factor      
-    return mat * bd.outer(oms1**2, oms2**2) * qq[indmat]
+    mat = mat * bd.outer(oms1**2, oms2**2) * qq[indmat]
+    return mat
 
 def mat_tm_tm(eps_array, d_array, eps_inv_mat, gk, indmode1, oms1,
                     As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
@@ -119,7 +120,8 @@ def mat_te_tm(eps_array, d_array, eps_inv_mat, indmode1, oms1,
                 d_array)  )
 
     # Final pre-factor
-    return mat * (oms1**2)[:, bd.newaxis] * qp[indmat]
+    mat = mat * (oms1**2)[:, bd.newaxis] * qp[indmat]
+    return mat
 
 def mat_tm_te(eps_array, d_array, eps_inv_mat, indmode1, oms1,
                     As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
@@ -152,4 +154,5 @@ def mat_tm_te(eps_array, d_array, eps_inv_mat, indmode1, oms1,
                 d_array)  )
 
     # Final pre-factor
-    return mat * (oms2**2)[bd.newaxis, :] * pq[indmat]
+    mat = mat * (oms2**2)[bd.newaxis, :] * pq[indmat]
+    return mat

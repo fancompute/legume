@@ -782,7 +782,8 @@ class GuidedModeExp(object):
                             e_a, d_a, 
                             self.eps_inv_mat, indmode1, oms1, As1, Bs1, chis1, 
                             indmoder[clad_ind], omr_arr, Ys['tm'][clad_ind], 
-                            Xs['tm'][clad_ind], chis['tm'][clad_ind], pq.transpose())
+                            Xs['tm'][clad_ind], chis['tm'][clad_ind], 
+                            bd.transpose(pq))
                     else:
                         # TM-TM coupling
                         rad = matrix_elements.mat_tm_tm(

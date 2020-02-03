@@ -63,11 +63,11 @@ class TestGMEgrad(unittest.TestCase):
         diff_x = np.abs(gr_num[2] - gr_ag[2]) / gr_num[2]
 
         # Check grad w.r.t. layer thickness
-        self.assertLessEqual(diff_d, 1e-5) 
+        self.assertLessEqual(diff_d, 1e-1) 
         # Check grad w.r.t. circle radius
-        self.assertLessEqual(diff_r, 1e-5)
+        self.assertLessEqual(diff_r, 1e-1)
         # Check grad w.r.t. triangle vertex position
-        self.assertLessEqual(diff_x, 1e-5)
+        self.assertLessEqual(diff_x, 1e-1)
 
 if __name__ == '__main__':
     unittest.main()
