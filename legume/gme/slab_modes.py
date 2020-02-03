@@ -427,10 +427,11 @@ def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
         coeffs.append(bd.dot(S_mat[-1], bd.dot(T_mat[-1], coeffs[-1])))
         coeffs = bd.array(coeffs, dtype=bd.complex).transpose()
 
+        # Normalize
         coeffs = coeffs / coeffs[1, -1] 
         if pol=='te':
             c_ind = [0, -1]
-            coeffs = coeffs/bd.sqrt(eps_array[c_ind[clad]])
+            coeffs = coeffs/bd.sqrt(eps_array[c_ind[clad]])/omega
         # Assign correctly based on which cladding the modes radiate to
         if clad == 0:
             Xs.append(coeffs[0, ::-1].ravel())

@@ -10,7 +10,7 @@ import scipy.io
 class TestGME(unittest.TestCase):
     '''
     Tests of single-layer legume vs. stored data from my MATLAB GME
-    Asymmetric claddings everywhere.
+    Asymmetric claddings everywhere, various combinations of shapes and lattices
     ''' 
     def test_square(self):
         '''

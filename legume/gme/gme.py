@@ -618,16 +618,13 @@ class GuidedModeExp(object):
                                     e_a, d_a, 
                                     self.eps_inv_mat, indmode1, oms1,
                                     As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
-                                    chis2, pq.transpose(), 1j)
+                                    chis2, pq.transpose())
                 elif mode1%2==1 and mode2%2==0:
-                    # Note: TM-TE is just hermitian conjugate of TE-TM
-                    # with switched indexes 1 <-> 2
-                    mat_block = matrix_elements.mat_te_tm(
+                    mat_block = matrix_elements.mat_tm_te(
                                     e_a, d_a, 
-                                    self.eps_inv_mat, indmode2, oms2,
-                                    As2, Bs2, chis2, indmode1, oms1, As1, Bs1, 
-                                    chis1, pq, -1j) 
-                    mat_block = bd.conj(bd.transpose(mat_block))
+                                    self.eps_inv_mat, indmode1, oms1,
+                                    As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
+                                    chis2, pq)
 
                 mat_blocks[im1].append(mat_block)
 
@@ -700,6 +697,19 @@ class GuidedModeExp(object):
         gky = self.gvec[1, :] + self.kpoints[1, kind]
         gk = np.sqrt(np.square(gkx) + np.square(gky))
 
+        # Unit vectors in the propagation direction; we add a tiny component 
+        # in the x-direction to avoid problems at gk = 0
+        pkx = gkx / gk
+        pky = gky / gk
+
+        # Unit vectors in-plane orthogonal to the propagation direction
+        qkx = gky / gk
+        qky = -gkx / gk
+
+        pp = np.outer(pkx, pkx) + np.outer(pky, pky)
+        pq = np.outer(pkx, qkx) + np.outer(pky, qky)
+        qq = np.outer(qkx, qkx) + np.outer(qky, qky)
+
         # Iterate over all the modes to be computed
         rad_tot = []
         (coup_l, coup_u) = ([], [])
@@ -744,27 +754,22 @@ class GuidedModeExp(object):
                             self._get_guided(gk, kind, mode1)
                 # Iterate over lower cladding (0) and upper cladding (1)
                 for clad_ind in [0, 1]:         
+                    omr_arr = omr*bd.ones((indmoder[clad_ind].size, ))
                     # Radiation to TE-polarized states
                     if mode1%2 == 0:
                         # TE-TE coupling
-                        qq = (np.outer(gkx[indmode1], gkx[indmoder[clad_ind]])
-                            + np.outer(gky[indmode1], gky[indmoder[clad_ind]]))\
-                            / np.outer(gk[indmode1], gk[indmoder[clad_ind]])
-                        rad = matrix_elements.rad_te_te(
+                        rad = matrix_elements.mat_te_te(
                             e_a, d_a, 
                             self.eps_inv_mat, indmode1, oms1, As1, Bs1, chis1, 
-                            indmoder[clad_ind], omr, Xs['te'][clad_ind], 
-                            Ys['te'][clad_ind], chis['te'][clad_ind], qq)
+                            indmoder[clad_ind], omr_arr, Ys['te'][clad_ind], 
+                            Xs['te'][clad_ind], chis['te'][clad_ind], qq)
                     else:
                         # TM-TE coupling
-                        pq = (np.outer(gkx[indmode1], gky[indmoder[clad_ind]])
-                            - np.outer(gky[indmode1], gkx[indmoder[clad_ind]]))\
-                            / np.outer(gk[indmode1], gk[indmoder[clad_ind]])
-                        rad = matrix_elements.rad_tm_te(
+                        rad = matrix_elements.mat_tm_te(
                             e_a, d_a, 
                             self.eps_inv_mat, indmode1, oms1, As1, Bs1, chis1, 
-                            indmoder[clad_ind], omr, Xs['te'][clad_ind], 
-                            Ys['te'][clad_ind], chis['te'][clad_ind], pq)
+                            indmoder[clad_ind], omr_arr, Ys['te'][clad_ind], 
+                            Xs['te'][clad_ind], chis['te'][clad_ind], pq)
 
                     rad = rad*bd.conj(evec[count:
                         count+self.modes_numg[kind][im1]][:, np.newaxis])
@@ -773,24 +778,18 @@ class GuidedModeExp(object):
                     # Radiation to TM-polarized states
                     if mode1%2 == 0:
                         # TE-TM coupling
-                        qp = (np.outer(gky[indmode1], gkx[indmoder[clad_ind]])
-                            - np.outer(gkx[indmode1], gky[indmoder[clad_ind]]))\
-                            / np.outer(gk[indmode1], gk[indmoder[clad_ind]])
-                        rad = matrix_elements.rad_te_tm(
+                        rad = matrix_elements.mat_te_tm(
                             e_a, d_a, 
                             self.eps_inv_mat, indmode1, oms1, As1, Bs1, chis1, 
-                            indmoder[clad_ind], omr, Xs['tm'][clad_ind], 
-                            Ys['tm'][clad_ind], chis['tm'][clad_ind], qp)
+                            indmoder[clad_ind], omr_arr, Ys['tm'][clad_ind], 
+                            Xs['tm'][clad_ind], chis['tm'][clad_ind], pq.transpose())
                     else:
                         # TM-TM coupling
-                        pp = (np.outer(gkx[indmode1], gkx[indmoder[clad_ind]])
-                            + np.outer(gky[indmode1], gky[indmoder[clad_ind]]))\
-                            / np.outer(gk[indmode1], gk[indmoder[clad_ind]])
-                        rad = matrix_elements.rad_tm_tm(
+                        rad = matrix_elements.mat_tm_tm(
                             e_a, d_a, 
                             self.eps_inv_mat, gk, indmode1, oms1, As1, Bs1, 
-                            chis1, indmoder[clad_ind], omr, Xs['tm'][clad_ind], 
-                            Ys['tm'][clad_ind], chis['tm'][clad_ind], pp)
+                            chis1, indmoder[clad_ind], omr_arr, Ys['tm'][clad_ind], 
+                            Xs['tm'][clad_ind], chis['tm'][clad_ind], pp)
 
                     # Multiply the overlap and the expansion coefficients
                     rad = rad*bd.conj(evec[count:

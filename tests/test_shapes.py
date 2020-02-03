@@ -10,22 +10,22 @@ class TestShapes(unittest.TestCase):
 		eps = 1
 		x_edges = np.array([-1.0, +1.0, +1.0, -1.0])
 		y_edges = np.array([-1.0, -1.0, +1.0, +1.0])
-		poly = legume.shapes.Poly(eps, x_edges, y_edges)
+		poly = legume.Poly(eps, x_edges, y_edges)
 
 		x_edges = np.array([-1.0, -1.0, +1.0, +1.0])
 		y_edges = np.array([-1.0, +1.0, +1.0, -1.0])
 		self.assertRaises(ValueError,
-						legume.shapes.Poly, *(eps, x_edges, y_edges))
+						legume.Poly, *(eps, x_edges, y_edges))
 
 		eps = 5
 		y_edges = np.array([0.05, -0.05, -0.05, 0.05])
 		x_edges = np.array([-0.25, -0.25, 0.25, 0.25])
-		poly = legume.shapes.Poly(eps, x_edges, y_edges)
+		poly = legume.Poly(eps, x_edges, y_edges)
 
 		y_edges = np.array([0.05, 0.05, -0.05, -0.05])
 		x_edges = np.array([-0.25, 0.25, 0.25, -0.25])
 		self.assertRaises(ValueError, 
-						legume.shapes.Poly, *(eps, x_edges, y_edges))
+						legume.Poly, *(eps, x_edges, y_edges))
 
 		list_xc = np.linspace(-1, +1, 9)
 		list_yc = np.linspace(-1, +1, 9)
@@ -35,7 +35,7 @@ class TestShapes(unittest.TestCase):
 				for yc in list_yc:
 					x_edges = xc + np.array([-a/2, +a/2, +a/2, -a/2])
 					y_edges = yc + np.array([-a/2, -a/2, +a/2, -a/2])
-					poly = legume.shapes.Poly(eps, x_edges, y_edges)
+					poly = legume.Poly(eps, x_edges, y_edges)
 
 
 if __name__ == '__main__':
