@@ -2,7 +2,7 @@ import numpy as np
 from legume.backend import backend as bd
 from legume.utils import get_value
 
-'''===========HELPER FUNCTIONS FOR Z-INTEGRATION============'''
+"""===========HELPER FUNCTIONS FOR Z-INTEGRATION============"""
 def I_alpha(a, d): # integrate exp(iaz)dz from -d/2 to d/2
     a = a + 1e-20
     return 2 / a * bd.sin(a*d/2)
@@ -10,18 +10,18 @@ def I_alpha(a, d): # integrate exp(iaz)dz from -d/2 to d/2
 def J_alpha(a): # integrate exp(iaz)dz from 0 to inf
     a = a + 1e-20
     return 1j / a
-'''========================================================='''
 
-def guided_modes(g_array, eps_array, d_array, n_modes=1, 
-            step=1e-3, tol=1e-4, pol='TE'):
-    ''' 
+"""============GUIDED MODE COMPUTATION============"""
+def guided_modes(g_array: np.ndarray, eps_array: np.ndarray,
+                d_array: np.ndarray, n_modes: int=1, 
+                step: float=1e-3, tol: float=1e-4, pol: str='TE'):
+    """ 
     Function to compute the guided modes of a multi-layer structure
     Input
-    g_array         : numpy array of wave vector amplitudes 
-    eps_array       : numpy array of slab permittivities, starting with lower 
+    g_array         : array of wave vector amplitudes 
+    eps_array       : array of slab permittivities, starting with lower 
                       cladding and ending with upper cladding
-
-    d_array         : thicknesses of each layer
+    d_array         : array of thickness of each layer
     n_modes         : maximum number of solutions to look for, starting from 
                       the lowest-frequency one
     omega_lb        : lower bound of omega
@@ -30,11 +30,13 @@ def guided_modes(g_array, eps_array, d_array, n_modes=1,
                         minimum expected separation between modes)
     tol             : tolerance in the omega boundaries for the root finding 
     pol             : polarization, 'te' or 'tm'
+
     Output
     om_guided       : array of size n_modes x length(g_array) with the guided 
                       mode frequencies
     coeffs_guided   : A, B coefficients of the modes in every layer
-    '''
+    """
+
     om_guided = []
     coeffs_guided = []
     for ig, g in enumerate(g_array):
@@ -51,11 +53,11 @@ def guided_modes(g_array, eps_array, d_array, n_modes=1,
                 # step is added just to be on the safe side
                 om_ub = min(om_ub, get_value(omegas[-1]) + step + 
                                         (g_array[ig] - g_array[ig-1]))
-            '''
+            """
             Check if the guided mode needs to be computed at all; when using the
             gmode_compute = 'exact' option, there might be identical g-points
             in the g_array, so we don't want to compute those multiple times
-            '''
+            """
             compute_g = np.abs(g - g_array[ig-1]) > 1e-8
 
         if compute_g:
@@ -70,10 +72,11 @@ def guided_modes(g_array, eps_array, d_array, n_modes=1,
 def guided_mode_given_g(g, eps_array, d_array, n_modes=1, 
                 omega_lb=None, omega_ub=None,
                 step=1e-2, tol=1e-2, pol='TE'):
-    '''
-    Currently, we do 'bisection' in all the regions of interest until n_modes 
-    target is met. For alternative variations, see guided_modes_draft.py
-    '''
+    """
+    Finds the first 'n_modes' guided modes of polarization 'pol' for a given 'g'
+    """
+
+    # Set lower and upper bound on the possible solutions
     eps_val = get_value(eps_array)
     d_val = get_value(d_array)
     if omega_lb is None:
@@ -84,6 +87,8 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
     omega_lb = omega_lb*(1+tol)
     omega_ub = omega_ub*(1-tol)
 
+    # D22real is used in the fsolve; D22test is vectorized and used on a test 
+    # array of omega-s to find sign flips
     if pol.lower()=='te':
         D22real = lambda x,*args: bd.real(D22_TE(x,*args))
         D22test = lambda x,*args: D22s_vec(x,*args,pol='TE').real
@@ -93,43 +98,36 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
     else:
         raise ValueError("Polarization should be 'TE' or 'TM'.")
 
-    # # Define the vjp for the fsolve function
-    # if repr(bd) == 'AutogradBackend':
-    #     from autograd.extend import defvjp
-    #     from autograd import grad
-    #     from legume.primitives import vjp_maker_fsolve
-    #     gradD22 = []
-    #     for iarg in range(4):
-    #         gradD22.append(grad(D22real, iarg))
-
-    #     defvjp(bd.fsolve, *vjp_maker_fsolve(D22real, gradD22, 3))
-
     # Making sure the bounds go all the way to omega_ub
     omega_bounds = np.append(np.arange(omega_lb, omega_ub, step), omega_ub) 
 
-    omega_solutions = [] ## solving for D22_real
+    # Variables storing the solutions
+    omega_solutions = [] 
     coeffs = []
 
+    # Find omegas between which D22 changes sign
     D22s = D22test(omega_bounds, g, eps_val, d_val).real
     sign_change = np.where(D22s[0:-1]*D22s[1:] < 0)[0]
     lb = omega_bounds[0]
 
+    # Use fsolve to find the first 'n_modes' guided modes
     for i in sign_change:
         if len(omega_solutions) >= n_modes:
             break
         lb = omega_bounds[i]
         ub = omega_bounds[i+1]
 
+        # Compute guided mode frequency 
         omega = bd.fsolve_D22(D22real, lb, ub, g, eps_array, d_array)
         omega_solutions.append(omega)
         chi_array = chi(omega, g, eps_array)
-        if pol.lower()=='te' or pol.lower()=='tm':              
+        if pol.lower()=='te' or pol.lower()=='tm':
+            # Compute A-B coefficients              
             AB = AB_matrices(omega, g, eps_array, d_array, 
                                 chi_array, pol)
+            # Normalize
             norm = normalization_coeff(omega, g, eps_array, d_array, 
                                 AB, pol)
-            # print(norm)
- 
             coeffs.append(AB / bd.sqrt(norm))
         else:
             raise ValueError("Polarization should be 'TE' or 'TM'")
@@ -137,30 +135,30 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
     return (omega_solutions, coeffs)
 
 def chi(omega, g, eps):
-    '''
-    Function to compute k_z
+    """
+    Function to compute chi_j, the z-direction wave-vector in each layer j
     Either omega is an array and eps is a number, or vice versa
     Input
-        omega           : frequency * 2π , in units of light speed / unit length
-        epses           : slab permittivity array
-        g               : wave vector along propagation direction (ß_x)
+        omega           : frequency * 2π , in units of light speed/unit length
+        eps             : slab permittivity array
+        g               : wave vector along propagation direction 
     Output
-        k_z
-    '''
+        chi             : array of chi_j for all layers j including claddings
+    """
     sqarg = bd.array(eps*omega**2 - g**2, dtype=bd.complex)
     return bd.where(bd.real(sqarg) >=0, bd.sqrt(sqarg),
                          1j*bd.sqrt(-sqarg))
 
 def chi_vec(omegas, g, eps):
-    '''
+    """
     Here omegas is an array and eps is a single number
-    '''
+    """
     return np.sqrt(eps*omegas**2 - g**2, dtype=np.complex)
 
 def S_T_matrices_TM(omega, g, eps_array, d_array):
-    '''
+    """
     Function to get a list of S and T matrices for D22 calculation
-    '''
+    """
     assert len(d_array)==len(eps_array)-2, \
             'd_array should have length = num_layers'
     chi_array = chi(omega, g, eps_array)
@@ -178,18 +176,16 @@ def S_T_matrices_TM(omega, g, eps_array, d_array):
     return S_matrices, T_matrices
 
 def D22_TM(omega, g, eps_array, d_array):
-    '''
-    Function to get eigen modes by solving D22=0
+    """
+    Function to get TM guided modes by solving D22=0
     Input
         omega           : frequency * 2π , in units of light speed/unit length
-        g               : wave vector along propagation direction (ß_x)
+        g               : wave vector along propagation direction 
         eps_array       : shape[M+1,1], slab permittivities
         d_array         : thicknesses of each layer
     Output
-        abs(D_22) 
-    (S matrices describe layers 0...M-1, T matrices describe layers 1...M-1)
-    (num_layers = M-1)
-    '''
+        D_22 
+    """
     S_matrices, T_matrices = S_T_matrices_TM(omega, g, eps_array, d_array)
     D = S_matrices[0,:,:]
     for i,S in enumerate(S_matrices[1:]):
@@ -198,9 +194,9 @@ def D22_TM(omega, g, eps_array, d_array):
     return D[1,1]
 
 def S_T_matrices_TE(omega, g, eps_array, d_array):
-    '''
+    """
     Function to get a list of S and T matrices for D22 calculation
-    '''
+    """
     assert len(d_array)==len(eps_array)-2, \
         'd_array should have length = num_layers'
     chi_array = chi(omega, g, eps_array)
@@ -218,18 +214,16 @@ def S_T_matrices_TE(omega, g, eps_array, d_array):
     return S_matrices, T_matrices
 
 def D22_TE(omega, g, eps_array, d_array):
-    '''
-    Function to get eigen modes by solving D22=0
+    """
+    Function to get TE guided modes by solving D22=0
     Input
         omega           : frequency * 2π , in units of light speed/unit length
-        g               : wave vector along propagation direction (ß_x)
+        g               : wave vector along propagation direction
         eps_array       : shape[M+1,1], slab permittivities
         d_array         : thicknesses of each layer
     Output
-        abs(D_22) 
-    (S matrices describe layers 0...M-1, T matrices describe layers 1...M-1)
-    (num_layers = M-1)
-    '''
+        D_22
+    """
     S_matrices, T_matrices = S_T_matrices_TE(omega, g, eps_array, d_array)
     D = S_matrices[0,:,:]
     for i,S in enumerate(S_matrices[1:]):
@@ -238,7 +232,7 @@ def D22_TE(omega, g, eps_array, d_array):
     return D[1,1]
 
 def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
-    '''
+    """
     Vectorized function to compute the matrix element D22 that needs to be zero
     Input
         omegas          : list of frequencies
@@ -253,7 +247,7 @@ def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
     Note: This function is used to find intervals at which D22 switches sign.
     It is currently not used in the root finding, but it could be useful if 
     there is a routine that can take advantage of the vectorization. 
-    '''
+    """
 
     N_oms = omegas.size # mats below will be of shape [2*N_oms, 2]
 
@@ -269,10 +263,10 @@ def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
         return (S11, S12, S12, S11)
 
     def S_T_prod(mats, omegas, g, eps1, eps2, d):
-        '''
+        """
         Get the i-th S and T matrices for an array of omegas given the i-th slab 
         thickness d and permittivity of the slab eps1 and the next layer eps2
-        '''
+        """
 
         chis1 = chi(omegas, g, eps1)
         chis2 = chi(omegas, g, eps2)
@@ -321,10 +315,10 @@ def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
     return D22s
 
 def AB_matrices(omega, g, eps_array, d_array, chi_array=None, pol='TE'):
-    '''
+    """
     Function to calculate A,B coeff
     Output: array of shape [M+1,2]
-    '''
+    """
     assert len(d_array)==len(eps_array)-2, \
         'd_array should have length = num_layers'
     if chi_array is None:
@@ -352,9 +346,9 @@ def AB_matrices(omega, g, eps_array, d_array, chi_array=None, pol='TE'):
     return bd.array(ABs)
 
 def normalization_coeff(omega, g, eps_array, d_array, ABref, pol='TE'):
-    '''
+    """
     Normalization of the guided modes (i.e. the A and B coeffs)
-    '''
+    """
     assert len(d_array)==len(eps_array)-2, \
         'd_array should have length = num_layers'
     chi_array = chi(omega, g, eps_array)
@@ -386,9 +380,10 @@ def normalization_coeff(omega, g, eps_array, d_array, ABref, pol='TE'):
         raise Exception('Polarization should be TE or TM.')
 
 
-def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
-    ''' 
-    Function to compute the leaky modes of a multi-layer structure
+def rad_modes(omega: float, g_array: np.ndarray, eps_array: np.ndarray,
+            d_array: np.ndarray, pol: str='TE', clad: int=0):
+    """ 
+    Function to compute the radiative modes of a multi-layer structure
     Input
     g_array         : numpy array of wave vector amplitudes 
     eps_array       : numpy array of slab permittivities, starting with lower 
@@ -397,10 +392,10 @@ def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
     d_array         : thicknesses of each layer
     omega           : frequency of the radiative mode
     pol             : polarization, 'te' or 'tm'
-    clad            : cladding index, 0 (lower) or 1 (upper)
+    clad            : radiating into cladding index, 0 (lower) or 1 (upper)
     Output
     Xs, Ys          : X, Y coefficients of the modes in every layer
-    '''
+    """
 
     Xs, Ys = [], []
     for ig, g in enumerate(g_array):
@@ -448,7 +443,7 @@ def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
         Xs = bd.ones((eps_array.size, 1))*Xs
         Ys = bd.ones((eps_array.size, 1))*Ys
 
-    '''
+    """
     (Xs, Ys) corresponds to the X, W coefficients for TE radiative modes in 
     Andreani and Gerace PRB (2006), and to the Z, Y coefficients for TM modes
 
@@ -456,7 +451,7 @@ def rad_modes(omega, g_array, eps_array, d_array, pol='TE', clad=0):
     correct statement should be: X3 = 0 for states out-going in the lower 
     cladding; normalize through W1; and W1 = 0 for states out-going in the upper
     cladding; normalize through X3.
-    '''
+    """
     return (Xs, Ys)
 
 

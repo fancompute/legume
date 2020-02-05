@@ -4,12 +4,9 @@ import matplotlib.path as mpltPath
 from legume.backend import backend as bd
 
 class Shape(object):
-    ''' 
-    Parent class for shapes. Each child class should have the following methods:
-        - compute_ft: discrete FT assuming 1 inside the shape and 0 outside
-        - is_inside: checks if points (x, y) are inside the shape
-    and 
-    '''
+    """ 
+    Parent class for shapes
+    """
     def __init__(self, eps=1.):
         self.eps = eps
         self.area = bd.real(self.compute_ft(bd.array([[0.], [0.]])))
@@ -36,10 +33,25 @@ class Shape(object):
 
         return (gvec[0, :], gvec[1, :])
 
+    def compute_ft(self, gvec):
+        """
+        FT of a 2D function equal to 1 inside the shape and 0 outside
+        Input: gvec, [2 x Ng] numpy array
+        """
+        raise NotImplementedError("compute_ft() needs to be implemented by"
+            "Shape subclasses")
+
+    def is_inside(self, x, y):
+        # Input: x, y, arrays of same shape
+        # Ouput: Array of same shape as x and y equals to 1 if (x, y) is inside
+        # the shape, and 0 otherwise
+        raise NotImplementedError("is_inside() needs to be implemented by"
+            "Shape subclasses")
+
 class Circle(Shape):
-    '''
+    """
     Define class for a circular shape
-    '''
+    """
     def __init__(self, eps=1., x_cent=0., y_cent=0., r=0.):
         self.x_cent = x_cent
         self.y_cent = y_cent
@@ -51,11 +63,10 @@ class Circle(Shape):
                (self.eps, self.x_cent, self.y_cent, self.r)
 
     def compute_ft(self, gvec):
-        '''
+        """
         FT of a 2D function equal to 1 inside the circle and 0 outside
-        Input: 
-            - gvec: [2 x Ng] numpy array
-        '''
+        Input: gvec, [2 x Ng] numpy array
+        """
         (gx, gy) = self.parse_ft_gvec(gvec)
 
         gabs = np.sqrt(np.abs(np.square(gx)) + np.abs(np.square(gy)))
@@ -67,13 +78,16 @@ class Circle(Shape):
         return ft
 
     def is_inside(self, x, y):
+        # Input: x, y, arrays of same shape
+        # Ouput: Array of same shape as x and y equals to 1 if (x, y) is inside
+        # the shape, and 0 otherwise
         return (np.square(x - self.x_cent) + np.square(y - self.y_cent)
                             <= np.square(self.r))
 
 class Poly(Shape):
-    '''
+    """
     Define class for a polygonal shape
-    '''
+    """
     def __init__(self, eps=1., x_edges=0., y_edges=0.):
         # Make extra sure that the last point of the polygon is the same as the 
         # first point
@@ -91,13 +105,13 @@ class Poly(Shape):
                (self.eps, self.x_edges, self.y_edges)
 
     def compute_ft(self, gvec):
-        '''
+        """
         Computing polygonal shape FT as per Lee, IEEE TAP (1984)
         NB: the vertices of the polygonal should be defined in a 
         counter-clockwise manner!
         Input: 
             - gvec: [2 x Ng] numpy array
-        '''
+        """
         (gx, gy) = self.parse_ft_gvec(gvec)
 
         (xj, yj) = self.x_edges, self.y_edges
@@ -156,6 +170,9 @@ class Poly(Shape):
         return ft
 
     def is_inside(self, x, y):
+        # Input: x, y, arrays of same shape
+        # Ouput: Array of same shape as x and y equals to 1 if (x, y) is inside
+        # the shape, and 0 otherwise
         vert = np.vstack((np.array(self.x_edges), np.array(self.y_edges)))
         path = mpltPath.Path(vert.T)
         points = np.vstack((np.array(x).ravel(), np.array(y).ravel()))
@@ -163,9 +180,9 @@ class Poly(Shape):
         return test.reshape((x.shape))
 
     def rotate(self, angle):
-        '''
+        """
         Rotate a polygon around its center of mass by angle radians
-        '''
+        """
 
         rotmat = bd.array([[bd.cos(angle), -bd.sin(angle)], \
                             [bd.sin(angle), bd.cos(angle)]])
@@ -182,9 +199,9 @@ class Poly(Shape):
         return self
 
 class Square(Poly):
-    '''
+    """
     Define class for a square shape
-    '''
+    """
     def __init__(self, eps=1, x_cent=0, y_cent=0, a=0):
         self.x_cent = x_cent
         self.y_cent = y_cent
@@ -198,9 +215,9 @@ class Square(Poly):
                (self.eps, self.x_cent, self.y_cent, self.a)
 
 class Hexagon(Poly):
-    '''
+    """
     Define class for a hexagon shape
-    '''
+    """
     def __init__(self, eps=1, x_cent=0, y_cent=0, a=0):
         self.x_cent = x_cent
         self.y_cent = y_cent

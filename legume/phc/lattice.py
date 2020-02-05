@@ -3,20 +3,21 @@ from legume.backend import backend as bd
 import legume.utils as utils
 
 class Lattice(object):
-    '''
+    """
     Class for constructing a Bravais lattice
-    '''
+    """
     def __init__(self, *args):
-        '''
+        """
         Initialize a Bravais lattice.
         If a single argument is passed, then
             - 'square': initializes a square lattice
             - 'hexagonal': initializes a hexagonal lattice
-            (lattice constant 1 in both cases)
+            (lattice constant a = 1 in both cases)
         If two arguments are passed, they should each be 2-element arrays
         defining the elementary vectors of the lattice
-        '''
+        """
 
+        # Primitive vectors cell definition
         (a1, a2) = self._parse_input(*args)
         self.a1 = a1[0:2]
         self.a2 = a2[0:2]
@@ -24,12 +25,12 @@ class Lattice(object):
         ec_area = bd.norm(bd.cross(a1, a2))
         a3 = bd.array([0, 0, 1])
 
+        # Reciprocal lattice basis vectors
         b1 = 2*np.pi*bd.cross(a2, a3)/bd.dot(a1, bd.cross(a2, a3)) 
         b2 = 2*np.pi*bd.cross(a3, a1)/bd.dot(a2, bd.cross(a3, a1))
 
         bz_area = bd.norm(bd.cross(b1, b2))
 
-        # Reciprocal lattice vectors
         self.b1 = b1[0:2]
         self.b2 = b2[0:2]
 
@@ -65,11 +66,11 @@ class Lattice(object):
         return (a1, a2)
 
     def xy_grid(self, Nx=100, Ny=100, periods=None):
-        ''' 
+        """ 
         Define an xy-grid for visualization purposes based on the lattice
         vectors of the PhC.'periods' is a number or a list of two numbers that 
         defines how many periods in the x- and y-directions are included
-        '''
+        """
         if periods == None:
             if self.type == 'square' or self.type == 'rectangular':
                 periods = [1, 1]
@@ -87,12 +88,12 @@ class Lattice(object):
         return (np.linspace(xmin, xmax, Nx), np.linspace(ymin, ymax, Ny))
 
     def bz_path(self, pts, ns):
-        '''
+        """
         Make a path in the Brillouin zone 
             - pts is a list of points 
             - ns is a list of length either 1 or len(pts) - 1, specifying 
                 how many points are to be added between each two pts
-        '''
+        """
 
         npts = len(pts)
         if npts < 2:
@@ -126,9 +127,9 @@ class Lattice(object):
         return path
 
     def _parse_point(self, pt):
-        '''
+        """
         Returns a numpy array corresponding to a BZ point pt
-        '''
+        """
         if type(pt) == np.ndarray:
             return pt
         elif type(pt) == list:

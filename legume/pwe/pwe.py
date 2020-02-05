@@ -3,15 +3,19 @@ from legume.utils import ftinv
 from legume.backend import backend as bd
 
 class PlaneWaveExp(object):
-    '''
-    Main simulation class of the guided-mode expansion
-    '''
-    def __init__(self, layer, gmax=3, eps_eff=None):
+    """
+    Main simulation class of the plane-wave expansion
+    """
+    def __init__(self, layer, gmax: float=3, eps_eff: float=None):
         # Object of class Layer which will be simulated
         self.layer = layer
+
         # Maximum reciprocal lattice wave-vector length in units of 2pi/a
         self.gmax = gmax
 
+        # Effective background epsilon; if None, take layer.eps_b
+        # This can be useful for simulations of an effective slab of a given
+        # thickness and at a particular frequency
         if not eps_eff:
             eps_eff = layer.eps_b
 
@@ -22,22 +26,23 @@ class PlaneWaveExp(object):
         self.compute_ft()
 
     def _init_reciprocal(self):
-        '''
+        """
         Initialize reciprocal lattice vectors based on self.layer and self.gmax
-        '''
-        n1max = np.int_((2*np.pi*self.gmax)/np.linalg.norm(self.layer.lattice.b1))
-        n2max = np.int_((2*np.pi*self.gmax)/np.linalg.norm(self.layer.lattice.b2))
+        """
+        n1max = np.int_((2*np.pi*self.gmax)/
+                    np.linalg.norm(self.layer.lattice.b1))
+        n2max = np.int_((2*np.pi*self.gmax)/
+                    np.linalg.norm(self.layer.lattice.b2))
 
         # This constructs the reciprocal lattice in a way that is suitable
         # for Toeplitz-Block-Toeplitz inversion of the permittivity in the main
         # code. However, one caveat is that the hexagonal lattice symmetry is 
-        # not preserved. For that, the option to construct a hexagonal mesh in 
-        # reciprocal space could is needed.
+        # not preserved. 
         inds1 = np.tile(np.arange(-n1max, n1max + 1), (2*n2max + 1, 1))  \
                          .reshape((2*n2max + 1)*(2*n1max + 1), order='F')
         inds2 = np.tile(np.arange(-n2max, n2max + 1), 2*n1max + 1)
 
-        gvec = self.layer.lattice.b1[:, np.newaxis].dot(inds1[np.newaxis, :]) + \
+        gvec = self.layer.lattice.b1[:, np.newaxis].dot(inds1[np.newaxis, :]) +\
                 self.layer.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
 
         # Save the reciprocal lattice vectors
@@ -49,9 +54,9 @@ class PlaneWaveExp(object):
         self.n2g = 2*n2max + 1
 
     def compute_ft(self):
-        '''
+        """
         Compute the unique FT coefficients of the permittivity, eps(g-g')
-        '''
+        """
         (n1max, n2max) = (self.n1g, self.n2g)
         G1 = - self.gvec + self.gvec[:, [0]]
         G2 = np.zeros((2, n1max*n2max))
@@ -69,11 +74,11 @@ class PlaneWaveExp(object):
         self.G2 = G2
 
     def get_eps_xy(self, Nx=100, Ny=100, z=0):
-        '''
+        """
         Plot the permittivity of the layer as computed from an 
         inverse Fourier transform with the GME reciprocal lattice vectors.
-        z is technically unused, but useful for viz.structure_ft
-        '''
+        z is technically unused, but useful for viz.eps_ft
+        """
         (xgrid, ygrid) = self.layer.lattice.xy_grid(Nx=Nx, Ny=Ny)
 
         ft_coeffs = np.hstack((self.T1, self.T2, 
@@ -84,12 +89,12 @@ class PlaneWaveExp(object):
         return (eps_r, xgrid, ygrid)
 
     def run(self, kpoints=np.array([[0], [0]]), pol='te', numeig=10):
-        ''' 
+        """ 
         Run the simulation. Input:
             - kpoints, [2xNk] numpy array over which band structure is simulated
             - pol, polarization of the computation (TE/TM)
             - numeig, number of eigenmodes to be stored
-        '''
+        """
          
         self.kpoints = kpoints
         self.pol = pol.lower()
@@ -134,9 +139,9 @@ class PlaneWaveExp(object):
         self.mat = mat
 
     def compute_eps_inv(self):
-        '''
+        """
         Construct the inverse FT matrix of the permittivity
-        '''
+        """
 
         # For now we just use the numpy inversion. Later on we could 
         # implement the Toeplitz-Block-Toeplitz inversion (faster)
@@ -144,11 +149,11 @@ class PlaneWaveExp(object):
         self.eps_inv_mat = bd.inv(eps_mat)
 
     def ft_field_xy(self, field, kind, mind):
-        '''
+        """
         Compute the 'H', 'D' or 'E' field FT in the xy-plane at position z
         Nothing really depends on z but we keep it here for compatibility with
         the GuidedModeExp methods and legume.viz.field
-        '''
+        """
         evec = self.eigvecs[kind][:, mind]
         omega = self.freqs[kind][mind]*2*np.pi
         k = self.kpoints[:, kind]
@@ -202,12 +207,12 @@ class PlaneWaveExp(object):
 
     def get_field_xy(self, field, kind, mind, z=0,
                     component='xyz', Nx=100, Ny=100):
-        '''
+        """
         Get the 'field' ('H', 'D', or 'E') at an xy-plane at position z for mode 
         number 'mind' at k-vector 'kind'.
         Returns a dictionary with the ['x'], ['y'], and ['z'] components of the 
         corresponding field; only the ones requested in 'comp' are computed 
-        '''
+        """
 
         # Make a grid in the x-y plane
         (xgrid, ygrid) = self.layer.lattice.xy_grid(Nx=Nx, Ny=Ny)

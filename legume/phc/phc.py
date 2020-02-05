@@ -5,16 +5,17 @@ import legume.utils as utils
 from . import ShapesLayer, FreeformLayer, Lattice
 
 class PhotCryst(object):
-    '''
+    """
     Class for a photonic crystal which can contain a number of layers
-    '''
-    def __init__(self, lattice, eps_l=1, eps_u=1):
+    """
+    def __init__(self, lattice, eps_l: float=1, eps_u: float=1):
         # Define permittivity of lower and upper cladding
-        # For now claddings are just ShapesLayer, maybe extend to freeform
+        # For now claddings are just ShapesLayer
         self.claddings = []
-        self.claddings.append(ShapesLayer(lattice, eps_b=eps_l, z_min=-1e50))
-        self.claddings.append(ShapesLayer(lattice, eps_b=eps_u, z_max=1e50))
+        self.claddings.append(ShapesLayer(lattice, eps_b=eps_l, z_min=-1e10))
+        self.claddings.append(ShapesLayer(lattice, eps_b=eps_u, z_max=1e10))
         
+        # Initialize underlying lattice
         self.lattice = lattice
 
         # Initialize an empty list of layers
@@ -29,19 +30,19 @@ class PhotCryst(object):
         return rep
 
     def z_grid(self, Nz=100, dist=1):
-        ''' 
+        """ 
         Define a z-grid for visualization purposes once some layers have been 
         added
-        '''
+        """
         zmin = self.layers[0].z_min - dist
         zmax = self.layers[-1].z_max + dist
     
         return np.linspace(zmin, zmax, Nz)
 
-    def add_layer(self, d, eps_b=1, layer_type='shapes'):
-        '''
+    def add_layer(self, d: float, eps_b: float=1, layer_type: str='shapes'):
+        """
         Add a layer with thickness d and background permittivity eps_b
-        '''
+        """
         if self.layers == []:
             z_min = 0
         else:
@@ -57,16 +58,15 @@ class PhotCryst(object):
         self.claddings[1].z_min = z_min + d
         self.layers.append(layer)
 
-    def add_shape(self, *args, **kwargs):
-        '''
+    def add_shape(self, shapes, layer=-1, cladding=None):
+        """
         Add a shape to layer number layer_ind
-        '''
-        cladding = kwargs.get('cladding', None)
-        layer = kwargs.get('layer', -1)
+        Each shape in shapes must be an instance of legume.Shape
+        """
         if cladding is not None:
-            if cladding==0 or cladding.lower()=='l':
+            if cladding==0 or cladding=='l':
                 lay = self.claddings[0]
-            elif cladding==1 or cladding.lower()=='u':
+            elif cladding==1 or cladding=='u':
                 lay = self.claddings[1]
             else:
                 raise ValueError("'cladding' must be 0 or 'l' for lower" \
@@ -78,15 +78,15 @@ class PhotCryst(object):
             else:
                 lay = self.layers[layer]
         if lay.layer_type == 'shapes':
-            lay.add_shape(*args)
+            lay.add_shape(shapes)
         else:
             raise TypeError("Shapes can only be added to a ShapesLayer")
 
     def get_eps(self, points):
-        '''
+        """
         Compute the permittivity of the PhC at a set of points defined by
         a tuple of x, y, z positions which are same-shape arrays
-        '''
+        """
         (xmesh, ymesh, zmesh) = points
         a_shape = xmesh.shape
         if (ymesh.shape != a_shape) or (zmesh.shape != a_shape):

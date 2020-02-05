@@ -100,6 +100,19 @@ def plot_circle(x, y, r, ax=None, color='b', lw=1, npts=51):
 
     return pl
 
+def eps(layer, Nx=100, Ny=100, ax=None, clim=None,
+             cbar=False, cmap='Greys'):
+    '''
+    Plot the in-plane permittivity distribution of a Layer instance
+    '''
+    (xgrid, ygrid) = layer.lattice.xy_grid(Nx=Nx, Ny=Ny)
+    [xmesh, ymesh] = np.meshgrid(xgrid, ygrid)
+
+    eps_r = layer.get_eps((xmesh, ymesh))
+    extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
+
+    plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+
 def eps_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
              cbar=False, cmap='Greys'):
     '''
@@ -114,7 +127,6 @@ def eps_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
     extent = [xgrid[0], xgrid[-1], zgrid[0], zgrid[-1]]
 
     plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
-
 
 def eps_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None,
              cbar=False, cmap='Greys'):
@@ -239,11 +251,14 @@ def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True,
             ax[indl].set_title("xy in layer %d" % indl)
     # plt.show()
 
-def structure_ft(struct, Nx=100, Ny=100, cladding=False):
+def eps_ft(struct, Nx=100, Ny=100, cladding=False, cbar=True, 
+                cmap='Greys', gridspec=None, fig=None, figsize=(4,8)):
     '''
     Plot the permittivity of the PhC cross-sections as computed from an 
     inverse Fourier transform with the GME reciprocal lattice vectors.
     '''
+
+    # Do some parsing of the inputs 
     if isinstance(struct, GuidedModeExp):
         str_type = 'gme'
     elif isinstance(struct, PlaneWaveExp):
@@ -264,8 +279,19 @@ def structure_ft(struct, Nx=100, Ny=100, cladding=False):
         all_layers = struct.phc.layers if str_type == 'gme' else [struct.layer]
     N_layers = len(all_layers)
 
-    fig, ax = plt.subplots(1, N_layers, constrained_layout=True)
-    if N_layers==1: ax=[ax]
+    # Initialize gridspec and figure
+    if gridspec is None and fig is None:
+        fig = plt.figure(constrained_layout=True, figsize=figsize)
+        gs = mpl.gridspec.GridSpec(N_layers, 1, figure=fig)
+    elif gridspec is not None and fig is not None:
+        gs = mpl.gridspec.GridSpecFromSubplotSpec(N_layers, 1, gridspec)
+    else:
+        raise ValueError("Parameters gridspec and fig should be both specified "
+                            "or both unspecified")
+
+    ax = []
+    for i in range(N_layers):
+        ax.append(fig.add_subplot(gs[i, :]))
 
     (eps_min, eps_max) = (all_layers[0].eps_b, all_layers[0].eps_b)
     ims = []
