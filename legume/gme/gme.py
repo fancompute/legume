@@ -807,14 +807,15 @@ class GuidedModeExp(object):
             rad_t = 0 # variable suming up contributions from all the channels
             (c_l, c_u) = ({}, {})
             for pol in ['te', 'tm']:
-                c_l[pol] = rad_coup[pol][0]
-                c_u[pol] = rad_coup[pol][1]
+                c_l[pol] = np.pi*rad_coup[pol][0]*rad_dos[0]
+                c_u[pol] = np.pi*rad_coup[pol][1]*rad_dos[1]
                 rad_t = rad_t + \
-                    np.pi*bd.sum(bd.square(bd.abs(c_l[pol]))*rad_dos[0]) + \
-                    np.pi*bd.sum(bd.square(bd.abs(c_u[pol]))*rad_dos[1])
+                    bd.sum(bd.square(bd.abs(c_l[pol]))) + \
+                    bd.sum(bd.square(bd.abs(c_u[pol])))
             rad_tot.append(bd.imag(bd.sqrt(omr**2 + 1j*rad_t)))
 
-            # TODO: think about the normalization of the couplings!
+            # Couplings normalized such that Im(omega^2/c^2) is equal to
+            # sum(square(abs(c_l))) + sum(square(abs(c_u)))
             coup_l.append(c_l)
             coup_u.append(c_u)
 
