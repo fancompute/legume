@@ -11,9 +11,9 @@ dependencies = [
 ]
 
 setup(
-    name='legume',
+    name='legume-gme',
     version='0.0.2',
-    description='GuidedModeExpansion',
+    description='Differentiable plane-wave and guided-mode expansion for photonic crystals',
     long_description=readme,
     long_description_content_type="text/markdown",
     author='Momchil Minkov',

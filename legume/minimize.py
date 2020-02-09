@@ -56,7 +56,7 @@ class Minimize(object):
 
     def adam(self, pstart, Nepochs=50, bounds=None, disp_p=False, 
                 step_size=1e-2, beta1=0.9, beta2=0.999, args=(),
-                pass_self=False):
+                pass_self=False, callback=None):
         """Performs 'Nepoch' steps of ADAM minimization with parameters 
         'step_size', 'beta1', 'beta2'
 
@@ -71,6 +71,8 @@ class Minimize(object):
         pass_self       -- if True, then the objective function should take
             of(params, args, opt), where opt is an instance of the Minimize 
             class defined here. Useful for scheduling
+        Callback        -- function to call at every epoch; the argument that's
+                            passed in is the current minimizer state
         """
         self.params = pstart
         self.bounds = self._parse_bounds(bounds)
@@ -117,6 +119,9 @@ class Minimize(object):
                 self.params[self.params < lbs] = lbs[self.params < lbs]
                 self.params[self.params > ubs] = ubs[self.params > ubs]
 
+            if callback is not None:
+                callback(self)
+
         return (self.params, self.of_list)
 
     @staticmethod
@@ -134,7 +139,8 @@ class Minimize(object):
         return (grad_adam, mopt, vopt)
 
     def lbfgs(self, pstart, Nepochs=50, bounds=None, disp_p=False,
-                maxfun=15000, args=(), pass_self=False, res=False):
+                maxfun=15000, args=(), pass_self=False, res=False,
+                callback=None):
         """Wraps the SciPy LBFGS minimizer in a way that displays intermediate
         information and stores intermediate values of the parameters and the
         objective function.
@@ -152,6 +158,8 @@ class Minimize(object):
             of(params, args, opt), where opt is an instance of the Minimize 
             class defined here. Useful for scheduling
         res             -- if True, will also return the SciPy OptimizeResult
+        callback        -- function to call at every epoch; the argument that's
+                            passed in is the current minimizer state
         """
 
         self.params = pstart
@@ -192,6 +200,10 @@ class Minimize(object):
             self.of_list.append(self.of_last)
             self.params = xk
             self._disp(t_elapsed)
+
+            # Call the custom callback function if any
+            if callback is not None:
+                callback(self)
 
         res_opt = minimize(of, self.params, args=args, method='L-BFGS-B',
             jac=self.jac, bounds=self.bounds, tol=None, callback=cb,

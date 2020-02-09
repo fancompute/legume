@@ -693,7 +693,7 @@ class GuidedModeExp(object):
                 "stored eigenmodes" % self.numeig)
         
         # G + k vectors
-        gkx = self.gvec[0, :] + self.kpoints[0, kind] - 1e-10
+        gkx = self.gvec[0, :] + self.kpoints[0, kind] + 1e-10
         gky = self.gvec[1, :] + self.kpoints[1, kind]
         gk = np.sqrt(np.square(gkx) + np.square(gky))
 
@@ -770,7 +770,7 @@ class GuidedModeExp(object):
                             self.eps_inv_mat, indmode1, oms1, As1, Bs1, chis1, 
                             indmoder[clad_ind], omr_arr, Ys['te'][clad_ind], 
                             Xs['te'][clad_ind], chis['te'][clad_ind], pq)
-
+                    # print(kind, im, indmode1.shape, self.modes_numg[kind][im1])
                     rad = rad*bd.conj(evec[count:
                         count+self.modes_numg[kind][im1]][:, np.newaxis])
                     rad_coup['te'][clad_ind] += bd.sum(rad, axis=0)
