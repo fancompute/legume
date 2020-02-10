@@ -807,8 +807,8 @@ class GuidedModeExp(object):
             rad_t = 0 # variable suming up contributions from all the channels
             (c_l, c_u) = ({}, {})
             for pol in ['te', 'tm']:
-                c_l[pol] = np.pi*rad_coup[pol][0]*rad_dos[0]
-                c_u[pol] = np.pi*rad_coup[pol][1]*rad_dos[1]
+                c_l[pol] = bd.sqrt(np.pi*rad_dos[0])*rad_coup[pol][0]
+                c_u[pol] = bd.sqrt(np.pi*rad_dos[1])*rad_coup[pol][1]
                 rad_t = rad_t + \
                     bd.sum(bd.square(bd.abs(c_l[pol]))) + \
                     bd.sum(bd.square(bd.abs(c_u[pol])))
