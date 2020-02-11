@@ -661,15 +661,21 @@ class GuidedModeExp(object):
             raise RuntimeError("Run the GME computation first!")
 
         freqs_i = [] # Imaginary part of frequencies
-        cl = []      # Coupling constants to lower-cladding radiative modes
-        cu = []      # Coupling constants to upper-cladding radiative modes
+        # Coupling constants to lower- and upper-cladding radiative modes
+        cl = {'te': [], 'tm': []}      
+        cu = {'te': [], 'tm': []}       
 
         for kind in range(len(self.freqs)):
             minds = np.arange(0, self.numeig)
             (freqs_im, coup_l, coup_u) = self.compute_rad(kind, minds)
             freqs_i.append(freqs_im)
-            cl.append(coup_l)
-            cu.append(coup_u)
+            for pol in ['te', 'tm']:
+                cl[pol].append(coup_l[pol])
+                cu[pol].append(coup_u[pol])
+
+        for pol in ['te', 'tm']:
+            cl[pol] = bd.array(cl[pol])
+            cu[pol] = bd.array(cu[pol])
 
         self.freqs_im = bd.array(freqs_i)
         self.coup_l = cl
@@ -712,7 +718,7 @@ class GuidedModeExp(object):
 
         # Iterate over all the modes to be computed
         rad_tot = []
-        (coup_l, coup_u) = ([], [])
+        (coup_l, coup_u) = ({'te': [], 'tm': []}, {'te': [], 'tm': []})
         for im in minds:
             omr = 2*np.pi*self.freqs[kind, im]
             evec = self.eigvecs[kind][:, im]
@@ -807,17 +813,20 @@ class GuidedModeExp(object):
             rad_t = 0 # variable suming up contributions from all the channels
             (c_l, c_u) = ({}, {})
             for pol in ['te', 'tm']:
+                # Couplings normalized such that Im(omega^2/c^2) is equal to
+                # sum(square(abs(c_l))) + sum(square(abs(c_u)))
                 c_l[pol] = bd.sqrt(np.pi*rad_dos[0])*rad_coup[pol][0]
                 c_u[pol] = bd.sqrt(np.pi*rad_dos[1])*rad_coup[pol][1]
                 rad_t = rad_t + \
                     bd.sum(bd.square(bd.abs(c_l[pol]))) + \
                     bd.sum(bd.square(bd.abs(c_u[pol])))
-            rad_tot.append(bd.imag(bd.sqrt(omr**2 + 1j*rad_t)))
 
-            # Couplings normalized such that Im(omega^2/c^2) is equal to
-            # sum(square(abs(c_l))) + sum(square(abs(c_u)))
-            coup_l.append(c_l)
-            coup_u.append(c_u)
+                # Store the coupling constants (they are effectively in units
+                # of angular frequency omega)
+                coup_l[pol].append(c_l[pol])
+                coup_u[pol].append(c_u[pol])
+
+            rad_tot.append(bd.imag(bd.sqrt(omr**2 + 1j*rad_t)))
 
         # Compute radiation rate in units of frequency  
         freqs_im = bd.array(rad_tot)/2/np.pi
