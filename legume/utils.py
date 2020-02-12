@@ -1,20 +1,20 @@
-'''
+"""
 Various utilities used in the main code.
 NOTE: there should be no autograd functions here, only plain numpy/scipy
-'''
+"""
 
 import numpy as np
 from scipy.linalg import toeplitz
 from scipy.optimize import brentq
 
 def ftinv(ft_coeff, gvec, xgrid, ygrid):
-    ''' 
+    """ 
     Returns the discrete inverse Fourier transform over a real-space mesh 
     defined by 'xgrid', 'ygrid', computed given a number of FT coefficients 
     'ft_coeff' defined over a set of reciprocal vectors 'gvec'.
     This could be sped up through an fft function but written like this it is 
     more general as we don't have to deal with grid and lattice issues.
-    '''
+    """
     (xmesh, ymesh) = np.meshgrid(xgrid, ygrid)
     ftinv = np.zeros(xmesh.shape, dtype=np.complex128)
 
@@ -48,11 +48,11 @@ def ftinv(ft_coeff, gvec, xgrid, ygrid):
     return ftinv
 
 def ft2square(lattice, ft_coeff, gvec):
-    '''
+    """
     Make a square array of Fourier components given a number of them defined 
     over a set of reciprocal vectors gvec.
     NB: function hasn't really been tested, just storing some code.
-    '''
+    """
     if lattice.type not in ['hexagonal', 'square']:
         raise NotImplementedError("ft2square probably only works for" \
                  "a lattice initialized as 'square' or 'hexagonal'")
@@ -74,9 +74,9 @@ def ft2square(lattice, ft_coeff, gvec):
     return (eps_ft, gx_grid, gy_grid)
 
 def grad_num(fn, arg, step_size=1e-7):
-    ''' Numerically differentiate `fn` w.r.t. its argument `arg` 
+    """ Numerically differentiate `fn` w.r.t. its argument `arg` 
     `arg` can be a numpy array of arbitrary shape
-    `step_size` can be a number or an array of the same shape as `arg` '''
+    `step_size` can be a number or an array of the same shape as `arg` """
 
     N = arg.size
     shape = arg.shape
@@ -133,11 +133,11 @@ def vjp_maker_num(fn, arg_inds, steps):
     return tuple(vjp_makers)
 
 def toeplitz_block(n, T1, T2):
-    '''
+    """
     Constructs a Hermitian Toeplitz-block-Toeplitz matrix with n blocks and 
     T1 in the first row and T2 in the first column of every block in the first
     row of blocks 
-    '''
+    """
     ntot = T1.shape[0]
     p = int(ntot/n) # Linear size of each block
     Tmat = np.zeros((ntot, ntot), dtype=T1.dtype)
@@ -153,27 +153,27 @@ def toeplitz_block(n, T1, T2):
     return np.triu(Tmat) + np.conj(np.transpose(np.triu(Tmat,1)))
 
 def get_value(x):
-    '''
+    """
     This is for when using the 'autograd' backend and you want to detach an 
     ArrayBox and just convert it to a numpy array.
-    '''
+    """
     if str(type(x)) == "<class 'autograd.numpy.numpy_boxes.ArrayBox'>":
         return x._value
     else:
         return x
 
 def fsolve(f, lb, ub, *args):
-    '''
+    """
     Solve for scalar f(x, *args) = 0 w.r.t. scalar x within lb < x < ub
-    '''
+    """
     args_value = tuple([get_value(arg) for arg in args])
     return brentq(f, lb, ub, args=args_value)
 
 def find_nearest(array, value, N):
-    '''
+    """
     Find the indexes of the N elements in an array nearest to a given value
     (Not the most efficient way but this is not a coding interview...)
-    ''' 
+    """ 
     idx = np.abs(array - value).argsort()
     return idx[:N]
 
@@ -257,3 +257,10 @@ def generate_gds_raster(lattice, raster, filename, unit=1e-6, tolerance=0.01, le
     cell.add(boundary)
 
     gdspy.write_gds(filename, unit=unit)
+
+def extend(vals, inds, shape):
+    """ Makes an array of shape `shape` where indices `inds` have vales `vals` 
+    """
+    z = np.zeros(shape, dtype=vals.dtype)
+    z[inds] = vals
+    return z

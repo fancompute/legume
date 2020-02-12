@@ -857,7 +857,7 @@ class GuidedModeExp(object):
 
         if field.lower()=='h':
             count = 0
-            [Hx_ft, Hy_ft, Hz_ft] = [bd.zeros(gnorm.shape, dtype=np.complex128)
+            [Hx_ft, Hy_ft, Hz_ft] = [bd.zeros(gnorm.shape, dtype=bd.complex)
                                      for i in range(3)]
             for im1 in range(self.gmode_include[kind].size):
                 mode1 = self.gmode_include[kind][im1]
@@ -892,7 +892,7 @@ class GuidedModeExp(object):
 
                 # TM-component
                 elif mode1%2==1:
-                    Hz = bd.zeros(indmode.shape)
+                    Hz = bd.zeros(indmode.shape, dtype=bd.complex)
                     # Do claddings separately
                     if lind==0:
                         H = Bs[0, :] * bd.exp(-1j*chis[0, :]
@@ -913,19 +913,22 @@ class GuidedModeExp(object):
                         Hx = Hxy * qx[indmode]
                         Hy = Hxy * qy[indmode]
 
-                Hx_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
+                valsx = evec[count:count+self.modes_numg[kind][im1]]*\
                                     Hx/bd.sqrt(self.phc.lattice.ec_area)
-                Hy_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
+                Hx_ft = Hx_ft + bd.extend(valsx, indmode, Hx_ft.shape)
+                valsy = evec[count:count+self.modes_numg[kind][im1]]*\
                                     Hy/bd.sqrt(self.phc.lattice.ec_area)
-                Hz_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
+                Hy_ft = Hy_ft + bd.extend(valsy, indmode, Hy_ft.shape)
+                valsz = evec[count:count+self.modes_numg[kind][im1]]*\
                                     Hz/bd.sqrt(self.phc.lattice.ec_area)
+                Hz_ft = Hz_ft + bd.extend(valsz, indmode, Hz_ft.shape)
                 count += self.modes_numg[kind][im1]
 
             return (Hx_ft, Hy_ft, Hz_ft)
 
         elif field.lower()=='d' or field.lower()=='e':
             count = 0
-            [Dx_ft, Dy_ft, Dz_ft] = [bd.zeros(gnorm.shape, dtype=np.complex128)
+            [Dx_ft, Dy_ft, Dz_ft] = [bd.zeros(gnorm.shape, dtype=bd.complex)
                                      for i in range(3)]
             for im1 in range(self.gmode_include[kind].size):
                 mode1 = self.gmode_include[kind][im1]
@@ -934,7 +937,7 @@ class GuidedModeExp(object):
 
                 # TE-component
                 if mode1%2==0:
-                    Dz = bd.zeros(indmode.shape)
+                    Dz = bd.zeros(indmode.shape, dtype=bd.complex)
                     # Do claddings separately
                     if lind==0:
                         D = 1j * Bs[0, :] * oms**2 / omega * \
@@ -987,12 +990,15 @@ class GuidedModeExp(object):
                         Dz = -1 / omega * gnorm[indmode] * \
                             (As[lind, :]*zp + Bs[lind, :]*zn)
 
-                Dx_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
+                valsx = evec[count:count+self.modes_numg[kind][im1]]*\
                                     Dx/bd.sqrt(self.phc.lattice.ec_area)
-                Dy_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
+                Dx_ft = Dx_ft + bd.extend(valsx, indmode, Dx_ft.shape)
+                valsy = evec[count:count+self.modes_numg[kind][im1]]*\
                                     Dy/bd.sqrt(self.phc.lattice.ec_area)
-                Dz_ft[indmode] += evec[count:count+self.modes_numg[kind][im1]]*\
+                Dy_ft = Dy_ft + bd.extend(valsy, indmode, Dy_ft.shape)
+                valsz = evec[count:count+self.modes_numg[kind][im1]]*\
                                     Dz/bd.sqrt(self.phc.lattice.ec_area)
+                Dz_ft = Dz_ft + bd.extend(valsz, indmode, Dz_ft.shape)
                 count += self.modes_numg[kind][im1]
 
             if field.lower()=='d':

@@ -1,19 +1,32 @@
 import numpy as np
 import scipy.sparse as sp
 from functools import partial
-from .utils import toeplitz_block, get_value, fsolve
+from .utils import toeplitz_block, get_value, fsolve, extend
 
 from autograd.extend import primitive, defvjp, vspace
 from autograd import grad, vector_jacobian_product
 import autograd.numpy as npa
 
-''' Define here various primitives needed for the main code 
+""" Define here various primitives needed for the main code 
 To use with both numpy and autograd backends, define the autograd primitive of 
-a numpy function fnc as fnc_ag, and then define the vjp'''
+a numpy function fnc as fnc_ag, and then define the vjp"""
 
 def T(x): return np.swapaxes(x, -1, -2)
 
-'''=========== NP.SQRT STABLE AROUND 0 =========== '''
+"""=========== EXPAND ARRAY TO A GIVEN SHAPE =========== """
+
+# extend(vals, inds, shape) makes an array of shape `shape` where indices 
+# `inds` have values `vals` 
+extend_ag = primitive(extend)
+
+def vjp_maker_extend(ans, vals, inds, shape):
+    def vjp(g):
+        return g[inds]
+    return vjp
+
+defvjp(extend_ag, vjp_maker_extend, None, None)
+
+"""=========== NP.SQRT STABLE AROUND 0 =========== """
 sqrt_ag = primitive(np.sqrt)
 
 def vjp_maker_sqrt(ans, x):
@@ -24,12 +37,12 @@ def vjp_maker_sqrt(ans, x):
 
 defvjp(sqrt_ag, vjp_maker_sqrt)
 
-'''=========== TOEPLITZ-BLOCK =========== '''
+"""=========== TOEPLITZ-BLOCK =========== """
 
 toeplitz_block_ag = primitive(toeplitz_block)
 
 def vjp_maker_TB_T1(Tmat, n, T1, T2):
-    ''' Gives vjp for Tmat = toeplitz_block(n, T1, T2) w.r.t. T1'''
+    """ Gives vjp for Tmat = toeplitz_block(n, T1, T2) w.r.t. T1"""
     def vjp(v):
         ntot = Tmat.shape[0]
         p = int(ntot/n) # Linear size of each block
@@ -49,7 +62,7 @@ def vjp_maker_TB_T1(Tmat, n, T1, T2):
     return vjp
 
 def vjp_maker_TB_T2(Tmat, n, T1, T2):
-    ''' Gives vjp for Tmat = toeplitz_block(n, T1, T2) w.r.t. T2'''
+    """ Gives vjp for Tmat = toeplitz_block(n, T1, T2) w.r.t. T2"""
     def vjp(v):
         ntot = Tmat.shape[0]
         p = int(ntot/n) # Linear size of each block
@@ -70,7 +83,7 @@ def vjp_maker_TB_T2(Tmat, n, T1, T2):
 
 defvjp(toeplitz_block_ag, None, vjp_maker_TB_T1, vjp_maker_TB_T2)
 
-'''=========== NUMPY.LINALG.EIGH =========== '''
+"""=========== NUMPY.LINALG.EIGH =========== """
 
 eigh_ag = primitive(np.linalg.eigh)
 
@@ -112,11 +125,11 @@ def vjp_maker_eigh(ans, x, UPLO='L'):
 
 defvjp(eigh_ag, vjp_maker_eigh)
 
-'''=========== MATRIX INVERSE =========== '''
-'''We define this here without the `einsum` notation that's used in autograd.
+"""=========== MATRIX INVERSE =========== """
+"""We define this here without the `einsum` notation that's used in autograd.
 `einsum` allows broadcasting (which we don't care about), but is slower 
 (which we do)
-'''
+"""
 
 inv_ag = primitive(np.linalg.inv)
 
@@ -124,7 +137,7 @@ def vjp_maker_inv(ans, x):
     return lambda g: -np.dot(np.dot(T(ans), g), T(ans))
 defvjp(inv_ag, vjp_maker_inv)
 
-'''=========== SCIPY.SPARSE.LINALG.EIGSH =========== '''
+"""=========== SCIPY.SPARSE.LINALG.EIGSH =========== """
 
 eigsh_ag = primitive(sp.linalg.eigsh)
 
@@ -155,16 +168,16 @@ def vjp_maker_eigsh(ans, x, numeig=10, sigma=0.):
 
 defvjp(eigsh_ag, vjp_maker_eigsh)
 
-'''=========== NUMPY.INTERP =========== '''
-'''This implementation might not be covering the full scope of the numpy.interp
+"""=========== NUMPY.INTERP =========== """
+"""This implementation might not be covering the full scope of the numpy.interp
 function, but it covers everything we need
-'''
+"""
 
 interp_ag = primitive(np.interp)
 
 def vjp_maker_interp(ans, x, xp, yp):
-    '''Construct the vjp of interp(x, xp, yp) w.r.t. yp
-    '''
+    """Construct the vjp of interp(x, xp, yp) w.r.t. yp
+    """
 
     def vjp(g):
         dydyp = np.zeros((x.size, xp.size))
@@ -178,15 +191,15 @@ def vjp_maker_interp(ans, x, xp, yp):
 defvjp(interp_ag, None, None, vjp_maker_interp)
 
 
-'''=========== SOLVE OF f(x, y) = 0 W.R.T. X =========== '''
+"""=========== SOLVE OF f(x, y) = 0 W.R.T. X =========== """
 fsolve_ag = primitive(fsolve)
-'''fsolve_ag(fun, lb, ub, *args) solves fun(x, *args) = 0 for lb <= x <= ub
+"""fsolve_ag(fun, lb, ub, *args) solves fun(x, *args) = 0 for lb <= x <= ub
     x and the output of fun are both scalar
     args can be anything
-'''
+"""
 
 def vjp_factory_fsolve(ginds):
-    '''
+    """
     Factory function defining the vjp_makers for a generic fsolve_ag with 
     multiple extra arguments
 
@@ -196,7 +209,7 @@ def vjp_factory_fsolve(ginds):
         - ginds : Boolean list defining which args will be differentiated.
         grad(f, gind) must exist for all gind==True in ginds
         grad(f, 0), i.e. the gradient w.r.t. x, must also exist
-    '''
+    """
 
     # Gradients w.r.t fun, lb and ub are not computed
     vjp_makers = [None, None, None] 

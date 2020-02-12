@@ -15,14 +15,14 @@ import numpy as np
 import scipy as sp
 
 # Import some specially written functions
-from .utils import toeplitz_block, fsolve
+from .utils import toeplitz_block, fsolve, extend
 
 # Import autograd if available
 try:
     import autograd.numpy as npa
     import autograd.scipy as spa
     from .primitives import (toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag,
-                        eigsh_ag, inv_ag, sqrt_ag)
+                        eigsh_ag, inv_ag, sqrt_ag, extend_ag)
     AG_AVAILABLE = True
 except ImportError:
     AG_AVAILABLE = False
@@ -61,6 +61,7 @@ class NumpyBackend(Backend):
     argsort = staticmethod(np.argsort)
     interp = staticmethod(np.interp)
     fsolve_D22 = staticmethod(fsolve)
+    extend = staticmethod(extend)
 
     # math functions
     exp = staticmethod(np.exp)
@@ -119,6 +120,7 @@ class AutogradBackend(Backend):
     argsort = staticmethod(npa.argsort)
     interp = staticmethod(interp_ag)
     fsolve_D22 = staticmethod(fsolve_ag)
+    extend = staticmethod(extend_ag)
 
     # math functions
     exp = staticmethod(npa.exp)
