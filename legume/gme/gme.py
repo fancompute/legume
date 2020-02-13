@@ -8,6 +8,9 @@ from . import matrix_elements
 from legume.backend import backend as bd
 from legume.utils import get_value, ftinv, find_nearest
 
+import logging
+logger = logging.getLogger(__name__)
+
 class GuidedModeExp(object):
     '''
     Main simulation class of the guided-mode expansion
@@ -137,17 +140,14 @@ class GuidedModeExp(object):
 
             # Using the 'average' or the 'background' permittivity of the layers
             # in the guided mode computation
-            'eps_eff'      : 'average',
-
-            # Print information at intermmediate steps
-            'verbose'      : True
+            'eps_eff'      : 'average'
             }
 
         if 'gmode_compute' in options.keys():
             if options['gmode_compute'] == 'exact':
                 if 'gmode_npts' in options.keys():
-                    print("Warning: ignoring 'gmode_npts' supplied in options "
-                            "when using 'gmode_compute' = 'exact'")
+                    logger.warn("ignoring 'gmode_npts' supplied in options "
+                                "when using 'gmode_compute' = 'exact'")
             elif options['gmode_compute'] != 'interp':
                 raise ValueError("options['gmode_compute'] can be one of"
                             "'interp' or 'exact'")
@@ -377,9 +377,6 @@ class GuidedModeExp(object):
             - compute the real eigenvalues and corresponding eigenvectors
         '''
         t_start = time.time()
-        
-        def print_vb(*args):
-            if self.verbose==True: print(*args)
 
         # Parse the input arguments
         self._run_options(kwargs)
@@ -442,16 +439,16 @@ class GuidedModeExp(object):
             self.compute_guided(g_array)
             self.t_guided = time.time()-t
 
-            print_vb("%1.4f seconds for guided mode computation"% 
+            logger.info("%1.4f seconds for guided mode computation"% 
                             (time.time()-t))
         else:
-            print_vb("Using the 'exact' method of guided mode computation")
+            logger.info("Using the 'exact' method of guided mode computation")
             self.t_guided = 0
 
         # Compute inverse matrix of FT of permittivity
         t = time.time()
         self.compute_eps_inv()
-        print_vb("%1.4f seconds for inverse matrix of Fourier-space "
+        logger.info("%1.4f seconds for inverse matrix of Fourier-space "
             "permittivity"% (time.time()-t))
 
         # Loop over all k-points, construct the matrix, diagonalize, and compute
@@ -461,7 +458,7 @@ class GuidedModeExp(object):
         freqs_im = []
         self.eigvecs = []
         for ik, k in enumerate(kpoints.T):
-            print_vb("Running k-point %d of %d" % (ik+1, kpoints.shape[1]))
+            logger.info("Running k-point %d of %d" % (ik+1, kpoints.shape[1]))
             mat = self.construct_mat(kind=ik)
             if self.numeig > mat.shape[0]:
                 raise ValueError("Requested number of eigenvalues 'numeig' "
@@ -496,16 +493,16 @@ class GuidedModeExp(object):
         # convention for the units (2pi a/c)
         self.freqs = bd.array(freqs)
 
-        print_vb("%1.4f seconds total time to run"% (time.time()-t_start))
+        logger.info("%1.4f seconds total time to run"% (time.time()-t_start))
         if self.gmode_compute.lower() == 'exact':
-            print_vb("%1.4f seconds of that was guided modes computation"
+            logger.info("%1.4f seconds of that was guided modes computation"
                     % self.t_guided)
 
         if self.compute_im:
-            print_vb("Computing imaginary part of the freqeuncies")
+            logger.info("Computing imaginary part of the freqeuncies")
             t = time.time()
             self.run_im()
-            print_vb("%1.4f seconds to compute radiative rates"
+            logger.info("%1.4f seconds to compute radiative rates"
                     % (time.time()-t))
 
     def compute_eps_inv(self):

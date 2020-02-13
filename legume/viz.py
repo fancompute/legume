@@ -5,6 +5,8 @@ from .gme import GuidedModeExp
 from .phc import PhotCryst, Circle
 from .pwe import PlaneWaveExp
 
+import logging
+logger = logging.getLogger(__name__)
 
 def bands(gme, Q=False, Q_clip=1e10, cone=True, conecolor='#eeeeee', ax=None, 
     figsize=(4,5), 
@@ -269,8 +271,8 @@ def eps_ft(struct, Nx=100, Ny=100, cladding=False, cbar=True,
 
     if cladding==True:
         if str_type == 'pwe':
-            print("Warning: ignoring 'cladding=True' for PlaneWaveExp "
-                   "structure.")
+            logger.warn("ignoring 'cladding=True' for PlaneWaveExp "
+                        "structure.")
             all_layers = [struct.layer]
         else:
             all_layers = [struct.phc.claddings[0]] + struct.phc.layers + \
