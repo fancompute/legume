@@ -1010,7 +1010,7 @@ class GuidedModeExp(object):
                 Ez_ft = bd.dot(self.eps_inv_mat[lind], Dz_ft)
                 return (Ex_ft, Ey_ft, Ez_ft)
 
-    def get_field_xy(self, field, kind, mind, z,
+    def get_field_xy(self, field, kind, mind, z, xgrid=None, ygrid=None,
                     component='xyz', Nx=100, Ny=100):
         '''
         Get the 'field' ('H', 'D', or 'E') at an xy-plane at position z for mode 
@@ -1020,7 +1020,12 @@ class GuidedModeExp(object):
         '''
 
         # Make a grid in the x-y plane
-        (xgrid, ygrid) = self.phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
+        if xgrid is None or ygrid is None:
+            (xgr, ygr) = self.phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
+            if xgrid is None:
+                xgrid = xgr
+            if ygrid is None:
+                ygrid = ygr
 
         # Get the field fourier components
         ft, fi = {}, {}
@@ -1036,15 +1041,17 @@ class GuidedModeExp(object):
 
         return (fi, xgrid, ygrid)
 
-    def get_field_xz(self, field, kind, mind, y,
+    def get_field_xz(self, field, kind, mind, y, xgrid=None, zgrid=None,
                     component='xyz', Nx=100, Nz=100, dist=1.):
         '''
         Hacked version for getting the field in an xz plane by stitching 
         together xy "planes" for various z slices
         '''
-        xgrid = self.phc.lattice.xy_grid(Nx=Nx, Ny=2)[0]
+        if xgrid is None:
+            xgrid = self.phc.lattice.xy_grid(Nx=Nx, Ny=2)[0]
         ygrid = np.array([y])
-        zgrid = self.phc.z_grid(Nz=Nz, dist=dist)
+        if zgrid is None:
+            zgrid = self.phc.z_grid(Nz=Nz, dist=dist)
 
         # Get the field components
         ft = {'x': [], 'y': [], 'z': []}
@@ -1069,15 +1076,17 @@ class GuidedModeExp(object):
 
         return (fi, xgrid, zgrid)
 
-    def get_field_yz(self, field, kind, mind, x,
+    def get_field_yz(self, field, kind, mind, x, ygrid=None, zgrid=None,
                     component='xyz', Ny=100, Nz=100, dist=1.):
         '''
         Hacked version for getting the field in a yz plane by stitching 
         together xy "planes" for various z slices
         '''
         xgrid = np.array([x])
-        ygrid = self.phc.lattice.xy_grid(Nx=2, Ny=Ny)[1]        
-        zgrid = self.phc.z_grid(Nz=Nz, dist=dist)
+        if ygrid is None:
+            ygrid = self.phc.lattice.xy_grid(Nx=2, Ny=Ny)[1]        
+        if zgrid is None:
+            zgrid = self.phc.z_grid(Nz=Nz, dist=dist)
 
         # Get the field components
         ft = {'x': [], 'y': [], 'z': []}
