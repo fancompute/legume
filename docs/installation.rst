@@ -4,10 +4,10 @@ Installation
 Dependencies
 ------------
 
-- `numpy <http://www.numpy.org/>`__ (1.16 or later)
-- `scipy <http://www.scipy.org/>`__ (1.16 or later)
-- `matplotlib <http://www.matplotlib.org/>`__ (3.0.3 or later)
-- `autograd <https://github.com/HIPS/autograd>`__ (1.2.1 or later)
+- `numpy <http://www.numpy.org/>`__ (>= 1.16)
+- `scipy <http://www.scipy.org/>`__ (>= 1.2.1)
+- `matplotlib <http://www.matplotlib.org/>`__ (>= 3.0.3)
+- `autograd <https://github.com/HIPS/autograd>`__ (>= 1.2)
 
 Instructions
 ------------
