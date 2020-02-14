@@ -12,3 +12,5 @@ from .pwe import PlaneWaveExp
 from .gme import GuidedModeExp
 from .gme.slab_modes import guided_modes, rad_modes
 from .backend import backend, set_backend
+
+__version__ = 'v0.0'
