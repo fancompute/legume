@@ -5,7 +5,7 @@ legume: Differentiable guided mode expansion methods
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Getting Started
 
    motivation
@@ -14,14 +14,14 @@ legume: Differentiable guided mode expansion methods
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: User Guide
 
    examples
 
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: Reference
 
    api
