@@ -5,7 +5,6 @@ docs/generated
 
 .idea/*
 
-*.png
 *.swp
 Rakefile
 .DS_Store
