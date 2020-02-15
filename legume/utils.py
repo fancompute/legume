@@ -7,6 +7,7 @@ import numpy as np
 from scipy.linalg import toeplitz
 from scipy.optimize import brentq
 
+
 def ftinv(ft_coeff, gvec, xgrid, ygrid):
     """ 
     Returns the discrete inverse Fourier transform over a real-space mesh 
@@ -47,6 +48,7 @@ def ftinv(ft_coeff, gvec, xgrid, ygrid):
     # print(ftinv)
     return ftinv
 
+
 def ft2square(lattice, ft_coeff, gvec):
     """
     Make a square array of Fourier components given a number of them defined 
@@ -73,6 +75,7 @@ def ft2square(lattice, ft_coeff, gvec):
 
     return (eps_ft, gx_grid, gy_grid)
 
+
 def grad_num(fn, arg, step_size=1e-7):
     """ Numerically differentiate `fn` w.r.t. its argument `arg` 
     `arg` can be a numpy array of arbitrary shape
@@ -95,6 +98,7 @@ def grad_num(fn, arg, step_size=1e-7):
         gradient[i] = (f_new_i - f_old) / step[i]
 
     return gradient.reshape(shape)
+
 
 def vjp_maker_num(fn, arg_inds, steps):
     """ Makes a vjp_maker for the numerical derivative of a function `fn`
@@ -132,6 +136,7 @@ def vjp_maker_num(fn, arg_inds, steps):
 
     return tuple(vjp_makers)
 
+
 def toeplitz_block(n, T1, T2):
     """
     Constructs a Hermitian Toeplitz-block-Toeplitz matrix with n blocks and 
@@ -152,6 +157,7 @@ def toeplitz_block(n, T1, T2):
 
     return np.triu(Tmat) + np.conj(np.transpose(np.triu(Tmat,1)))
 
+
 def get_value(x):
     """
     This is for when using the 'autograd' backend and you want to detach an 
@@ -162,12 +168,14 @@ def get_value(x):
     else:
         return x
 
+
 def fsolve(f, lb, ub, *args):
     """
     Solve for scalar f(x, *args) = 0 w.r.t. scalar x within lb < x < ub
     """
     args_value = tuple([get_value(arg) for arg in args])
     return brentq(f, lb, ub, args=args_value)
+
 
 def find_nearest(array, value, N):
     """
@@ -176,6 +184,7 @@ def find_nearest(array, value, N):
     """ 
     idx = np.abs(array - value).argsort()
     return idx[:N]
+
 
 def RedhefferStar(SA,SB): #SA and SB are both 2x2 matrices;
     assert type(SA) == np.ndarray, 'not np.matrix'
@@ -197,66 +206,6 @@ def RedhefferStar(SA,SB): #SA and SB are both 2x2 matrices;
     SAB = np.array([[SAB_11, SAB_12],[SAB_21, SAB_22]])
     return SAB
 
-def generate_gds(phc, filename, unit=1e-6, tolerance=0.01):
-    """Takes a photonic crystal object and generates a GDS file with layers
-    """
-    import gdspy
-
-    polygon_based_shapes = [legume.phc.shapes.Poly, legume.phc.shapes.Square, legume.phc.shapes.Hexagon]
-
-    gdspy.current_library = gdspy.GdsLibrary()
-    cell = gdspy.Cell('CELL')
-
-    # TODO: Can also add a `datatype`, ranging from 0-255, to each shape for use
-    # by whatever program ends up reading the GDS
-
-    for i, layer in enumerate(phc.layers):
-        for shape in layer.shapes:
-            if type(shape) in polygon_based_shapes:
-                points = [(x, y) for (x,y) in zip(shape.x_edges[:-1], shape.y_edges[:-1])]
-                poly = gdspy.Polygon(points, layer=i, datatype=1)
-                cell.add(poly)
-            elif type(shape) == legume.phc.shapes.Circle:
-                circle = gdspy.Round((shape.x_cent, shape.y_cent), shape.r, layer=i, datatype=1, tolerance=tolerance)
-                cell.add(circle)
-            else:
-                raise RuntimeError("Unknown shape type, %s, found in layer %d of phc" % (type(shape), i))
-
-    gdspy.write_gds(filename, unit=unit)
-
-def generate_gds_raster(lattice, raster, filename, unit=1e-6, tolerance=0.01, level=0.5, cell_bound=True, levels=0.5):
-    """Traces the rasterization of a "freeform" layer and generates a single-layer GDS file
-    """
-    import skimage
-    import gdspy
-
-    contours = skimage.measure.find_contours(raster, levels)
-    polygons = []
-
-    T = np.hstack((lattice.a1[:, np.newaxis], lattice.a2[:, np.newaxis]))
-
-    for contour in contours:
-        #TODO(ian): make sure that this coord transform is correct
-        #TODO(ian): generalize the 0.5 boundary
-        coords = T @ (contour/(np.array(raster.shape)[np.newaxis,:]-1) - 0.5).T
-
-        points = [(x, y) for (x, y) in zip(coords[0,:], coords[1,:])]
-        poly = gdspy.Polygon(points, layer=0, datatype=0)
-        polygons.append(poly)
-
-    gdspy.current_library = gdspy.GdsLibrary()
-    cell = gdspy.Cell('CELL')
-    cell.add(polygons)
-
-    # TODO(ian): Need to do a boolean operation here
-    if cell_bound:
-        bounds = T @ np.array([[-0.5, -0.5, +0.5, +0.5],[-0.5, +0.5, +0.5, -0.5]])
-        points = [(x, y) for (x, y) in zip(bounds[0,:], bounds[1,:])]
-        boundary = gdspy.Polygon(points, layer=0, datatype=1)
-
-    cell.add(boundary)
-
-    gdspy.write_gds(filename, unit=unit)
 
 def extend(vals, inds, shape):
     """ Makes an array of shape `shape` where indices `inds` have vales `vals` 
