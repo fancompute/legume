@@ -414,11 +414,6 @@ def field(
     fig : matplotlib figure object
         Figure object for the plot.
     """
-    """
-
-    Required arguments:
-
-    """
 
     if isinstance(struct, GuidedModeExp):
         str_type = 'gme'
