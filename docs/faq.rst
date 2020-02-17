@@ -32,3 +32,9 @@ If you find Legume to be useful for your research, we would apprecite you citing
       journal = { ... },
       number = { ... }
     }
+
+
+Who made that awesome Legume logo?
+----------------------------------
+
+The Legume logo was designed by `Nadine Gilmer <https://nadinegilmer.com/>`_. She is also behind the logos for our `angler <https://github.com/fancompute/angler/>`_ and `ceviche <https://github.com/fancompute/ceviche/>`_ packages.
