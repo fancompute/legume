@@ -1,6 +1,6 @@
 import numpy as np
 
-import time
+import time, sys
 from itertools import zip_longest
 
 from .slab_modes import guided_modes, rad_modes
@@ -378,8 +378,13 @@ class GuidedModeExp(object):
         '''
         t_start = time.time()
         
-        def print_vb(*args):
-            if self.verbose==True: print(*args)
+        def print_vb(text, flush=False, end='\n'):
+            if self.verbose==True: 
+                if flush==False:
+                    print(text, end=end)
+                else:
+                    sys.stdout.write("\r" + text)
+                    sys.stdout.flush()
 
         # Parse the input arguments
         self._run_options(kwargs)
@@ -442,17 +447,13 @@ class GuidedModeExp(object):
             self.compute_guided(g_array)
             self.t_guided = time.time()-t
 
-            print_vb("%1.4f seconds for guided mode computation"% 
-                            (time.time()-t))
         else:
-            print_vb("Using the 'exact' method of guided mode computation")
             self.t_guided = 0
 
         # Compute inverse matrix of FT of permittivity
         t = time.time()
         self.compute_eps_inv()
-        print_vb("%1.4f seconds for inverse matrix of Fourier-space "
-            "permittivity"% (time.time()-t))
+        t_eps_inv = time.time()-t
 
         # Loop over all k-points, construct the matrix, diagonalize, and compute
         # radiative losses for the modes requested by kinds_rad and minds_rad
@@ -461,7 +462,9 @@ class GuidedModeExp(object):
         freqs_im = []
         self.eigvecs = []
         for ik, k in enumerate(kpoints.T):
-            print_vb("Running k-point %d of %d" % (ik+1, kpoints.shape[1]))
+            
+            print_vb("Running k-point %d of %d" % (ik+1, kpoints.shape[1]), 
+                        flush=True)            
             mat = self.construct_mat(kind=ik)
             if self.numeig > mat.shape[0]:
                 raise ValueError("Requested number of eigenvalues 'numeig' "
@@ -496,17 +499,24 @@ class GuidedModeExp(object):
         # convention for the units (2pi a/c)
         self.freqs = bd.array(freqs)
 
-        print_vb("%1.4f seconds total time to run"% (time.time()-t_start))
-        if self.gmode_compute.lower() == 'exact':
-            print_vb("%1.4f seconds of that was guided modes computation"
-                    % self.t_guided)
+        print_vb("", flush=True)
+        print_vb("%1.4fs total time for real part of frequencies, of which"
+                    % (time.time()-t_start))
+        print_vb("  %1.4fs for guided modes computation using"
+                " the gmode_compute='%s' method"
+                % (self.t_guided, self.gmode_compute.lower()))
+        print_vb("  %1.4fs for inverse matrix of Fourier-space "
+            "permittivity"% t_eps_inv)
 
-        if self.compute_im:
-            print_vb("Computing imaginary part of the freqeuncies")
+        if self.compute_im==True:
             t = time.time()
             self.run_im()
-            print_vb("%1.4f seconds to compute radiative rates"
+            print_vb("%1.4fs for imaginary part computation"
                     % (time.time()-t))
+        else:
+            print_vb("Skipping imaginary part computation, use run_im() to"
+                " run it, or compute_rad() to compute the radiative rates"
+                " of selected eigenmodes")
 
     def compute_eps_inv(self):
         '''
