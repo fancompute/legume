@@ -6,29 +6,58 @@ from .phc import PhotCryst, Circle
 from .pwe import PlaneWaveExp
 
 
-def bands(gme, Q=False, Q_clip=1e10, cone=True, conecolor='#eeeeee', ax=None, 
+def bands(
+    gme, 
+    Q=False, 
+    Q_clip=1e10, 
+    cone=True, 
+    conecolor='#eeeeee', 
+    ax=None,
     figsize=(4,5), 
-    Q_cmap='viridis', markersize=6, markeredgecolor='w', markeredgewidth=1.5):
-    """Visualize the computed bands and, optionally, the quality factor from a 
-    GME object
+    Q_cmap='viridis', 
+    markersize=6, 
+    markeredgecolor='w', 
+    markeredgewidth=1.5
+):
+    """Plot photonic band structure from a GME simulation
 
-    Required arguments:
-    gme             -- The GME object whose bands should be visualized
+    Note
+    ----
+    The bands must be solved for and stored in the `GuidedModeExp` or 
+    `PlaneWaveExp` object prior to calling this function.
 
-    Keyword arguments:
-    cone            -- Boolean specifying whether the light cone should be 
-                        shaded
-    conecolor       -- Color string specifying the color of the light cone
-    Q               -- Boolean specifying whether the quality factor should be 
-                        visualized on the bands
-    Q_clip          -- Value to clip the Q colormap
-    ax              -- Matplotlib axis handle for plotting, if None, a new 
-                        figure is created
-    figsize         -- If creating a new figure, this size is used
-    Q_cmap          -- Colormap used to visualize quality factor
-    markersize      -- Band marker size
-    markeredgecolor -- Band marker edge border color
-    markeredgewidth -- Band marker edge border width
+    Parameters
+    ----------
+    gme : GuidedModeExp
+    Q : bool, optional
+        Whether each point should be colored according to the quality factor. 
+        Default is False.
+    Q_clip : float, optional
+        The clipping (vmax) value for the quality factor colormap. Default is
+        1e10.
+    cone : bool , optional
+        Whether the the light cone region of the band structure should be 
+        shaded. Default is True.
+    conecolor : str, optional
+        Color of the light cone region. Default is '#eeeeee' (light grey).
+    ax : matplotlib axis object, optional
+        Matplotlib axis object for plotting. If not provided, a new figure and 
+        axis are automatically created.
+    figsize : Tuple, optional
+        Figure size for created figure. Default is (4,5).
+    Q_cmap : str or matplotlib colormap object, optional
+        Colormap used for the quality factor. Default is 'viridis'.
+    markersize : float, optional
+        Band marker size. Default is 6.
+    markeredgecolor : str, optional
+        Band marker edge border color. Default is white.
+    markeredgewidth : float, optional
+        Band marker edge border width. Default is 1.5.
+
+    Returns
+    -------
+    ax : matplotlib axis object
+        Axis object for the plot.
     """
 
     if np.all(gme.kpoints[0,:]==0) and not np.all(gme.kpoints[1,:]==0) \
@@ -69,8 +98,6 @@ def bands(gme, Q=False, Q_clip=1e10, cone=True, conecolor='#eeeeee', ax=None,
     ax.set_ylim(bottom=0.0, top=gme.freqs[:].max())
     ax.set_xlabel('Wave vector')
     ax.set_ylabel('Frequency')
-
-    # plt.show()
 
     return ax
 
@@ -329,29 +356,68 @@ def reciprocal(exp):
     ax.set_title("Reciprocal lattice")
     # plt.show()
 
-def field(struct, field, kind, mind, x=None, y=None, z=None, periodic=True,
-            component='xyz', val='re', N1=100, N2=100, cbar=True, eps=True, 
-            eps_levels=None):
-    """Visualize the field components of a mode over a slice in x, y, or z
+def field(
+    struct, 
+    field, 
+    kind, 
+    mind, 
+    x=None, 
+    y=None, 
+    z=None, 
+    periodic=True,
+    component='xyz', 
+    val='re', 
+    N1=100, 
+    N2=100, 
+    cbar=True, 
+    eps=True,
+    eps_levels=None
+):
+    """Visualize mode fields over a 2D slice in x, y, or z
+
+    Note
+    ----
+    The fields must be solved for and stored in the `GuidedModeExp` or 
+    `PlaneWaveExp` object prior to calling this function.
+
+    Parameters
+    ----------
+    struct : GuidedModeExp or PlaneWaveExp 
+    field : {'H', 'D', 'E'}
+        The field quantity to plot
+    kind : int
+        The wave vector index to plot
+    mind : int
+        The mode index to plot
+    x, y, z : float
+        Coordinate of the slice in either x, y, or z. One and 
+        only one of these should be specified
+    periodic : bool, optional
+        Whether the periodic portion or the full field should be plotted
+    component : str, optional
+        Component of the vector field to plot
+    val : {'re', 'im', 'abs'}, optional
+        Field value to plot
+    N1 : int, optional
+        Number of grid points to sample in first spatial dim
+    N2 : int, optional
+        Number of grid points to sample in second spatial dim
+    cbar : bool, optional
+        Whether to include a colorbar
+    eps : bool, optional
+        Whether an outline of the permittivity should be overlaid
+    eps_levels : List, optional
+        A list of contour levels for the permittivity
+
+    Returns
+    -------
+    fig : matplotlib figure object
+        Figure object for the plot.
+    """
+    """
 
     Required arguments:
-    struct          -- A GME or PWE object
-    field           -- The field quantity, should be one of 'H', 'D', or 'E'
-    kind            -- The wave vector index of the mode
-    mind            -- The mode index
-    x, y, or z      -- Coordinate of the slice in either x, y, or z. One and 
-                        only one of these should be specified
 
-    Keyword arguments:
-    periodic        -- Whether the periodic portion or the full field should be 
-                        plotted
-    component       -- Component of the vector field to plot
-    val             -- Field value to plot, either 're', 'im', or 'abs'
-    N1              -- Number of grid points to sample in first spatial dim
-    N2              -- Number of grid points to sample in second spatial dim
-    cbar            -- Whether to include a colorbar
-    eps             -- Whether an outline of the permittivity should be overlaid
-    eps_levels      -- The contour levels for the permittivity
     """
 
     if isinstance(struct, GuidedModeExp):
