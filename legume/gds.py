@@ -1,7 +1,17 @@
-import numpy as np
-import skimage
-import gdspy
+import logging
+logger = logging.getLogger(__name__)
 
+import numpy as np
+
+try:
+    import gdspy
+except ImportError:
+    logger.debug('Unable to import gdspy. Export to GDS will be unavailable')
+
+try:
+    import skimage
+except ImportError:
+    logger.debug('Unable to import skimage. Rasterization to GDS will be unavailable')
 
 def generate_gds(phc, filename, unit=1e-6, tolerance=0.01):
     """Takes a photonic crystal object and generates a GDS file with all layers
