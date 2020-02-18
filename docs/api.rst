@@ -24,8 +24,13 @@ Attributes
 .. autosummary::
    :toctree: generated/
 
-   GuidedModeExp.N_layers
-   GuidedModeExp.gmax
+   GuidedModeExp.freqs
+   GuidedModeExp.freqs_im
+   GuidedModeExp.eigvecs
+   GuidedModeExp.kpoints
+   GuidedModeExp.gvec
+   GuidedModeExp.run_options
+
 
 Methods
 -------
@@ -33,13 +38,16 @@ Methods
 .. autosummary::
    :toctree: generated/
 
-   GuidedModeExp.compute_guided
-   GuidedModeExp.compute_ft_tbt
-   GuidedModeExp.compute_ft_abs
-   GuidedModeExp.get_eps_xy
    GuidedModeExp.run
-   GuidedModeExp.construct_mat
    GuidedModeExp.run_im
+   GuidedModeExp.compute_rad
+   GuidedModeExp.get_eps_xy
+   GuidedModeExp.ft_field_xy
+   GuidedModeExp.get_field_xy
+   GuidedModeExp.get_field_xz
+   GuidedModeExp.get_field_yz
+   GuidedModeExp.set_run_options
+   
 
 PlaneWaveExp
 ============
