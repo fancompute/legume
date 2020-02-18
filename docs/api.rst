@@ -122,3 +122,11 @@ Visualization
    viz.reciprocal
    viz.field
 
+GDS
+===
+
+.. autosummary::
+   :toctree: generated/
+
+   gds.generate_gds
+   gds.generate_gds_raster

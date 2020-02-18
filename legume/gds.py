@@ -3,6 +3,8 @@ logger = logging.getLogger(__name__)
 
 import numpy as np
 
+from . import Circle, Poly, Square, Hexagon
+
 try:
     import gdspy
 except ImportError:
@@ -13,11 +15,25 @@ try:
 except ImportError:
     logger.debug('Unable to import skimage. Rasterization to GDS will be unavailable')
 
-def generate_gds(phc, filename, unit=1e-6, tolerance=0.01):
-    """Takes a photonic crystal object and generates a GDS file with all layers
-    """
 
-    polygon_based_shapes = [legume.phc.shapes.Poly, legume.phc.shapes.Square, legume.phc.shapes.Hexagon]
+def generate_gds(phc, filename, unit=1e-6, tolerance=0.01):
+    """Export a GDS file for all layers of a photonic crystal
+
+    Note
+    ----
+    The ``gdspy`` package is required for exporting GDS files.
+
+    Parameters
+    ----------
+    phc : PhotCryst
+    filename : str
+    unit : float, optional
+        The GDS spatial units. 
+        Default is 1e-6, or 1 um.
+    tolerance : float , optional
+        The GDS tolerance parameter. 
+        Default is 0.01.
+    """
 
     gdspy.current_library = gdspy.GdsLibrary()
     cell = gdspy.Cell('CELL')
@@ -27,11 +43,11 @@ def generate_gds(phc, filename, unit=1e-6, tolerance=0.01):
 
     for i, layer in enumerate(phc.layers):
         for shape in layer.shapes:
-            if type(shape) in polygon_based_shapes:
+            if type(shape) in [Poly, Square, Hexagon]:
                 points = [(x, y) for (x,y) in zip(shape.x_edges[:-1], shape.y_edges[:-1])]
                 poly = gdspy.Polygon(points, layer=i, datatype=1)
                 cell.add(poly)
-            elif type(shape) == legume.phc.shapes.Circle:
+            elif type(shape) == Circle:
                 circle = gdspy.Round((shape.x_cent, shape.y_cent), shape.r, layer=i, datatype=1, tolerance=tolerance)
                 cell.add(circle)
             else:
@@ -40,8 +56,30 @@ def generate_gds(phc, filename, unit=1e-6, tolerance=0.01):
     gdspy.write_gds(filename, unit=unit)
 
 
-def generate_gds_raster(lattice, raster, filename, unit=1e-6, tolerance=0.01, level=0.5, cell_bound=True, levels=0.5):
-    """Traces a rasterization of a layer to generate a single-layer GDS file
+def generate_gds_raster(lattice, raster, filename, unit=1e-6, tolerance=0.01, cell_bound=True, levels=[0.5]):
+    """Traces a rasterization projected onto a lattice to generate a GDS file
+
+    Note
+    ----
+    The ``gdspy`` and ``scikit-image`` packages are required for exporting rasterized GDS files.
+
+    Parameters
+    ----------
+    lattice : Lattice
+    raster : 2D array of floats
+    filename : str
+    unit : float, optional
+        The GDS spatial units. 
+        Default is 1e-6, or 1 um.
+    tolerance : float , optional
+        The GDS tolerance parameter. 
+        Default is 0.01.
+    cell_bound : bool, optional
+        Whether a Polygon should be added to define the unit cell boundary.
+        Default is True.
+    levels : List[float], optional
+        List of the raster levels to trace with ``skimage.measure.find_contours``.
+        Default is [0.5].
     """
 
     contours = skimage.measure.find_contours(raster, levels)
