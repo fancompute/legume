@@ -21,7 +21,7 @@ __all__ = ['GuidedModeExp',
            'ShapesLayer', 
            'FreeformLayer', 
            'Lattice',
-           'Shape'
+           'Shape',
            'Circle',
            'Poly',
            'Square', 
