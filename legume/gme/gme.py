@@ -9,19 +9,31 @@ from legume.backend import backend as bd
 from legume.utils import get_value, ftinv, find_nearest
 
 class GuidedModeExp(object):
-    '''
+    """
     Main simulation class of the guided-mode expansion
-    '''
+    """
     def __init__(self, phc, gmax=3, truncate_g='tbt'):
-        # Object of class Phc which will be simulated
+        """Initialize the guided-mode expansion
+        
+        Parameters
+        ----------
+        phc : PhotCryst
+            Photonic crystal object to be simulated
+        gmax : int, optional
+            Maximum reciprocal lattice wave-vector length in units of 2pi/a
+        truncate_g : {'tbt', 'abs'}
+            Truncation of the reciprocal lattice vectors, 'tbt' takes a 
+            parallelogram in reciprocal space, while 'abs' takes a circle
+        """
+
         self.phc = phc
-        # Number of layers
-        self.N_layers = len(phc.layers)
-        # Maximum reciprocal lattice wave-vector length in units of 2pi/a
         self.gmax = gmax
-        # Truncation of the reciprocal lattice vectors, 'tbt' or 'abs'
         self.truncate_g = truncate_g
 
+        # Number of layers in the PhC
+        self.N_layers = len(phc.layers)
+
+        # Parameters below are defined when self.run() is called
         # Number of G points included for every mode, will be defined after run
         self.modes_numg = []
         # Total number of basis vectors (equal to np.sum(self.modes_numg))
@@ -30,19 +42,14 @@ class GuidedModeExp(object):
         # (in case gmode_inds includes modes that are above the gmax cutoff)
         self.gmode_include = []
 
-        # Eigenfrequencies and eigenvectors
-        self.freqs = []
-        self.freqs_im = []
-        self.eigvecs = []
-
         # Initialize the reciprocal lattice vectors and compute the FT of all
         # the layers of the PhC
         if self.truncate_g == 'tbt':
             self._init_reciprocal_tbt()
-            self.compute_ft_tbt()
+            self._compute_ft_tbt()
         elif self.truncate_g == 'abs':
             self._init_reciprocal_abs()
-            self.compute_ft_abs()
+            self._compute_ft_abs()
         else: raise ValueError("'truncate_g' must be 'tbt' or 'abs'.")
 
     def __repr__(self):
@@ -53,11 +60,62 @@ class GuidedModeExp(object):
         rep += repr(self.phc) + '\n)'
         return rep
 
+    @property
+    def freqs(self):
+        """Real part of the frequencies of the eigenmodes computed by the 
+        guided-mode expansion.
+        """
+        if self._freqs is None: self._freqs = []
+        return self._freqs
+
+    @property
+    def freqs_im(self):
+        """Imaginary part of the frequencies of the eigenmodes computed by the 
+        guided-mode expansion.
+        """
+        if self._freqs_im is None: self._freqs_im = []
+        return self._freqs_im
+
+    @property
+    def eigvecs(self):
+        """Eigenvectors of the eigenmodes computed by the guided-mode expansion.
+        """
+        if self._eigvecs is None: self._eigvecs = []
+        return self._eigvecs
+
+    @property
+    def kpoints(self):
+        """Numpy array of shape (2, :) with the [kx, ky] coordinates of the 
+        k-vectors over which the simulation is run.
+        """
+        if self._kpoints is None: self._kpoints = []
+        return self._kpoints
+
+    @property
+    def gvec(self):
+        """Numpy array of shape (2, :) with the [gx, gy] coordinates of the 
+        reciprocal lattice vectors over which the simulation is run.
+        """
+        if self._gvec is None: self._gvec = []
+        return self._gvec
+
+    @property
+    def run_options(self):
+        """Dictionary of options for the simulation run. See documentation of 
+        :meth:`GuidedModeExp.set_run_options` for details.
+        """
+        if self._run_options is None: self._run_options = {}
+        return self._run_options       
+        
+    @run_options.setter
+    def run_options(self, **options):
+        self.set_run_options(options)
+
     def _init_reciprocal_tbt(self):
-        '''
+        """
         Initialize reciprocal lattice vectors with a parallelogram truncation
         such that the eps matrix is toeplitz-block-toeplitz
-        '''
+        """
         n1max = np.int_((2*np.pi*self.gmax)/np.linalg.norm(self.phc.lattice.b1))
         n2max = np.int_((2*np.pi*self.gmax)/np.linalg.norm(self.phc.lattice.b2))
 
@@ -73,7 +131,7 @@ class GuidedModeExp(object):
                 self.phc.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
 
         # Save the reciprocal lattice vectors
-        self.gvec = gvec
+        self._gvec = gvec
 
         # Save the number of vectors along the b1 and the b2 directions 
         # Note: gvec.shape[1] = n1g*n2g
@@ -81,9 +139,9 @@ class GuidedModeExp(object):
         self.n2g = 2*n2max + 1
 
     def _init_reciprocal_abs(self):
-        '''
+        """
         Initialize reciprocal lattice vectors with circular truncation.
-        '''
+        """
         n1max = np.int_((4*np.pi*self.gmax)/np.linalg.norm(self.phc.lattice.b1))
         n2max = np.int_((4*np.pi*self.gmax)/np.linalg.norm(self.phc.lattice.b2))
 
@@ -97,99 +155,27 @@ class GuidedModeExp(object):
         gvec = gvec[:, gnorm <= 2*np.pi*self.gmax]
 
         # Save the reciprocal lattice vectors
-        self.gvec = gvec
-
-    def _run_options(self, options):
-        default_options = {
-            # Define whether the guided modes are computed in the beginning
-            # and then interpolated ('interp'), or whether they are computed
-            # exactly at every k-step ('exact')
-            'gmode_compute': 'exact',
-
-            # Indexes of modes to be included in the expansion
-            'gmode_inds'   : [0],
-
-            # Number of points over which guided modes are computed
-            'gmode_npts'   : 1000,
-
-            # Step in frequency in the search for guided mode solutions
-            'gmode_step'   : 1e-2,
-
-            # Tolerance in the minimum and maximum omega value when looking for 
-            # the guided-mode solutions
-            'gmode_tol'    : 1e-10,
-
-            # Number of eigen-frequencies to be stored (starting from lowest)
-            'numeig'       : 10,
-
-            # Should the imaginary parts of the frequencies also be computed
-            'compute_im'   : True,
-
-            # Whether to compute 'exact' gradients, or 'approx' (faster)
-            'gradients'    : 'exact',
-
-            # Eigenvalue solver, 'eigh' (numpy.linalg.eigh) or 'eigsh'
-            # (scipy.sparse.linalg.eigsh)
-            'eig_solver'   : 'eigh',
-
-            # Target eigenvalue if using the 'eigsh' solver 
-            'eig_sigma'    : 0.,
-
-            # Using the 'average' or the 'background' permittivity of the layers
-            # in the guided mode computation
-            'eps_eff'      : 'average',
-
-            # Print information at intermmediate steps
-            'verbose'      : True
-            }
-
-        if 'gmode_compute' in options.keys():
-            if options['gmode_compute'] == 'exact':
-                if 'gmode_npts' in options.keys():
-                    print("Warning: ignoring 'gmode_npts' supplied in options "
-                            "when using 'gmode_compute' = 'exact'")
-            elif options['gmode_compute'] != 'interp':
-                raise ValueError("options['gmode_compute'] can be one of"
-                            "'interp' or 'exact'")
-
-        for key in default_options.keys():
-            if key not in options.keys():
-                options[key] = default_options[key]
-
-        for key in options.keys():
-            if key not in default_options.keys():
-                raise ValueError("Unknown run() argument '%s'" % key)
-
-        # Store the dictionary of all options
-        self.run_options = options
-
-        # Also store the options as separate attributes
-        for (option, value) in options.items():
-            # Make sure 'gmode_inds' is a numpy array
-            if option.lower() == 'gmode_inds':
-                value = np.array(value)
-            # Set all the options as class attributes
-            setattr(self, option, value)
+        self._gvec = gvec
 
     def _get_guided(self, gk, kind, mode):
-        '''
+        """
         Get all the guided mode parameters over 'gk' for mode number 'mode'
         Variable 'indmode' stores the indexes of 'gk' over which a guided
         mode solution was found
-        '''
+        """
 
         def interp_coeff(coeffs, il, ic, indmode, gs):
-            '''
+            """
             Interpolate the A/B coefficient (ic = 0/1) in layer number il
-            '''
+            """
             param_list = [coeffs[i][il, ic, 0] for i in range(len(coeffs))]
             c_interp = bd.interp(gk[indmode], gs, bd.array(param_list))
             return c_interp.ravel()
 
         def interp_guided(im, ik, omegas, coeffs):
-            '''
+            """
             Interpolate all the relevant guided mode parameters over gk
-            '''
+            """
             gs = self.g_array[ik][-len(omegas[ik][im]):]
             indmode = np.argwhere(gk > gs[0]-1e-10).ravel()
             oms = bd.interp(gk[indmode], gs, bd.array(omegas[ik][im]))
@@ -217,11 +203,11 @@ class GuidedModeExp(object):
         return (indmode, oms, As, Bs, chis)
 
     def _get_chi(self, gk, oms, eps_array):
-        '''
+        """
         Function to get the z-direction wave-vectors chi for in-plane wave
         vectors gk and frequencies oms (can be either a single number or an 
         array of the same shape as gk)
-        '''
+        """
         chis = []
         for il in range(self.N_layers + 2):
             sqarg = bd.array(eps_array[il]*bd.square(oms) - bd.square(gk),
@@ -232,10 +218,10 @@ class GuidedModeExp(object):
         return bd.array(chis, dtype=bd.complex)
 
     def _get_rad(self, gkr, omr, pol, clad):
-        '''
+        """
         Get all the radiative mode parameters over 'gkr' at frequency 'omr' with
         polarization 'pol' and out-going in cladding 'clad'
-        '''
+        """
         chis = self._get_chi(gkr, omr, self.eps_array)       
         (Xs, Ys) = rad_modes(omr, gkr, self.eps_array, 
                                     self.d_array, pol, clad)
@@ -243,10 +229,10 @@ class GuidedModeExp(object):
         return (Xs, Ys, chis)
 
     def _z_to_lind(self, z):
-        '''
+        """
         Get a layer index corresponding to a position z. Claddings are included 
         as first and last layer
-        '''
+        """
 
         z_max = self.phc.claddings[0].z_max
         lind = 0 # Index denoting which layer (including claddings) z is in 
@@ -257,11 +243,11 @@ class GuidedModeExp(object):
 
         return lind
 
-    def compute_guided(self, g_array):
-        '''
+    def _compute_guided(self, g_array):
+        """
         Compute the guided modes using the slab_modes module, reshape the 
         results appropriately and store
-        '''
+        """
 
         # Expand boundaries a bit to make sure we get all the modes
         # Note that the 'exact' computation still uses interpolation, 
@@ -294,11 +280,11 @@ class GuidedModeExp(object):
             self.omegas_tm.append(reshape_list(omegas_tm))
             self.coeffs_tm.append(reshape_list(coeffs_tm))     
 
-    def compute_ft_tbt(self):
-        '''
+    def _compute_ft_tbt(self):
+        """
         Compute the unique FT coefficients of the permittivity, eps(g-g') for
         every layer in the PhC, assuming TBT-initialized reciprocal lattice
-        '''
+        """
         (n1max, n2max) = (self.n1g, self.n2g)
         G1 = - self.gvec + self.gvec[:, [0]]
         G2 = np.zeros((2, n1max*n2max))
@@ -331,11 +317,11 @@ class GuidedModeExp(object):
         self.G1 = G1
         self.G2 = G2
 
-    def compute_ft_abs(self):
-        '''
+    def _compute_ft_abs(self):
+        """
         Compute the unique FT coefficients of the permittivity, eps(g-g') for
         every layer in the PhC, assuming abs-initialized reciprocal lattice
-        '''
+        """
         ggridx = (self.gvec[0, :][np.newaxis, :] - 
                     self.gvec[0, :][:, np.newaxis]).ravel()
         ggridy = (self.gvec[1, :][np.newaxis, :] - 
@@ -348,180 +334,10 @@ class GuidedModeExp(object):
             self.eps_ft.append(bd.reshape(eps_ft, 
                         (self.gvec[0, :].size, self.gvec[0, :].size)))
 
-    def get_eps_xy(self, z, Nx=100, Ny=100):
-        '''
-        Get the permittivity of the PhC cross-sections as computed from an 
-        inverse Fourier transform with the GME reciprocal lattice vectors.
-        '''
-        (xgrid, ygrid) = self.phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
-        lind = self._z_to_lind(z)
-
-        ft_coeffs = np.hstack((self.T1[lind], self.T2[lind], 
-                            np.conj(self.T1[lind]), np.conj(self.T2[lind])))
-        gvec = np.hstack((self.G1, self.G2, 
-                                -self.G1, -self.G2))
-
-        eps_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
-
-        return (eps_r, xgrid, ygrid)
-
-    def run(self, kpoints=np.array([[0], [0]]), **kwargs):
-        ''' 
-        Run the simulation. Basically:
-
-        - Compute the guided modes over a grid of g-points
-        - Compute the inverse matrix of the FT of the permittivity eps(G - G')
-            in every phc layer, with G, G' reciprocal lattice vectors
-        - Iterate over the k points:
-            - compute the Hermitian matrix for diagonalization 
-            - compute the real eigenvalues and corresponding eigenvectors
-        '''
-        t_start = time.time()
-        
-        def print_vb(text, flush=False, end='\n'):
-            if self.verbose==True: 
-                if flush==False:
-                    print(text, end=end)
-                else:
-                    sys.stdout.write("\r" + text)
-                    sys.stdout.flush()
-
-        # Parse the input arguments
-        self._run_options(kwargs)
-        # Bloch momenta over which band structure is simulated 
-        self.kpoints = kpoints
-
-        # Array of effective permittivity of every layer (including claddings)
-        if self.eps_eff=='average':
-            layer_eps = 'eps_avg'
-        elif self.eps_eff=='background':
-            layer_eps = 'eps_b'
-        else:
-            raise ValueError("'eps_eff' can be 'average' or 'background'")
-        
-        # Store an array of the effective permittivity for every layer
-        #(including claddings)
-        eps_array = bd.array(list(getattr(layer, layer_eps)
-            for layer in [self.phc.claddings[0]] + self.phc.layers + 
-            [self.phc.claddings[1]]), dtype=bd.float).ravel()
-        # A separate array where the values are converted from ArrayBox to numpy
-        # array, if using the 'autograd' backend.
-        eps_array_val = np.array(list(get_value(getattr(layer, layer_eps))
-            for layer in [self.phc.claddings[0]] + self.phc.layers + 
-            [self.phc.claddings[1]]), dtype=np.float).ravel()
-        
-        # Store an array of thickness of every layer (not including claddings)
-        d_array = bd.array(list(layer.d for layer in \
-            self.phc.layers), dtype=bd.float).ravel()
-        # A separate array where the values are converted from ArrayBox to numpy
-        # array, if using the 'autograd' backend.
-        d_array_val = np.array(list(get_value(layer.d) for layer in \
-            self.phc.layers), dtype=np.float).ravel()
-
-        (self.eps_array_val, self.eps_array, self.d_array_val, self.d_array) = \
-                                (eps_array_val, eps_array, d_array_val, d_array)
-
-        # Initialize attributes for guided-mode storing
-        self.g_array = []
-        '''
-        List dimensions in order: 
-            - k-point index (length 1 if gmode_compute=='interp')
-            - guided mode index
-            - g_array index
-        '''
-        self.omegas_te = []
-        self.coeffs_te = []
-        self.omegas_tm = []
-        self.coeffs_tm = []
-
-        # Pre-compute guided modes if the 'interp' option is used
-        if self.gmode_compute.lower() == 'interp':
-            t = time.time()
-            kmax = np.amax(np.sqrt(np.square(kpoints[0, :]) +
-                                np.square(kpoints[1, :])))
-            Gmax = np.amax(np.sqrt(np.square(self.gvec[0, :]) +
-                                np.square(self.gvec[1, :])))
-
-            # Array of g-points over which the guided modes will be computed
-            g_array = np.linspace(0, Gmax + kmax, self.gmode_npts)
-            self.compute_guided(g_array)
-            self.t_guided = time.time()-t
-
-        else:
-            self.t_guided = 0
-
-        # Compute inverse matrix of FT of permittivity
-        t = time.time()
-        self.compute_eps_inv()
-        t_eps_inv = time.time()-t
-
-        # Loop over all k-points, construct the matrix, diagonalize, and compute
-        # radiative losses for the modes requested by kinds_rad and minds_rad
-        t_rad = 0
-        freqs = []
-        freqs_im = []
-        self.eigvecs = []
-        for ik, k in enumerate(kpoints.T):
-            
-            print_vb("Running k-point %d of %d" % (ik+1, kpoints.shape[1]), 
-                        flush=True)            
-            mat = self.construct_mat(kind=ik)
-            if self.numeig > mat.shape[0]:
-                raise ValueError("Requested number of eigenvalues 'numeig' "
-                    "larger than total size of basis set. Reduce 'numeig' or "
-                    "increase 'gmax'")
-
-            # NB: we shift the matrix by np.eye to avoid problems at the zero-
-            # frequency mode at Gamma
-            if self.eig_solver == 'eigh':
-                (freq2, evecs) = bd.eigh(mat + bd.eye(mat.shape[0]))
-                freq1 = bd.sqrt(bd.abs(freq2 - bd.ones(mat.shape[0])))/2/np.pi
-                i_near = find_nearest(get_value(freq1), 
-                                        self.eig_sigma, self.numeig)
-                i_sort = bd.argsort(freq1[i_near])
-                freq = freq1[i_near[i_sort]]
-                evec = evecs[:, i_near[i_sort]]
-            elif self.eig_solver == 'eigsh':
-                (freq2, evecs) = bd.eigsh(mat + bd.eye(mat.shape[0]), 
-                                        self.numeig, 
-                                        sigma=(self.eig_sigma*2*np.pi)**2)
-                freq1 = bd.sqrt(bd.abs(freq2 - bd.ones(self.numeig)))/2/np.pi
-                i_sort = bd.argsort(freq1)
-                freq = freq1[i_sort]
-                evec = evecs[:, i_sort]
-            else:
-                raise ValueError("'eig_solver' can be 'eigh' or 'eigsh'")
-            
-            freqs.append(freq)
-            self.eigvecs.append(evec)
-
-        # Store the eigenfrequencies taking the standard reduced frequency 
-        # convention for the units (2pi a/c)
-        self.freqs = bd.array(freqs)
-
-        print_vb("", flush=True)
-        print_vb("%1.4fs total time for real part of frequencies, of which"
-                    % (time.time()-t_start))
-        print_vb("  %1.4fs for guided modes computation using"
-                " the gmode_compute='%s' method"
-                % (self.t_guided, self.gmode_compute.lower()))
-        print_vb("  %1.4fs for inverse matrix of Fourier-space "
-            "permittivity"% t_eps_inv)
-
-        if self.compute_im==True:
-            t = time.time()
-            self.run_im()
-            print_vb("%1.4fs for imaginary part computation"
-                    % (time.time()-t))
-        else:
-            print_vb("Skipping imaginary part computation, use run_im() to"
-                " run it, or compute_rad() to compute the radiative rates"
-                " of selected eigenmodes")
-
-    def compute_eps_inv(self):
-        '''
+    def _compute_eps_inv(self):
+        """
         Construct the inverse FT matrices for the permittivity in each layer
-        '''
+        """
 
         # List of inverse permittivity matrices for every layer
         self.eps_inv_mat = []
@@ -536,10 +352,10 @@ class GuidedModeExp(object):
             for eps_mat in self.eps_ft:
                 self.eps_inv_mat.append(bd.inv(eps_mat))
 
-    def construct_mat(self, kind):
-        '''
+    def _construct_mat(self, kind):
+        """
         Construct the Hermitian matrix for diagonalization for a given k
-        '''
+        """
 
         # G + k vectors
         gkx = self.gvec[0, :] + self.kpoints[0, kind] + 1e-10
@@ -550,7 +366,7 @@ class GuidedModeExp(object):
         if self.gmode_compute.lower() == 'exact':
             t = time.time()
             g_array = np.sort(gk)
-            self.compute_guided(g_array)
+            self._compute_guided(g_array)
             self.t_guided += time.time() - t
 
         # Unit vectors in the propagation direction; we add a tiny component 
@@ -646,27 +462,268 @@ class GuidedModeExp(object):
         # Stack all the blocks together
         mat = bd.vstack([bd.hstack(mb) for mb in mat_blocks])
 
-        '''
+        """
         If the matrix is within numerical precision to real symmetric, 
         make it explicitly so. This will speed up the diagonalization and will
         often be the case, specifically when there is in-plane inversion
         symmetry in the PhC elementary cell
-        '''
+        """
         # if bd.amax(bd.abs(bd.imag(mat))) < 1e-10*bd.amax(bd.abs(bd.real(mat))):
         #     mat = bd.real(mat)
         #     print(mat.dtype)
 
-        '''
+        """
         Make the matrix Hermitian (note that only upper part of the blocks, i.e.
         (im2 >= im1) was computed
-        '''
+        """
         return bd.triu(mat) + bd.transpose(bd.conj(bd.triu(mat, 1)))
 
+    def set_run_options(self, gmode_compute='exact', gmode_inds: list=[0], 
+            gmode_npts: int=1000,
+            gmode_step: float=1e-2, gmode_tol: float=1e-10, numeig: int=10,
+            compute_im: bool=True, gradients='exact', eig_solver='eigh',
+            eig_sigma: float=0., eps_eff='average', verbose: bool=True):
+            """Set multiple options for the guided-mode expansion
+            
+            Parameters
+            ----------
+            gmode_compute : {'exact', 'interp'}, optional
+                Define whether the guided modes are computed exactly at every 
+                k-step ('exact'), or computed in the beginning and then 
+                interpolated ('interp'), or whether they are 
+            gmode_inds : list or np.ndarray, optional
+                Indexes of modes to be included in the expansion. 
+                Default is [0].
+            gmode_npts : int, optional
+                Number of points over which guided modes are computed. 
+                Default is 1000.
+            gmode_step : float, optional
+                Step in frequency in the search for guided mode solutions.
+                Default is 1e-2.
+            gmode_tol : float, optional
+                Tolerance in the minimum and maximum frequency value when 
+                looking for the guided-mode solutions. Default is 1e-10.
+            numeig : int, optional
+                Number of eigen-frequencies to be stored (starting from lowest).
+                Default is 10.
+            compute_im : bool, optional
+                Should the imaginary parts of the frequencies also be computed.
+                Default is True. 
+            gradients : {'exact', 'approx'}, optional
+                Whether to compute 'exact' gradients, or 'approx' (faster).
+            eig_solver : {'eigh', 'eigsh'}, optional
+                Eigenvalue solver, 'eigh' (numpy.linalg.eigh) or 'eigsh'
+                (scipy.sparse.linalg.eigsh)
+            eig_sigma : float, optional
+                Target eigenvalue; numeig eigenvalues closest to eig_sigma are
+                stored. Default is 0.
+            eps_eff : {'average', 'background'}, optional
+                Using the 'average' or the 'background' permittivity of the 
+                layers in the guided mode computation.
+            verbose : bool, optional
+                Print information at intermmediate steps. Default is True.
+            """
+
+            # Make a dictionary that stores all the options
+            self._run_options = {
+                'gmode_compute':gmode_compute, 
+                'gmode_inds':gmode_inds,
+                'gmode_npts':gmode_npts,
+                'gmode_step':gmode_step, 
+                'gmode_tol':gmode_tol, 
+                'numeig':numeig,
+                'compute_im':compute_im, 
+                'gradients':gradients, 
+                'eig_solver':eig_solver,
+                'eig_sigma':eig_sigma, 
+                'eps_eff':eps_eff, 
+                'verbose':verbose  
+                }
+
+            # Also store the options as separate attributes
+            for (option, value) in self._run_options.items():
+                # Make sure 'gmode_inds' is a numpy array
+                if option.lower() == 'gmode_inds':
+                    value = np.array(value)
+                # Set all the options as class attributes
+                setattr(self, option, value)
+
+    def run(self, kpoints: np.ndarray=np.array([[0], [0]]), **kwargs):            
+        """
+        Compute the eigenmodes of the photonic crystal structure.
+        
+        The guided-mode expansion proceeds as follows:
+
+            Compute the inverse matrix of the fourier transform of the 
+            permittivity in every phc layer
+            Iterate over the k points:
+                Compute the guided modes over all the (g + k) points
+                Compute the Hermitian matrix for diagonalization 
+                Compute the real part of the eigenvalues, stored in 
+            :attr:`GuidedModeExp.freqs`, and the corresponding eigenvectors,
+            stored in :attr:`GuidedModeExp.eigvecs`
+            If compute_im=True (as is default), run :meth:`GuidedModeExp.run_im`
+        
+        Parameters
+        ----------
+        kpoints : np.ndarray, optional
+            numpy array of shape (2, :) with the [kx, ky] coordinates of the 
+            k-vectors over which the simulation is run.
+        **kwargs
+            For all possible run options, see 
+            :meth:`GuidedModeExp.set_run_options`
+        """
+
+        # Set the default options and then overwrite with the user supplied
+        self.set_run_options(**kwargs)
+       
+        t_start = time.time()
+        
+        def print_vb(text, flush=False, end='\n'):
+            """Print if verbose==True
+            """
+            if self.verbose==True: 
+                if flush==False:
+                    print(text, end=end)
+                else:
+                    sys.stdout.write("\r" + text)
+                    sys.stdout.flush()
+
+        # Bloch momenta over which band structure is simulated 
+        self._kpoints = kpoints
+
+        # Array of effective permittivity of every layer (including claddings)
+        if self.eps_eff=='average':
+            layer_eps = 'eps_avg'
+        elif self.eps_eff=='background':
+            layer_eps = 'eps_b'
+        else:
+            raise ValueError("'eps_eff' can be 'average' or 'background'")
+        
+        # Store an array of the effective permittivity for every layer
+        #(including claddings)
+        eps_array = bd.array(list(getattr(layer, layer_eps)
+            for layer in [self.phc.claddings[0]] + self.phc.layers + 
+            [self.phc.claddings[1]]), dtype=bd.float).ravel()
+        # A separate array where the values are converted from ArrayBox to numpy
+        # array, if using the 'autograd' backend.
+        eps_array_val = np.array(list(get_value(getattr(layer, layer_eps))
+            for layer in [self.phc.claddings[0]] + self.phc.layers + 
+            [self.phc.claddings[1]]), dtype=np.float).ravel()
+        
+        # Store an array of thickness of every layer (not including claddings)
+        d_array = bd.array(list(layer.d for layer in \
+            self.phc.layers), dtype=bd.float).ravel()
+        # A separate array where the values are converted from ArrayBox to numpy
+        # array, if using the 'autograd' backend.
+        d_array_val = np.array(list(get_value(layer.d) for layer in \
+            self.phc.layers), dtype=np.float).ravel()
+
+        (self.eps_array_val, self.eps_array, self.d_array_val, self.d_array) = \
+                                (eps_array_val, eps_array, d_array_val, d_array)
+
+        # Initialize attributes for guided-mode storing
+        self.g_array = []
+        """
+        List dimensions in order: 
+            - k-point index (length 1 if gmode_compute=='interp')
+            - guided mode index
+            - g_array index
+        """
+        self.omegas_te = []
+        self.coeffs_te = []
+        self.omegas_tm = []
+        self.coeffs_tm = []
+
+        # Pre-compute guided modes if the 'interp' option is used
+        if self.gmode_compute.lower() == 'interp':
+            t = time.time()
+            kmax = np.amax(np.sqrt(np.square(kpoints[0, :]) +
+                                np.square(kpoints[1, :])))
+            Gmax = np.amax(np.sqrt(np.square(self.gvec[0, :]) +
+                                np.square(self.gvec[1, :])))
+
+            # Array of g-points over which the guided modes will be computed
+            g_array = np.linspace(0, Gmax + kmax, self.gmode_npts)
+            self._compute_guided(g_array)
+            self.t_guided = time.time()-t
+
+        else:
+            self.t_guided = 0
+
+        # Compute inverse matrix of FT of permittivity
+        t = time.time()
+        self._compute_eps_inv()
+        t_eps_inv = time.time()-t
+
+        # Loop over all k-points, construct the matrix, diagonalize, and compute
+        # radiative losses for the modes requested by kinds_rad and minds_rad
+        t_rad = 0
+        freqs = []
+        freqs_im = []
+        self._eigvecs = []
+        for ik, k in enumerate(kpoints.T):
+            
+            print_vb("Running k-point %d of %d" % (ik+1, kpoints.shape[1]), 
+                        flush=True)            
+            mat = self._construct_mat(kind=ik)
+            if self.numeig > mat.shape[0]:
+                raise ValueError("Requested number of eigenvalues 'numeig' "
+                    "larger than total size of basis set. Reduce 'numeig' or "
+                    "increase 'gmax'")
+
+            # NB: we shift the matrix by np.eye to avoid problems at the zero-
+            # frequency mode at Gamma
+            if self.eig_solver == 'eigh':
+                (freq2, evecs) = bd.eigh(mat + bd.eye(mat.shape[0]))
+                freq1 = bd.sqrt(bd.abs(freq2 - bd.ones(mat.shape[0])))/2/np.pi
+                i_near = find_nearest(get_value(freq1), 
+                                        self.eig_sigma, self.numeig)
+                i_sort = bd.argsort(freq1[i_near])
+                freq = freq1[i_near[i_sort]]
+                evec = evecs[:, i_near[i_sort]]
+            elif self.eig_solver == 'eigsh':
+                (freq2, evecs) = bd.eigsh(mat + bd.eye(mat.shape[0]), 
+                                        self.numeig, 
+                                        sigma=(self.eig_sigma*2*np.pi)**2)
+                freq1 = bd.sqrt(bd.abs(freq2 - bd.ones(self.numeig)))/2/np.pi
+                i_sort = bd.argsort(freq1)
+                freq = freq1[i_sort]
+                evec = evecs[:, i_sort]
+            else:
+                raise ValueError("'eig_solver' can be 'eigh' or 'eigsh'")
+            
+            freqs.append(freq)
+            self._eigvecs.append(evec)
+
+        # Store the eigenfrequencies taking the standard reduced frequency 
+        # convention for the units (2pi a/c)
+        self._freqs = bd.array(freqs)
+
+        print_vb("", flush=True)
+        print_vb("%1.4fs total time for real part of frequencies, of which"
+                    % (time.time()-t_start))
+        print_vb("  %1.4fs for guided modes computation using"
+                " the gmode_compute='%s' method"
+                % (self.t_guided, self.gmode_compute.lower()))
+        print_vb("  %1.4fs for inverse matrix of Fourier-space "
+            "permittivity"% t_eps_inv)
+
+        if self.compute_im==True:
+            t = time.time()
+            self.run_im()
+            print_vb("%1.4fs for imaginary part computation"
+                    % (time.time()-t))
+        else:
+            print_vb("Skipping imaginary part computation, use run_im() to"
+                " run it, or compute_rad() to compute the radiative rates"
+                " of selected eigenmodes")
+
     def run_im(self):
-        '''
+        """
         Compute the radiative rates associated to all the freqeuncies that were 
         computed during self.run()
-        '''
+        """
         if len(self.freqs)==0:
             raise RuntimeError("Run the GME computation first!")
 
@@ -687,12 +744,12 @@ class GuidedModeExp(object):
             cl[pol] = bd.array(cl[pol])
             cu[pol] = bd.array(cu[pol])
 
-        self.freqs_im = bd.array(freqs_i)
+        self._freqs_im = bd.array(freqs_i)
         self.coup_l = cl
         self.coup_u = cu
 
-    def compute_rad(self, kind, minds=[0]):
-        '''
+    def compute_rad(self, kind: int, minds: list=[0]):
+        """
         Compute the radiation losses of the eigenmodes after the dispersion
         has been computed.
         Input
@@ -700,8 +757,8 @@ class GuidedModeExp(object):
             minds           : indexes of which modes to be computed 
                               (max value must be smaller than self.numeig)
         Output
-            freqs_im        : imaginary part of the frequencies 
-        '''
+            freqs_im        : imaginary part of the frequencies
+        """
         if len(self.freqs)==0:
             raise RuntimeError("Run the GME computation first!")
         if np.max(np.array(minds)) > self.numeig - 1:
@@ -842,10 +899,27 @@ class GuidedModeExp(object):
         freqs_im = bd.array(rad_tot)/2/np.pi
         return (freqs_im, coup_l, coup_u)
 
+    def get_eps_xy(self, z, Nx=100, Ny=100):
+        """
+        Get the permittivity of the PhC cross-sections as computed from an 
+        inverse Fourier transform with the GME reciprocal lattice vectors.
+        """
+        (xgrid, ygrid) = self.phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
+        lind = self._z_to_lind(z)
+
+        ft_coeffs = np.hstack((self.T1[lind], self.T2[lind], 
+                            np.conj(self.T1[lind]), np.conj(self.T2[lind])))
+        gvec = np.hstack((self.G1, self.G2, 
+                                -self.G1, -self.G2))
+
+        eps_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
+
+        return (eps_r, xgrid, ygrid)
+
     def ft_field_xy(self, field, kind, mind, z):
-        '''
+        """
         Compute the 'H', 'D' or 'E' field FT in the xy-plane at position z
-        '''
+        """
         evec = self.eigvecs[kind][:, mind]
         omega = self.freqs[kind][mind]*2*np.pi
         k = self.kpoints[:, kind]
@@ -1022,12 +1096,12 @@ class GuidedModeExp(object):
 
     def get_field_xy(self, field, kind, mind, z, xgrid=None, ygrid=None,
                     component='xyz', Nx=100, Ny=100):
-        '''
+        """
         Get the 'field' ('H', 'D', or 'E') at an xy-plane at position z for mode 
         number 'mind' at k-vector 'kind'.
         Returns a dictionary with the ['x'], ['y'], and ['z'] components of the 
         corresponding field; only the ones requested in 'comp' are computed 
-        '''
+        """
 
         # Make a grid in the x-y plane
         if xgrid is None or ygrid is None:
@@ -1053,10 +1127,10 @@ class GuidedModeExp(object):
 
     def get_field_xz(self, field, kind, mind, y, xgrid=None, zgrid=None,
                     component='xyz', Nx=100, Nz=100, dist=1.):
-        '''
+        """
         Hacked version for getting the field in an xz plane by stitching 
         together xy "planes" for various z slices
-        '''
+        """
         if xgrid is None:
             xgrid = self.phc.lattice.xy_grid(Nx=Nx, Ny=2)[0]
         ygrid = np.array([y])
@@ -1088,10 +1162,10 @@ class GuidedModeExp(object):
 
     def get_field_yz(self, field, kind, mind, x, ygrid=None, zgrid=None,
                     component='xyz', Ny=100, Nz=100, dist=1.):
-        '''
+        """
         Hacked version for getting the field in a yz plane by stitching 
         together xy "planes" for various z slices
-        '''
+        """
         xgrid = np.array([x])
         if ygrid is None:
             ygrid = self.phc.lattice.xy_grid(Nx=2, Ny=Ny)[1]        
