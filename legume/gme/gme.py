@@ -10,20 +10,20 @@ from legume.utils import get_value, ftinv, find_nearest
 
 class GuidedModeExp(object):
     """
-    Main simulation class of the guided-mode expansion
+    Main simulation class of the guided-mode expansion.
     """
     def __init__(self, phc, gmax=3, truncate_g='tbt'):
-        """Initialize the guided-mode expansion
+        """Initialize the guided-mode expansion.
         
         Parameters
         ----------
         phc : PhotCryst
-            Photonic crystal object to be simulated
+            Photonic crystal object to be simulated.
         gmax : int, optional
-            Maximum reciprocal lattice wave-vector length in units of 2pi/a
+            Maximum reciprocal lattice wave-vector length in units of 2pi/a.
         truncate_g : {'tbt', 'abs'}
             Truncation of the reciprocal lattice vectors, 'tbt' takes a 
-            parallelogram in reciprocal space, while 'abs' takes a circle
+            parallelogram in reciprocal space, while 'abs' takes a circle.
         """
 
         self.phc = phc
@@ -54,10 +54,18 @@ class GuidedModeExp(object):
 
     def __repr__(self):
         rep = 'GuidedModeExp(\n'
-        rep += 'gmax = ' + repr(self.gmax) + '\n'
-        rep += 'modes_numg = ' + repr(self.modes_numg) + '\n'
-        rep += 'N_basis = ' + repr(self.N_basis) + '\n'
-        rep += repr(self.phc) + '\n)'
+        rep += 'phc = PhotCryst object' + ', \n'
+        rep += 'gmax = ' + repr(self.gmax) + ', \n'
+        run_options = ['gmode_compute', 'gmode_inds', 'gmode_step', 'gradients', 
+                        'eig_solver', 'eig_sigma', 'eps_eff']
+        for option in run_options:
+            try: 
+                val = getattr(self, option)
+                rep += option + ' = ' + repr(val) + ', \n'
+            except:
+                pass
+
+        rep += ')'
         return rep
 
     @property
@@ -85,7 +93,7 @@ class GuidedModeExp(object):
 
     @property
     def kpoints(self):
-        """Numpy array of shape (2, :) with the [kx, ky] coordinates of the 
+        """Numpy array of shape (2, Nk) with the [kx, ky] coordinates of the 
         k-vectors over which the simulation is run.
         """
         if self._kpoints is None: self._kpoints = []
@@ -93,23 +101,11 @@ class GuidedModeExp(object):
 
     @property
     def gvec(self):
-        """Numpy array of shape (2, :) with the [gx, gy] coordinates of the 
+        """Numpy array of shape (2, Ng) with the [gx, gy] coordinates of the 
         reciprocal lattice vectors over which the simulation is run.
         """
         if self._gvec is None: self._gvec = []
         return self._gvec
-
-    @property
-    def run_options(self):
-        """Dictionary of options for the simulation run. See documentation of 
-        :meth:`GuidedModeExp.set_run_options` for details.
-        """
-        if self._run_options is None: self._run_options = {}
-        return self._run_options       
-        
-    @run_options.setter
-    def run_options(self, **options):
-        self.set_run_options(options)
 
     def _init_reciprocal_tbt(self):
         """
@@ -483,14 +479,14 @@ class GuidedModeExp(object):
             gmode_step: float=1e-2, gmode_tol: float=1e-10, numeig: int=10,
             compute_im: bool=True, gradients='exact', eig_solver='eigh',
             eig_sigma: float=0., eps_eff='average', verbose: bool=True):
-            """Set multiple options for the guided-mode expansion
+            """Set multiple options for the guided-mode expansion.
             
             Parameters
             ----------
             gmode_compute : {'exact', 'interp'}, optional
                 Define whether the guided modes are computed exactly at every 
                 k-step ('exact'), or computed in the beginning and then 
-                interpolated ('interp'), or whether they are 
+                interpolated ('interp').
             gmode_inds : list or np.ndarray, optional
                 Indexes of modes to be included in the expansion. 
                 Default is [0].
@@ -555,14 +551,16 @@ class GuidedModeExp(object):
         The guided-mode expansion proceeds as follows:
 
             Compute the inverse matrix of the fourier transform of the 
-            permittivity in every phc layer
+            permittivity in every phc layer.
             Iterate over the k points:
-                Compute the guided modes over all the (g + k) points
-                Compute the Hermitian matrix for diagonalization 
+                Compute the guided modes over all the (g + k) points.
+
+                Compute the Hermitian matrix for diagonalization.
+
                 Compute the real part of the eigenvalues, stored in 
-            :attr:`GuidedModeExp.freqs`, and the corresponding eigenvectors,
-            stored in :attr:`GuidedModeExp.eigvecs`
-            If compute_im=True (as is default), run :meth:`GuidedModeExp.run_im`
+                :attr:`GuidedModeExp.freqs`, and the corresponding eigenvectors,
+                stored in :attr:`GuidedModeExp.eigvecs`.
+            If compute_im=True (as is default), run :meth:`GuidedModeExp.run_im`.
         
         Parameters
         ----------
@@ -571,7 +569,7 @@ class GuidedModeExp(object):
             k-vectors over which the simulation is run.
         **kwargs
             For all possible run options, see 
-            :meth:`GuidedModeExp.set_run_options`
+            :meth:`GuidedModeExp.set_run_options`.
         """
 
         # Set the default options and then overwrite with the user supplied

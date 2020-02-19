@@ -29,7 +29,6 @@ Attributes
    GuidedModeExp.eigvecs
    GuidedModeExp.kpoints
    GuidedModeExp.gvec
-   GuidedModeExp.run_options
 
 
 Methods
