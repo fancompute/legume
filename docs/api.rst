@@ -27,6 +27,8 @@ Attributes
    GuidedModeExp.freqs
    GuidedModeExp.freqs_im
    GuidedModeExp.eigvecs
+   GuidedModeExp.coup_l
+   GuidedModeExp.coup_u
    GuidedModeExp.kpoints
    GuidedModeExp.gvec
 

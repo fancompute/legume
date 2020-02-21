@@ -92,6 +92,20 @@ class GuidedModeExp(object):
         return self._eigvecs
 
     @property
+    def coup_l(self):
+        """Coupling to 'te' and 'tm' radiative modes in the lower cladding.
+        """
+        if self._coup_l is None: self._coup_l = []
+        return self._coup_l
+
+    @property
+    def coup_u(self):
+        """Coupling to 'te' and 'tm' radiative modes in the lower cladding.
+        """
+        if self._coup_u is None: self._coup_u = []
+        return self._coup_u
+
+    @property
     def kpoints(self):
         """Numpy array of shape (2, Nk) with the [kx, ky] coordinates of the 
         k-vectors over which the simulation is run.
@@ -568,7 +582,8 @@ class GuidedModeExp(object):
             numpy array of shape (2, :) with the [kx, ky] coordinates of the 
             k-vectors over which the simulation is run.
         **kwargs
-            For all possible run options, see 
+            All the keyword arguments that can be passed here, as well as their 
+            default values, are defined in 
             :meth:`GuidedModeExp.set_run_options`.
         """
 
@@ -719,8 +734,10 @@ class GuidedModeExp(object):
 
     def run_im(self):
         """
-        Compute the radiative rates associated to all the freqeuncies that were 
-        computed during self.run()
+        Compute the radiative rates associated to all the eigenmodes that were 
+        computed during :meth:`GuidedModeExp.run`. Results are stored in 
+        :attr:`GuidedModeExp.freqs_im`, :attr:`GuidedModeExp.coup_l`, and 
+        :attr:`GuidedModeExp.coup_u`.
         """
         if len(self.freqs)==0:
             raise RuntimeError("Run the GME computation first!")
@@ -743,19 +760,31 @@ class GuidedModeExp(object):
             cu[pol] = bd.array(cu[pol])
 
         self._freqs_im = bd.array(freqs_i)
-        self.coup_l = cl
-        self.coup_u = cu
+        self._coup_l = cl
+        self._coup_u = cu
 
     def compute_rad(self, kind: int, minds: list=[0]):
         """
         Compute the radiation losses of the eigenmodes after the dispersion
         has been computed.
-        Input
-            kind            : index of the k-point for the computation
-            minds           : indexes of which modes to be computed 
-                              (max value must be smaller than self.numeig)
-        Output
-            freqs_im        : imaginary part of the frequencies
+        
+        Parameters
+        ----------
+        kind : int
+            Index of the k-point for the computation.
+        minds : list, optional
+            Indexes of which modes to be computed. Max value must be smaller 
+            than `GuidedModeExp.numeig` set in :meth:`GuidedModeExp.run`.
+        
+        Returns
+        -------
+        freqs_im : np.ndarray
+            Imaginary part of the frequencies of the eigenmodes computed by the 
+            guided-mode expansion.
+        coup_l : dict 
+            Coupling to 'te' and 'tm' radiative modes in the lower cladding.
+        coup_u : dict
+            Coupling to 'te' and 'tm' radiative modes in the upper cladding.
         """
         if len(self.freqs)==0:
             raise RuntimeError("Run the GME computation first!")
@@ -897,12 +926,45 @@ class GuidedModeExp(object):
         freqs_im = bd.array(rad_tot)/2/np.pi
         return (freqs_im, coup_l, coup_u)
 
-    def get_eps_xy(self, z, Nx=100, Ny=100):
+    def get_eps_xy(self, z:float, xgrid=None, ygrid=None, Nx=100, Ny=100):
         """
-        Get the permittivity of the PhC cross-sections as computed from an 
-        inverse Fourier transform with the GME reciprocal lattice vectors.
+        Get the xy-plane permittivity of the PhC at a given z as computed from 
+        an inverse Fourier transform with the GME reciprocal lattice vectors.
+        
+        Parameters
+        ----------
+        z : float
+            Position of the xy-plane.
+        xgrid : None, optional
+            None or a 1D np.array defining a grid in x.
+        ygrid : None, optional
+            None or a 1D np.array defining a grid in y.
+        Nx : int, optional
+            If xgrid==None, a grid of Nx points in the elementary cell is 
+            created.
+        Ny : int, optional
+            If ygrid==None, a grid of Ny points in the elementary cell is 
+            created.
+        
+        Returns
+        -------
+        eps_r : np.ndarray
+            The in-plane real-space permittivity.
+        xgrid : np.ndarray
+            The input or constructed grid in x.
+        ygrid : np.ndarray
+            The input or constructed grid in y.
         """
-        (xgrid, ygrid) = self.phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
+
+        # Make a grid in the x-y plane
+        if xgrid is None or ygrid is None:
+            (xgr, ygr) = self.phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
+            if xgrid is None:
+                xgrid = xgr
+            if ygrid is None:
+                ygrid = ygr
+
+        # Layer index where z lies
         lind = self._z_to_lind(z)
 
         ft_coeffs = np.hstack((self.T1[lind], self.T2[lind], 
@@ -916,7 +978,36 @@ class GuidedModeExp(object):
 
     def ft_field_xy(self, field, kind, mind, z):
         """
-        Compute the 'H', 'D' or 'E' field FT in the xy-plane at position z
+        Compute the 'H', 'D' or 'E' field Fourier components in the xy-plane at 
+        position z.
+        
+        Parameters
+        ----------
+        field : {'H', 'D', 'E'}
+            The field to be computed. 
+        kind : int
+            The field of the mode at `GuidedModeExp.kpoints[:, kind]` is 
+            computed.
+        mind : int
+            The field of the `mind` mode at that kpoint is computed.
+        z : float
+            Position of the xy-plane.
+
+        Note
+        ----
+        The function outputs 1D arrays with the same size as 
+        `GuidedModeExp.gvec[0, :]` corresponding to the G-vectors in 
+        that array.
+        
+        Returns
+        -------
+        fi_x : np.ndarray
+            The Fourier transform of the x-component of the specified field. 
+        fi_y : np.ndarray
+            The Fourier transform of the y-component of the specified field. 
+        fi_z : np.ndarray
+            The Fourier transform of the z-component of the specified field. 
+
         """
         evec = self.eigvecs[kind][:, mind]
         omega = self.freqs[kind][mind]*2*np.pi
@@ -1095,10 +1186,41 @@ class GuidedModeExp(object):
     def get_field_xy(self, field, kind, mind, z, xgrid=None, ygrid=None,
                     component='xyz', Nx=100, Ny=100):
         """
-        Get the 'field' ('H', 'D', or 'E') at an xy-plane at position z for mode 
-        number 'mind' at k-vector 'kind'.
-        Returns a dictionary with the ['x'], ['y'], and ['z'] components of the 
-        corresponding field; only the ones requested in 'comp' are computed 
+        Compute the 'H', 'D' or 'E' field components in the xy-plane at 
+        position z.
+        
+        Parameters
+        ----------
+        field : {'H', 'D', 'E'}
+            The field to be computed. 
+        kind : int
+            The field of the mode at `GuidedModeExp.kpoints[:, kind]` is 
+            computed.
+        mind : int
+            The field of the `mind` mode at that kpoint is computed.
+        z : float
+            Position of the xy-plane.
+        xgrid : None, optional
+            None or a 1D np.array defining a grid in x.
+        ygrid : None, optional
+            None or a 1D np.array defining a grid in y.
+        component : str, optional
+            A string containing 'x', 'y', and/or 'z'
+        Nx : int, optional
+            If xgrid==None, a grid of Nx points in the elementary cell is 
+            created.
+        Ny : int, optional
+            If ygrid==None, a grid of Ny points in the elementary cell is 
+            created.
+        
+        Returns
+        -------
+        fi : dict
+            A dictionary with the requested components, 'x', 'y', and/or 'z'.
+        xgrid : np.ndarray
+            The input or constructed grid in x.
+        ygrid : np.ndarray
+            The input or constructed grid in y.
         """
 
         # Make a grid in the x-y plane
@@ -1126,9 +1248,43 @@ class GuidedModeExp(object):
     def get_field_xz(self, field, kind, mind, y, xgrid=None, zgrid=None,
                     component='xyz', Nx=100, Nz=100, dist=1.):
         """
-        Hacked version for getting the field in an xz plane by stitching 
-        together xy "planes" for various z slices
+        Compute the 'H', 'D' or 'E' field components in the xz-plane at 
+        position y.
+        
+        Parameters
+        ----------
+        field : {'H', 'D', 'E'}
+            The field to be computed. 
+        kind : int
+            The field of the mode at `GuidedModeExp.kpoints[:, kind]` is 
+            computed.
+        mind : int
+            The field of the `mind` mode at that kpoint is computed.
+        y : float
+            Position of the xz-plane.
+        xgrid : None, optional
+            None or a 1D np.array defining a grid in x.
+        zgrid : None, optional
+            None or a 1D np.array defining a grid in z.
+        component : str, optional
+            A string containing 'x', 'y', and/or 'z'
+        Nx : int, optional
+            If xgrid==None, a grid of Nx points in the elementary cell is 
+            created.
+        Nz : int, optional
+            If zgrid==None, a grid of Nz points in the elementary cell is 
+            created.
+        
+        Returns
+        -------
+        fi : dict
+            A dictionary with the requested components, 'x', 'y', and/or 'z'.
+        xgrid : np.ndarray
+            The input or constructed grid in x.
+        zgrid : np.ndarray
+            The input or constructed grid in z.
         """
+
         if xgrid is None:
             xgrid = self.phc.lattice.xy_grid(Nx=Nx, Ny=2)[0]
         ygrid = np.array([y])
@@ -1161,8 +1317,41 @@ class GuidedModeExp(object):
     def get_field_yz(self, field, kind, mind, x, ygrid=None, zgrid=None,
                     component='xyz', Ny=100, Nz=100, dist=1.):
         """
-        Hacked version for getting the field in a yz plane by stitching 
-        together xy "planes" for various z slices
+        Compute the 'H', 'D' or 'E' field components in the yz-plane at 
+        position x.
+        
+        Parameters
+        ----------
+        field : {'H', 'D', 'E'}
+            The field to be computed. 
+        kind : int
+            The field of the mode at `GuidedModeExp.kpoints[:, kind]` is 
+            computed.
+        mind : int
+            The field of the `mind` mode at that kpoint is computed.
+        x : float
+            Position of the yz-plane.
+        ygrid : None, optional
+            None or a 1D np.array defining a grid in y.
+        zgrid : None, optional
+            None or a 1D np.array defining a grid in z.
+        component : str, optional
+            A string containing 'x', 'y', and/or 'z'
+        Ny : int, optional
+            If xgrid==None, a grid of Ny points in the elementary cell is 
+            created.
+        Nz : int, optional
+            If ygrid==None, a grid of Nz points in the elementary cell is 
+            created.
+        
+        Returns
+        -------
+        fi : dict
+            A dictionary with the requested components, 'x', 'y', and/or 'z'.
+        ygrid : np.ndarray
+            The input or constructed grid in y.
+        zgrid : np.ndarray
+            The input or constructed grid in z.
         """
         xgrid = np.array([x])
         if ygrid is None:
