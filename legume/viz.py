@@ -115,7 +115,7 @@ def _plot_eps(eps_r, clim=None, ax=None, extent=None, cmap='Greys', cbar=False):
         
     return im
 
-def plot_circle(x, y, r, ax=None, color='b', lw=1, npts=51):
+def _plot_circle(x, y, r, ax=None, color='b', lw=1, npts=51):
 
     if ax is None:
         fig, ax = plt.subplots(1, constrained_layout=True)
@@ -327,10 +327,10 @@ def shapes(layer, ax=None, npts=101, color='k', lw=1, pad=True):
             x = shape.x_cent
             y = shape.y_cent
             r = shape.r
-            plot_circle(x, y, r, ax=ax, color=color, lw=lw, npts=npts)
+            _plot_circle(x, y, r, ax=ax, color=color, lw=lw, npts=npts)
             if pad == True:
                 for (x_p, y_p) in xy_p:
-                    plot_circle(x + x_p, y + y_p, r,
+                    _plot_circle(x + x_p, y + y_p, r,
                                 ax=ax, color=color, lw=lw, npts=npts)
         else:
             # Everything else should be a Poly subclass
