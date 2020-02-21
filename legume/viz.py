@@ -101,7 +101,7 @@ def bands(
 
     return ax
 
-def plot_eps(eps_r, clim=None, ax=None, extent=None, cmap='Greys', cbar=False):
+def _plot_eps(eps_r, clim=None, ax=None, extent=None, cmap='Greys', cbar=False):
 
     if ax is None:
         fig, ax = plt.subplots(1, constrained_layout=True)
@@ -158,7 +158,7 @@ def eps(layer, Nx=100, Ny=100, ax=None, clim=None,
     eps_r = layer.get_eps((xmesh, ymesh))
     extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
 
-    plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+    _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
 def eps_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
              cbar=False, cmap='Greys', plot=True):
@@ -206,7 +206,7 @@ def eps_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
     extent = [xgrid[0], xgrid[-1], zgrid[0], zgrid[-1]]
 
     if plot:
-        plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+        _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
     return eps_r
 
@@ -255,7 +255,7 @@ def eps_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None,
     extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
 
     if plot:
-        plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+        _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
     return eps_r
 
@@ -305,7 +305,7 @@ def eps_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None,
     extent = [ygrid[0], ygrid[-1], zgrid[0], zgrid[-1]]
 
     if plot:
-        plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+        _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
     return eps_r
 
@@ -512,7 +512,7 @@ def eps_ft(struct, Nx=100, Ny=100, cladding=False, cbar=True,
         eps_max = max([eps_max, np.amax(np.real(eps_r))])
         extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
 
-        im = plot_eps(np.real(eps_r), ax=ax[indl], extent=extent, 
+        im = _plot_eps(np.real(eps_r), ax=ax[indl], extent=extent, 
                         cbar=False)
         ims.append(im)
         if cladding:
