@@ -79,3 +79,6 @@ html_static_path = ['_static']
 html_theme_options = {"logo_only": True}
 html_logo = "_static/legume-logo.png"
 html_favicon = "_static/favicon.ico"
+
+def setup (app):
+    app.add_stylesheet('css/custom.css')
