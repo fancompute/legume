@@ -5,16 +5,17 @@ from legume.backend import backend as bd
 
 class Shape(object):
     """ 
-    Parent class for shapes
+    Parent class for shapes.
     """
     def __init__(self, eps=1.):
+        
         self.eps = eps
         self.area = bd.real(self.compute_ft(bd.array([[0.], [0.]])))
 
     def __repr__(self):
         return "Shape"
 
-    def parse_ft_gvec(self, gvec):
+    def _parse_ft_gvec(self, gvec):
         if type(gvec) == list:
             gvec = np.array(gvec)
         elif type(gvec) != np.ndarray:
@@ -35,24 +36,53 @@ class Shape(object):
 
     def compute_ft(self, gvec):
         """
-        FT of a 2D function equal to 1 inside the shape and 0 outside
-        Input: gvec, [2 x Ng] numpy array
+        FT of a 2D function equal to 1 inside the shape and 0 outside.
         """
         raise NotImplementedError("compute_ft() needs to be implemented by"
             "Shape subclasses")
 
     def is_inside(self, x, y):
-        # Input: x, y, arrays of same shape
-        # Ouput: Array of same shape as x and y equals to 1 if (x, y) is inside
-        # the shape, and 0 otherwise
+        """Vectorized check if points are inside the shape.
+        
+        Parameters
+        ----------
+        x : np.ndarray
+            x-coordinates of points to test.
+        y : np.ndarray
+            y-coordinates of points to test.
+
+        Note
+        ----
+        `x` and `y` must have the same shape.
+
+        Returns
+        -------
+        np.ndarray
+            An array of the same shape as `x` and `y` with elements equal to 1 
+            if the corresponding point (x, y) is inside the shape, and 0 
+            otherwise.
+        """
         raise NotImplementedError("is_inside() needs to be implemented by"
             "Shape subclasses")
 
 class Circle(Shape):
     """
-    Define class for a circular shape
+    Subclass for a circular shape.
     """
     def __init__(self, eps=1., x_cent=0., y_cent=0., r=0.):
+        """Initialize a circle.
+        
+        Parameters
+        ----------
+        eps : float, optional
+            Permittivity inside the circle.
+        x_cent : float, optional
+            x-coordinate of the center.
+        y_cent : float, optional
+            y-coordinate of the center.
+        r : float, optional
+            Radius.
+        """
         self.x_cent = x_cent
         self.y_cent = y_cent
         self.r = r
@@ -64,10 +94,21 @@ class Circle(Shape):
 
     def compute_ft(self, gvec):
         """
-        FT of a 2D function equal to 1 inside the circle and 0 outside
-        Input: gvec, [2 x Ng] numpy array
+        Fourier transform of a 2D function equal to 1 inside the circle and 0 
+        outside.
+        
+        Parameters
+        ----------
+        gvec : np.ndarray
+            An array of shape (2, Ng) of G-points in the xy-plane over which 
+            the FT is computed.
+        
+        Returns
+        -------
+        ft : np.ndarray
+            An array of shape (Ng, ) with the corresponding Fourier components.
         """
-        (gx, gy) = self.parse_ft_gvec(gvec)
+        (gx, gy) = self._parse_ft_gvec(gvec)
 
         gabs = np.sqrt(np.abs(np.square(gx)) + np.abs(np.square(gy)))
         gabs += 1e-10 # To avoid numerical instability at zero
@@ -78,20 +119,35 @@ class Circle(Shape):
         return ft
 
     def is_inside(self, x, y):
-        # Input: x, y, arrays of same shape
-        # Ouput: Array of same shape as x and y equals to 1 if (x, y) is inside
-        # the shape, and 0 otherwise
+
         return (np.square(x - self.x_cent) + np.square(y - self.y_cent)
                             <= np.square(self.r))
 
 class Poly(Shape):
     """
-    Define class for a polygonal shape
+    Subclass for a polygonal shape.
     """
-    def __init__(self, eps=1., x_edges=0., y_edges=0.):
+    def __init__(self, eps=1., x_edges=[0.], y_edges=[0.]):
+        """Initialize a polygon.
+        
+        Parameters
+        ----------
+        eps : float, optional
+            Permittivity inside the polygon.
+        x_edges : list or np.ndarray, optional
+            A 1D array containing the x-coordinates of the polygon vertices.
+        y_edges : list or np.ndarray, optional
+            A 1D array containing the y-coordinates of the polygon vertices.
+
+        Note
+        ----
+        x_edges and y_edges must have the same size. The vertices of the polygon
+        must be defined in a counter-clockwise direction. This is checked for 
+        when initializing a Poly object.
+        """
+
         # Make extra sure that the last point of the polygon is the same as the 
         # first point
-
         self.x_edges = bd.hstack((bd.array(x_edges), x_edges[0]))
         self.y_edges = bd.hstack((bd.array(y_edges), y_edges[0]))
         super().__init__(eps)
@@ -106,13 +162,10 @@ class Poly(Shape):
 
     def compute_ft(self, gvec):
         """
-        Computing polygonal shape FT as per Lee, IEEE TAP (1984)
-        NB: the vertices of the polygonal should be defined in a 
-        counter-clockwise manner!
-        Input: 
-            - gvec: [2 x Ng] numpy array
+        Fourier transform of a 2D function equal to 1 inside the polygon and 0 
+        outside. Computed as per Lee, IEEE TAP (1984).
         """
-        (gx, gy) = self.parse_ft_gvec(gvec)
+        (gx, gy) = self._parse_ft_gvec(gvec)
 
         (xj, yj) = self.x_edges, self.y_edges
         npts = xj.shape[0]
@@ -170,9 +223,7 @@ class Poly(Shape):
         return ft
 
     def is_inside(self, x, y):
-        # Input: x, y, arrays of same shape
-        # Ouput: Array of same shape as x and y equals to 1 if (x, y) is inside
-        # the shape, and 0 otherwise
+
         vert = np.vstack((np.array(self.x_edges), np.array(self.y_edges)))
         path = mpltPath.Path(vert.T)
         points = np.vstack((np.array(x).ravel(), np.array(y).ravel()))
@@ -181,7 +232,7 @@ class Poly(Shape):
 
     def rotate(self, angle):
         """
-        Rotate a polygon around its center of mass by angle radians
+        Rotate a polygon around its center of mass by `angle` radians.
         """
 
         rotmat = bd.array([[bd.cos(angle), -bd.sin(angle)], \
@@ -200,9 +251,22 @@ class Poly(Shape):
 
 class Square(Poly):
     """
-    Define class for a square shape
+    Sublass for a square shape
     """
     def __init__(self, eps=1, x_cent=0, y_cent=0, a=0):
+        """Initialize a square.
+        
+        Parameters
+        ----------
+        eps : float, optional
+            Permittivity inside the square.
+        x_cent : float, optional
+            x-coordinate of the center.
+        y_cent : float, optional
+            y-coordinate of the center.
+        a : float, optional
+            Side-length.
+        """
         self.x_cent = x_cent
         self.y_cent = y_cent
         self.a = a
@@ -216,9 +280,22 @@ class Square(Poly):
 
 class Hexagon(Poly):
     """
-    Define class for a hexagon shape
+    Subclass for a hexagon shape
     """
     def __init__(self, eps=1, x_cent=0, y_cent=0, a=0):
+        """Initialize a hexagon.
+        
+        Parameters
+        ----------
+        eps : float, optional
+            Permittivity inside the square.
+        x_cent : float, optional
+            x-coordinate of the center.
+        y_cent : float, optional
+            y-coordinate of the center.
+        a : float, optional
+            Side-length.
+        """
         self.x_cent = x_cent
         self.y_cent = y_cent
         self.a = a
