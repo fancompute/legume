@@ -4,18 +4,18 @@ import matplotlib.path as mpltPath
 from legume.backend import backend as bd
 
 class Shape(object):
-    """ 
-    Parent class for shapes.
+    """Geometric shape base class
     """
     def __init__(self, eps=1.):
-        
+        """Create a shape
+        """
         self.eps = eps
         self.area = bd.real(self.compute_ft(bd.array([[0.], [0.]])))
 
     def __repr__(self):
         return "Shape"
 
-    def _parse_ft_gvec(self, gvec):
+    def parse_ft_gvec(self, gvec):
         if type(gvec) == list:
             gvec = np.array(gvec)
         elif type(gvec) != np.ndarray:
@@ -35,53 +35,44 @@ class Shape(object):
         return (gvec[0, :], gvec[1, :])
 
     def compute_ft(self, gvec):
-        """
-        FT of a 2D function equal to 1 inside the shape and 0 outside.
+        """Compute Fourier transform of a 2D shape function
+
+        The shape function is assumed to take a value of 1 inside
+        the shape and a value of 0 outside the shape.
+
+        Parameters
+        ----------
+        gvec : np.ndarray of shape (2, Ng)
+            g-vectors at which the Fourier transform is evaluated
         """
         raise NotImplementedError("compute_ft() needs to be implemented by"
             "Shape subclasses")
 
     def is_inside(self, x, y):
-        """Vectorized check if points are inside the shape.
-        
-        Parameters
-        ----------
-        x : np.ndarray
-            x-coordinates of points to test.
-        y : np.ndarray
-            y-coordinates of points to test.
+        """Indicator function for the shape
 
-        Note
-        ----
-        `x` and `y` must have the same shape.
-
-        Returns
-        -------
-        np.ndarray
-            An array of the same shape as `x` and `y` with elements equal to 1 
-            if the corresponding point (x, y) is inside the shape, and 0 
-            otherwise.
+        This returns 1 if (x, y) is inside the shape and
+        returns 0 if (x, y) coord is outside the shape 
         """
         raise NotImplementedError("is_inside() needs to be implemented by"
             "Shape subclasses")
 
 class Circle(Shape):
-    """
-    Subclass for a circular shape.
+    """Circle shape
     """
     def __init__(self, eps=1., x_cent=0., y_cent=0., r=0.):
-        """Initialize a circle.
-        
+        """Create a circle shape
+
         Parameters
         ----------
-        eps : float, optional
-            Permittivity inside the circle.
-        x_cent : float, optional
-            x-coordinate of the center.
-        y_cent : float, optional
-            y-coordinate of the center.
-        r : float, optional
-            Radius.
+        eps : float
+            Permittivity value
+        x_cent : float
+            x-coordinate of circle center
+        y_cent : float
+            y-coordinate of circle center
+        r : float
+            radius of circle
         """
         self.x_cent = x_cent
         self.y_cent = y_cent
@@ -93,22 +84,7 @@ class Circle(Shape):
                (self.eps, self.x_cent, self.y_cent, self.r)
 
     def compute_ft(self, gvec):
-        """
-        Fourier transform of a 2D function equal to 1 inside the circle and 0 
-        outside.
-        
-        Parameters
-        ----------
-        gvec : np.ndarray
-            An array of shape (2, Ng) of G-points in the xy-plane over which 
-            the FT is computed.
-        
-        Returns
-        -------
-        ft : np.ndarray
-            An array of shape (Ng, ) with the corresponding Fourier components.
-        """
-        (gx, gy) = self._parse_ft_gvec(gvec)
+        (gx, gy) = self.parse_ft_gvec(gvec)
 
         gabs = np.sqrt(np.abs(np.square(gx)) + np.abs(np.square(gy)))
         gabs += 1e-10 # To avoid numerical instability at zero
@@ -119,31 +95,27 @@ class Circle(Shape):
         return ft
 
     def is_inside(self, x, y):
-
         return (np.square(x - self.x_cent) + np.square(y - self.y_cent)
                             <= np.square(self.r))
 
 class Poly(Shape):
+    """Polygon shape
     """
-    Subclass for a polygonal shape.
-    """
-    def __init__(self, eps=1., x_edges=[0.], y_edges=[0.]):
-        """Initialize a polygon.
-        
+    def __init__(self, eps=1., x_edges=0., y_edges=0.):
+        """Create a polygon shape
+
         Parameters
         ----------
-        eps : float, optional
-            Permittivity inside the polygon.
-        x_edges : list or np.ndarray, optional
-            A 1D array containing the x-coordinates of the polygon vertices.
-        y_edges : list or np.ndarray, optional
-            A 1D array containing the y-coordinates of the polygon vertices.
+        eps : float
+            Permittivity value
+        x_edges : List[float]
+            x-coordinates of polygon vertices
+        y_edges : List[float]
+            y-coordinates of polygon vertices
 
         Note
         ----
-        x_edges and y_edges must have the same size. The vertices of the polygon
-        must be defined in a counter-clockwise direction. This is checked for 
-        when initializing a Poly object.
+        The polygon vertices must be supplied in counter-clockwise order.
         """
 
         # Make extra sure that the last point of the polygon is the same as the 
@@ -161,11 +133,18 @@ class Poly(Shape):
                (self.eps, self.x_edges, self.y_edges)
 
     def compute_ft(self, gvec):
+        """Compute Fourier transform of the polygon
+
+        The polygon is assumed to take a value of 1 inside and a value of 0 outside.
+
+        The Fourier transform calculation follows that of Lee, IEEE TAP (1984).
+
+        Parameters
+        ----------
+        gvec : np.ndarray of shape (2, Ng)
+            g-vectors at which FT is evaluated
         """
-        Fourier transform of a 2D function equal to 1 inside the polygon and 0 
-        outside. Computed as per Lee, IEEE TAP (1984).
-        """
-        (gx, gy) = self._parse_ft_gvec(gvec)
+        (gx, gy) = self.parse_ft_gvec(gvec)
 
         (xj, yj) = self.x_edges, self.y_edges
         npts = xj.shape[0]
@@ -223,7 +202,6 @@ class Poly(Shape):
         return ft
 
     def is_inside(self, x, y):
-
         vert = np.vstack((np.array(self.x_edges), np.array(self.y_edges)))
         path = mpltPath.Path(vert.T)
         points = np.vstack((np.array(x).ravel(), np.array(y).ravel()))
@@ -231,8 +209,7 @@ class Poly(Shape):
         return test.reshape((x.shape))
 
     def rotate(self, angle):
-        """
-        Rotate a polygon around its center of mass by `angle` radians.
+        """Rotate the polygon around its center of mass by angle radians
         """
 
         rotmat = bd.array([[bd.cos(angle), -bd.sin(angle)], \
@@ -250,22 +227,21 @@ class Poly(Shape):
         return self
 
 class Square(Poly):
-    """
-    Sublass for a square shape
+    """Square shape
     """
     def __init__(self, eps=1, x_cent=0, y_cent=0, a=0):
-        """Initialize a square.
-        
+        """Create a square shape
+
         Parameters
         ----------
-        eps : float, optional
-            Permittivity inside the square.
-        x_cent : float, optional
-            x-coordinate of the center.
-        y_cent : float, optional
-            y-coordinate of the center.
-        a : float, optional
-            Side-length.
+        eps : float
+            Permittivity value
+        x_cent : float
+            x-coordinate of square center
+        y_cent : float
+            y-coordinate of square center
+        a : float
+            square edge length
         """
         self.x_cent = x_cent
         self.y_cent = y_cent
@@ -279,22 +255,21 @@ class Square(Poly):
                (self.eps, self.x_cent, self.y_cent, self.a)
 
 class Hexagon(Poly):
-    """
-    Subclass for a hexagon shape
+    """Hexagon shape
     """
     def __init__(self, eps=1, x_cent=0, y_cent=0, a=0):
-        """Initialize a hexagon.
-        
+        """Create a hexagon shape
+
         Parameters
         ----------
-        eps : float, optional
-            Permittivity inside the square.
-        x_cent : float, optional
-            x-coordinate of the center.
-        y_cent : float, optional
-            y-coordinate of the center.
-        a : float, optional
-            Side-length.
+        eps : float
+            Permittivity value
+        x_cent : float
+            x-coordinate of hexagon center
+        y_cent : float
+            y-coordinate of hexagon center
+        a : float
+            hexagon edge length
         """
         self.x_cent = x_cent
         self.y_cent = y_cent

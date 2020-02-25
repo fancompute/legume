@@ -101,7 +101,7 @@ def bands(
 
     return ax
 
-def plot_eps(eps_r, clim=None, ax=None, extent=None, cmap='Greys', cbar=False):
+def _plot_eps(eps_r, clim=None, ax=None, extent=None, cmap='Greys', cbar=False):
 
     if ax is None:
         fig, ax = plt.subplots(1, constrained_layout=True)
@@ -115,7 +115,7 @@ def plot_eps(eps_r, clim=None, ax=None, extent=None, cmap='Greys', cbar=False):
         
     return im
 
-def plot_circle(x, y, r, ax=None, color='b', lw=1, npts=51):
+def _plot_circle(x, y, r, ax=None, color='b', lw=1, npts=51):
 
     if ax is None:
         fig, ax = plt.subplots(1, constrained_layout=True)
@@ -129,22 +129,74 @@ def plot_circle(x, y, r, ax=None, color='b', lw=1, npts=51):
 
 def eps(layer, Nx=100, Ny=100, ax=None, clim=None,
              cbar=False, cmap='Greys'):
-    '''
-    Plot the in-plane permittivity distribution of a Layer instance
-    '''
+    """Plot the in-plane permittivity distribution of a Layer instance
+
+    Parameters
+    ----------
+    layer : Layer
+    Nx : int, optional
+        Number of sample points to use in x-direction.
+        Default is 100.
+    Ny : int, optional
+        Number of sample points to use in y-direction.
+        Default is 100.
+    ax : int, optional
+        Matplotlib axis object to use for plot.
+    clim : List[float], optional
+        Matplotlib color limit to use for plot.
+        Default is None.
+    cbar : bool, optional
+        Whether or not a colorbar should be added to the plot.
+        Default is False.
+    cmap : bool, optional
+        Matplotlib colormap to use for plot
+        Default is 'Greys'.
+    """
     (xgrid, ygrid) = layer.lattice.xy_grid(Nx=Nx, Ny=Ny)
     [xmesh, ymesh] = np.meshgrid(xgrid, ygrid)
 
     eps_r = layer.get_eps((xmesh, ymesh))
     extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
 
-    plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+    _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
 def eps_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
-             cbar=False, cmap='Greys'):
-    '''
-    Plot an xz-cross section showing all the layers and shapes
-    '''
+             cbar=False, cmap='Greys', plot=True):
+    """Plot permittivity cross section of a photonic crystal in an xz plane
+
+    Parameters
+    ----------
+    phc : PhotCryst
+    y : float, optional
+        The y-coordinate of the xz plane.
+        Default is 0.
+    Nx : int, optional
+        Number of sample points to use in x-direction.
+        Default is 100.
+    Nz : int, optional
+        Number of sample points to use in z-direction.
+        Default is 50.
+    ax : int, optional
+        Matplotlib axis object to use for plot.
+    clim : List[float], optional
+        Matplotlib color limit to use for plot.
+        Default is None.
+    cbar : bool, optional
+        Whether or not a colorbar should be added to the plot.
+        Default is False.
+    cmap : bool, optional
+        Matplotlib colormap to use for plot
+        Default is 'Greys'.
+    plot : bool, optional
+        Whether or not the a plot should be generated. Useful for cases where
+        only the array values are needed, e.g. for logging during optimization.
+        Default is True.
+
+    Returns
+    -------
+    eps_r : np.ndarray
+        Array containing permittivity values
+    """
     (xgrid, zgrid) = (phc.lattice.xy_grid(Nx=Nx)[0], phc.z_grid(Nz=Nz))
 
     [xmesh, zmesh] = np.meshgrid(xgrid, zgrid)
@@ -153,13 +205,48 @@ def eps_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
     eps_r = phc.get_eps((xmesh, ymesh, zmesh))
     extent = [xgrid[0], xgrid[-1], zgrid[0], zgrid[-1]]
 
-    plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+    if plot:
+        _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+
+    return eps_r
 
 def eps_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None,
-             cbar=False, cmap='Greys'):
-    '''
-    Plot an xy-cross section showing all the layers and shapes
-    '''
+             cbar=False, cmap='Greys', plot=True):
+    """Plot permittivity cross section of a photonic crystal in an xy plane
+
+    Parameters
+    ----------
+    phc : PhotCryst
+    z : float, optional
+        The z-coordinate of the xz plane.
+        Default is 0.
+    Nx : int, optional
+        Number of sample points to use in x-direction.
+        Default is 100.
+    Ny : int, optional
+        Number of sample points to use in y-direction.
+        Default is 100.
+    ax : int, optional
+        Matplotlib axis object to use for plot.
+    clim : List[float], optional
+        Matplotlib color limit to use for plot.
+        Default is None.
+    cbar : bool, optional
+        Whether or not a colorbar should be added to the plot.
+        Default is False.
+    cmap : bool, optional
+        Matplotlib colormap to use for plot
+        Default is 'Greys'.
+    plot : bool, optional
+        Whether or not the a plot should be generated. Useful for cases where
+        only the array values are needed, e.g. for logging during optimization.
+        Default is True.
+
+    Returns
+    -------
+    eps_r : np.ndarray
+        Array containing permittivity values
+    """
     (xgrid, ygrid) = phc.lattice.xy_grid(Nx=Nx, Ny=Ny)
     [xmesh, ymesh] = np.meshgrid(xgrid, ygrid)
     zmesh = z*np.ones(xmesh.shape)
@@ -167,14 +254,49 @@ def eps_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None,
     eps_r = phc.get_eps((xmesh, ymesh, zmesh))
     extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
 
-    plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+    if plot:
+        _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+
+    return eps_r
 
 
 def eps_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None,
-             cbar=False, cmap='Greys'):
-    '''
-    Plot a yz-cross section showing all the layers and shapes
-    '''
+             cbar=False, cmap='Greys', plot=True):
+    """Plot permittivity cross section of a photonic crystal in an yz plane
+
+    Parameters
+    ----------
+    phc : PhotCryst
+    x : float, optional
+        The x-coordinate of the xz plane.
+        Default is 0.
+    Ny : int, optional
+        Number of sample points to use in y-direction.
+        Default is 100.
+    Nz : int, optional
+        Number of sample points to use in z-direction.
+        Default is 50.
+    ax : int, optional
+        Matplotlib axis object to use for plot.
+    clim : List[float], optional
+        Matplotlib color limit to use for plot.
+        Default is None.
+    cbar : bool, optional
+        Whether or not a colorbar should be added to the plot.
+        Default is False.
+    cmap : bool, optional
+        Matplotlib colormap to use for plot
+        Default is 'Greys'.
+    plot : bool, optional
+        Whether or not the a plot should be generated. Useful for cases where
+        only the array values are needed, e.g. for logging during optimization.
+        Default is True.
+
+    Returns
+    -------
+    eps_r : np.ndarray
+        Array containing permittivity values
+    """
     (ygrid, zgrid) = (phc.lattice.xy_grid(Ny=Ny)[1], phc.z_grid(Nz=Nz))
     [ymesh, zmesh] = np.meshgrid(ygrid, zgrid)
     xmesh = x*np.ones(ymesh.shape)
@@ -182,13 +304,14 @@ def eps_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None,
     eps_r = phc.get_eps((xmesh, ymesh, zmesh))
     extent = [ygrid[0], ygrid[-1], zgrid[0], zgrid[-1]]
 
-    plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+    if plot:
+        _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+
+    return eps_r
 
 def shapes(layer, ax=None, npts=101, color='k', lw=1, pad=True):
-    '''Plot all the shapes in a ShapesLayer object 'layer'
-    npts      -- number of points for discretization of circles
-    pad       -- if True, will add an extra elementary cell on each side
-    '''
+    """Plot all shapes of Layer
+    """
 
     (xext, yext) = layer.lattice.xy_grid(Nx=2, Ny=2)
     if ax is None:
@@ -204,10 +327,10 @@ def shapes(layer, ax=None, npts=101, color='k', lw=1, pad=True):
             x = shape.x_cent
             y = shape.y_cent
             r = shape.r
-            plot_circle(x, y, r, ax=ax, color=color, lw=lw, npts=npts)
+            _plot_circle(x, y, r, ax=ax, color=color, lw=lw, npts=npts)
             if pad == True:
                 for (x_p, y_p) in xy_p:
-                    plot_circle(x + x_p, y + y_p, r,
+                    _plot_circle(x + x_p, y + y_p, r,
                                 ax=ax, color=color, lw=lw, npts=npts)
         else:
             # Everything else should be a Poly subclass
@@ -219,13 +342,43 @@ def shapes(layer, ax=None, npts=101, color='k', lw=1, pad=True):
     ax.set_xlim(xext)
     ax.set_ylim(yext)
     ax.set_aspect('equal')
-    # plt.show()
+
 
 def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True, 
                 cmap='Greys', gridspec=None, fig=None, figsize=(4,8)):
-    '''
-    Plot the permittivity of the PhC cross-sections
-    '''
+    """Plot permittivity for all cross sections of a photonic crystal
+
+    Parameters
+    ----------
+    struct : GuidedModeExp or PlaneWaveExp 
+    Nx : int, optional
+        Number of sample points to use in x-direction.
+        Default is 100.
+    Ny : int, optional
+        Number of sample points to use in y-direction.
+        Default is 100.
+    Nz : int, optional
+        Number of sample points to use in z-direction.
+        Default is 50.
+    cladding : bool, optional
+        Whether or not the cladding should be plotted.
+        Default is False.
+    cbar : bool, optional
+        Whether or not a colorbar should be added to the plot.
+        Default is False.
+    cmap : bool, optional
+        Matplotlib colormap to use for plot
+        Default is 'Greys'.
+    gridspec : Matplotlib gridspec object, optional
+        Gridspec to use for creating the plots.
+        Default is None.
+    fig : Matplotlib figure object, optional
+        Figure to use for creating the plots.
+        Default is None.
+    figsize : Tuple, optional
+        Size of Matplotlib figure to create.
+        Default is (4,8).
+    """
     if isinstance(struct, GuidedModeExp):
         phc = struct.phc
     elif isinstance(struct, PhotCryst):
@@ -276,14 +429,43 @@ def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True,
                 ax[-1].set_title("xy in upper cladding")
         else:
             ax[indl].set_title("xy in layer %d" % indl)
-    # plt.show()
+
 
 def eps_ft(struct, Nx=100, Ny=100, cladding=False, cbar=True, 
                 cmap='Greys', gridspec=None, fig=None, figsize=(4,8)):
-    '''
-    Plot the permittivity of the PhC cross-sections as computed from an 
-    inverse Fourier transform with the GME reciprocal lattice vectors.
-    '''
+    """Plot a permittivity cross section computed from an inverse FT
+
+    The Fourier transform is computed with respect to the GME reciprocal
+    lattice vectors.
+
+    Parameters
+    ----------
+    struct : GuidedModeExp or PlaneWaveExp 
+    Nx : int, optional
+        Number of sample points to use in x-direction.
+        Default is 100.
+    Ny : int, optional
+        Number of sample points to use in y-direction.
+        Default is 100.
+    cladding : bool, optional
+        Whether or not the cladding should be plotted.
+        Default is False.
+    cbar : bool, optional
+        Whether or not a colorbar should be added to the plot.
+        Default is False.
+    cmap : bool, optional
+        Matplotlib colormap to use for plot
+        Default is 'Greys'.
+    gridspec : Matplotlib gridspec object, optional
+        Gridspec to use for creating the plots.
+        Default is None.
+    fig : Matplotlib figure object, optional
+        Figure to use for creating the plots.
+        Default is None.
+    figsize : Tuple, optional
+        Size of Matplotlib figure to create.
+        Default is (4,8).
+    """
 
     # Do some parsing of the inputs 
     if isinstance(struct, GuidedModeExp):
@@ -330,7 +512,7 @@ def eps_ft(struct, Nx=100, Ny=100, cladding=False, cbar=True,
         eps_max = max([eps_max, np.amax(np.real(eps_r))])
         extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
 
-        im = plot_eps(np.real(eps_r), ax=ax[indl], extent=extent, 
+        im = _plot_eps(np.real(eps_r), ax=ax[indl], extent=extent, 
                         cbar=False)
         ims.append(im)
         if cladding:
@@ -345,16 +527,19 @@ def eps_ft(struct, Nx=100, Ny=100, cladding=False, cbar=True,
     for il in range(N_layers):
         ims[il].set_clim(vmin=eps_min, vmax=eps_max)
     plt.colorbar(ims[-1])
-    # plt.show()
 
-def reciprocal(exp):
-    '''
-    Plot the reciprocal lattice of a GME or PWE object
-    '''
+
+def reciprocal(struct):
+    """Plot the reciprocal lattice of a GME or PWE object
+
+    Parameters
+    ----------
+    struct : GuidedModeExp or PlaneWaveExp 
+    """
     fig, ax = plt.subplots(1, constrained_layout=True)
-    plt.plot(exp.gvec[0, :], exp.gvec[1, :], 'bx')
+    plt.plot(struct.gvec[0, :], struct.gvec[1, :], 'bx')
     ax.set_title("Reciprocal lattice")
-    # plt.show()
+
 
 def field(
     struct, 
@@ -528,6 +713,5 @@ def field(
                                             struct.freqs_im[kind, mind])
 
         ax.set_title(title_str)
-    # plt.show()
 
     return f1

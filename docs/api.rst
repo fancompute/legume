@@ -113,7 +113,6 @@ Visualization
    :toctree: generated/
 
    viz.bands
-   viz.plot_eps
    viz.structure
    viz.shapes
    viz.eps_xz
