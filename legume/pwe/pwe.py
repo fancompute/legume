@@ -4,18 +4,26 @@ from legume.backend import backend as bd
 
 class PlaneWaveExp(object):
     """
-    Main simulation class of the plane-wave expansion
+    Main simulation class of the plane-wave expansion.
     """
-    def __init__(self, layer, gmax: float=3, eps_eff: float=None):
-        # Object of class Layer which will be simulated
-        self.layer = layer
+    def __init__(self, layer, gmax: float=3., eps_eff: float=None):
+        """Initialize the plane-wave expansion.
+        
+        Parameters
+        ----------
+        layer : Layer
+            Layer defining the 2D structure.
+        gmax : float, optional
+            Maximum reciprocal lattice wave-vector length in units of 2pi/a.
+        eps_eff : float, optional
+            Effective background epsilon; if None, take `layer.eps_b`.
+        """
 
-        # Maximum reciprocal lattice wave-vector length in units of 2pi/a
+        self.layer = layer
         self.gmax = gmax
 
-        # Effective background epsilon; if None, take layer.eps_b
-        # This can be useful for simulations of an effective slab of a given
-        # thickness and at a particular frequency
+        # The effective epsilon can be useful for simulations of an effective 
+        # slab of a given thickness and at a particular frequency.
         if not eps_eff:
             eps_eff = layer.eps_b
 
@@ -23,7 +31,53 @@ class PlaneWaveExp(object):
 
         # Initialize the reciprocal lattice vectors and compute the eps FT
         self._init_reciprocal()
-        self.compute_ft()
+        self._compute_ft()
+
+    def __repr__(self):
+        rep = 'PlaneWaveExp(\n'
+        rep += 'layer = Layer object' + ', \n'
+        rep += 'gmax = ' + repr(self.gmax) + ', \n'
+        rep += 'eps_eff = ' + repr(self.eps_eff) + ', \n'
+        run_options = ['pol', 'numeig']
+        for option in run_options:
+            try: 
+                val = getattr(self, option)
+                rep += option + ' = ' + repr(val) + ', \n'
+            except:
+                pass
+
+        rep += ')'
+        return rep
+
+    @property
+    def freqs(self):
+        """Frequencies of the eigenmodes computed by the plane-wave expansion.
+        """
+        if self._freqs is None: self._freqs = []
+        return self._freqs
+
+    @property
+    def eigvecs(self):
+        """Eigenvectors of the eigenmodes computed by the plane-wave expansion.
+        """
+        if self._eigvecs is None: self._eigvecs = []
+        return self._eigvecs
+
+    @property
+    def kpoints(self):
+        """Numpy array of shape (2, Nk) with the [kx, ky] coordinates of the 
+        k-vectors over which the simulation is run.
+        """
+        if self._kpoints is None: self._kpoints = []
+        return self._kpoints
+
+    @property
+    def gvec(self):
+        """Numpy array of shape (2, Ng) with the [gx, gy] coordinates of the 
+        reciprocal lattice vectors over which the simulation is run.
+        """
+        if self._gvec is None: self._gvec = []
+        return self._gvec
 
     def _init_reciprocal(self):
         """
@@ -46,14 +100,14 @@ class PlaneWaveExp(object):
                 self.layer.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
 
         # Save the reciprocal lattice vectors
-        self.gvec = gvec
+        self._gvec = gvec
 
         # Save the number of vectors along the b1 and the b2 directions 
         # Note: gvec.shape[1] = n1g*n2g
         self.n1g = 2*n1max + 1
         self.n2g = 2*n2max + 1
 
-    def compute_ft(self):
+    def _compute_ft(self):
         """
         Compute the unique FT coefficients of the permittivity, eps(g-g')
         """
@@ -73,39 +127,43 @@ class PlaneWaveExp(object):
         self.G1 = G1
         self.G2 = G2
 
-    def get_eps_xy(self, Nx=100, Ny=100, z=0):
+    def _compute_eps_inv(self):
         """
-        Plot the permittivity of the layer as computed from an 
-        inverse Fourier transform with the GME reciprocal lattice vectors.
-        z is technically unused, but useful for viz.eps_ft
+        Construct the inverse FT matrix of the permittivity
         """
-        (xgrid, ygrid) = self.layer.lattice.xy_grid(Nx=Nx, Ny=Ny)
 
-        ft_coeffs = np.hstack((self.T1, self.T2, 
-                            np.conj(self.T1), np.conj(self.T2)))
-        gvec = np.hstack((self.G1, self.G2, -self.G1, -self.G2))
-
-        eps_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
-        return (eps_r, xgrid, ygrid)
+        # For now we just use the numpy inversion. Later on we could 
+        # implement the Toeplitz-Block-Toeplitz inversion (faster)
+        eps_mat = bd.toeplitz_block(self.n1g, self.T1, self.T2)
+        self.eps_inv_mat = bd.inv(eps_mat)
 
     def run(self, kpoints=np.array([[0], [0]]), pol='te', numeig=10):
-        """ 
-        Run the simulation. Input:
-            - kpoints, [2xNk] numpy array over which band structure is simulated
-            - pol, polarization of the computation (TE/TM)
-            - numeig, number of eigenmodes to be stored
+        """
+        Run the simulation. The computed eigen-frequencies are stored in
+        :attr:`PlaneWaveExp.freqs`, and the corresponding eigenvectors - 
+        in :attr:`PlaneWaveExp.eigvecs`.
+        
+        Parameters
+        ----------
+        kpoints : np.ndarray, optional
+            Numpy array of shape (2, Nk) with the [kx, ky] coordinates of the 
+            k-vectors over which the simulation is run.
+        pol : {'te', 'tm'}, optional
+            Polarization of the modes.
+        numeig : int, optional
+            Number of eigen-frequencies to be stored (starting from lowest).
         """
          
-        self.kpoints = kpoints
+        self._kpoints = kpoints
         self.pol = pol.lower()
         # Change this if switching to a solver that allows for variable numeig
         self.numeig = numeig
 
-        self.compute_ft()
-        self.compute_eps_inv()
+        self._compute_ft()
+        self._compute_eps_inv()
 
         freqs = []
-        self.eigvecs = []
+        self._eigvecs = []
         for ik, k in enumerate(kpoints.T):
             # Construct the matrix for diagonalization
             if self.pol == 'te':
@@ -131,28 +189,74 @@ class PlaneWaveExp(object):
             freq = freq1[i_sort]
             evec = evecs[:, i_sort]
             freqs.append(freq)
-            self.eigvecs.append(evec)
+            self._eigvecs.append(evec)
 
         # Store the eigenfrequencies taking the standard reduced frequency 
         # convention for the units (2pi a/c)    
-        self.freqs = bd.array(freqs)
+        self._freqs = bd.array(freqs)
         self.mat = mat
 
-    def compute_eps_inv(self):
+    def get_eps_xy(self, Nx=100, Ny=100, z=0):
         """
-        Construct the inverse FT matrix of the permittivity
+        Get the xy-plane permittivity of the layer as computed from 
+        an inverse Fourier transform with the PWE reciprocal lattice vectors.
+        
+        Parameters
+        ----------
+        Nx : int, optional
+            A grid of Nx points in the elementary cell is created.
+        Ny : int, optional
+            A grid of Ny points in the elementary cell is created.
+        z : float, optional
+            Position of the xy-plane. This doesn't matter for the PWE, but is 
+            added for consistency with the GME definitions.
+        
+        Returns
+        -------
+        eps_r : np.ndarray
+            The in-plane real-space permittivity.
+        xgrid : np.ndarray
+            The constructed grid in x.
+        ygrid : np.ndarray
+            The constructed grid in y.
         """
+        (xgrid, ygrid) = self.layer.lattice.xy_grid(Nx=Nx, Ny=Ny)
 
-        # For now we just use the numpy inversion. Later on we could 
-        # implement the Toeplitz-Block-Toeplitz inversion (faster)
-        eps_mat = bd.toeplitz_block(self.n1g, self.T1, self.T2)
-        self.eps_inv_mat = bd.inv(eps_mat)
+        ft_coeffs = np.hstack((self.T1, self.T2, 
+                            np.conj(self.T1), np.conj(self.T2)))
+        gvec = np.hstack((self.G1, self.G2, -self.G1, -self.G2))
+
+        eps_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
+        return (eps_r, xgrid, ygrid)
 
     def ft_field_xy(self, field, kind, mind):
         """
-        Compute the 'H', 'D' or 'E' field FT in the xy-plane at position z
-        Nothing really depends on z but we keep it here for compatibility with
-        the GuidedModeExp methods and legume.viz.field
+        Compute the 'H', 'D' or 'E' field Fourier components in the xy-plane.
+        
+        Parameters
+        ----------
+        field : {'H', 'D', 'E'}
+            The field to be computed. 
+        kind : int
+            The field of the mode at `PlaneWaveExp.kpoints[:, kind]` is 
+            computed.
+        mind : int
+            The field of the `mind` mode at that kpoint is computed.
+
+        Note
+        ----
+        The function outputs 1D arrays with the same size as 
+        `PlaneWaveExp.gvec[0, :]` corresponding to the G-vectors in 
+        that array.
+        
+        Returns
+        -------
+        fi_x : np.ndarray
+            The Fourier transform of the x-component of the specified field. 
+        fi_y : np.ndarray
+            The Fourier transform of the y-component of the specified field. 
+        fi_z : np.ndarray
+            The Fourier transform of the z-component of the specified field. 
         """
         evec = self.eigvecs[kind][:, mind]
         omega = self.freqs[kind][mind]*2*np.pi
@@ -208,10 +312,36 @@ class PlaneWaveExp(object):
     def get_field_xy(self, field, kind, mind, z=0,
                     component='xyz', Nx=100, Ny=100):
         """
-        Get the 'field' ('H', 'D', or 'E') at an xy-plane at position z for mode 
-        number 'mind' at k-vector 'kind'.
-        Returns a dictionary with the ['x'], ['y'], and ['z'] components of the 
-        corresponding field; only the ones requested in 'comp' are computed 
+        Compute the 'H', 'D' or 'E' field components in the xy-plane at 
+        position z.
+        
+        Parameters
+        ----------
+        field : {'H', 'D', 'E'}
+            The field to be computed. 
+        kind : int
+            The field of the mode at `PlaneWaveExp.kpoints[:, kind]` is 
+            computed.
+        mind : int
+            The field of the `mind` mode at that kpoint is computed.
+        z : float
+            Position of the xy-plane. This doesn't matter for the PWE, but is 
+            added for consistency with the GME definitions.
+        component : str, optional
+            A string containing 'x', 'y', and/or 'z'
+        Nx : int, optional
+            A grid of Nx points in the elementary cell is created.
+        Ny : int, optional
+            A grid of Ny points in the elementary cell is created.
+        
+        Returns
+        -------
+        fi : dict
+            A dictionary with the requested components, 'x', 'y', and/or 'z'.
+        xgrid : np.ndarray
+            The constructed grid in x.
+        ygrid : np.ndarray
+            The constructed grid in y.
         """
 
         # Make a grid in the x-y plane

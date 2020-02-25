@@ -4,7 +4,7 @@ Monkey-patching numpy/autograd backend inspired by Floris Laporte's FDTD
 package at github.com/flaport/fdtd
 '''
 from .phc import Shape, Circle, Poly, Square, Hexagon
-from .phc import PhotCryst, ShapesLayer, FreeformLayer, Lattice
+from .phc import PhotCryst, Layer, ShapesLayer, FreeformLayer, Lattice
 
 from . import gds
 from . import minimize

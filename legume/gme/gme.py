@@ -12,14 +12,14 @@ class GuidedModeExp(object):
     """
     Main simulation class of the guided-mode expansion.
     """
-    def __init__(self, phc, gmax=3, truncate_g='tbt'):
+    def __init__(self, phc, gmax=3., truncate_g='tbt'):
         """Initialize the guided-mode expansion.
         
         Parameters
         ----------
         phc : PhotCryst
             Photonic crystal object to be simulated.
-        gmax : int, optional
+        gmax : float, optional
             Maximum reciprocal lattice wave-vector length in units of 2pi/a.
         truncate_g : {'tbt', 'abs'}
             Truncation of the reciprocal lattice vectors, 'tbt' takes a 

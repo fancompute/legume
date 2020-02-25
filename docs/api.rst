@@ -67,8 +67,10 @@ Attributes
 .. autosummary::
    :toctree: generated/
 
-   PlaneWaveExp.eps_eff
-   PlaneWaveExp.gmax
+   PlaneWaveExp.freqs
+   PlaneWaveExp.eigvecs
+   PlaneWaveExp.kpoints
+   PlaneWaveExp.gvec
 
 Methods
 -------
@@ -76,10 +78,10 @@ Methods
 .. autosummary::
    :toctree: generated/
 
-   PlaneWaveExp.compute_ft
-   PlaneWaveExp.get_eps_xy
    PlaneWaveExp.run
-   PlaneWaveExp.compute_eps_inv
+   PlaneWaveExp.get_eps_xy
+   PlaneWaveExp.ft_field_xy
+   PlaneWaveExp.get_field_xy
 
 
 Photonic crystal
@@ -90,8 +92,8 @@ Photonic crystal
 
    Lattice
    PhotCryst
+   Layer
    ShapesLayer
-   FreeformLayer
 
 
 Geometry
