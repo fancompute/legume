@@ -15,7 +15,7 @@ class Shape(object):
     def __repr__(self):
         return "Shape"
 
-    def parse_ft_gvec(self, gvec):
+    def _parse_ft_gvec(self, gvec):
         if type(gvec) == list:
             gvec = np.array(gvec)
         elif type(gvec) != np.ndarray:
@@ -49,10 +49,11 @@ class Shape(object):
             "Shape subclasses")
 
     def is_inside(self, x, y):
-        """Indicator function for the shape
+        """Elementwise indicator function for the shape
 
-        This returns 1 if (x, y) is inside the shape and
-        returns 0 if (x, y) coord is outside the shape 
+        x and y are arrays of the same shape. This function returns an array of
+        the same shape, where every element is equal to 1 if the corresponding
+        (x, y) point is inside the shape, and 0 if (x, y) outside.
         """
         raise NotImplementedError("is_inside() needs to be implemented by"
             "Shape subclasses")
@@ -84,7 +85,7 @@ class Circle(Shape):
                (self.eps, self.x_cent, self.y_cent, self.r)
 
     def compute_ft(self, gvec):
-        (gx, gy) = self.parse_ft_gvec(gvec)
+        (gx, gy) = self._parse_ft_gvec(gvec)
 
         gabs = np.sqrt(np.abs(np.square(gx)) + np.abs(np.square(gy)))
         gabs += 1e-10 # To avoid numerical instability at zero
@@ -101,16 +102,16 @@ class Circle(Shape):
 class Poly(Shape):
     """Polygon shape
     """
-    def __init__(self, eps=1., x_edges=0., y_edges=0.):
+    def __init__(self, eps=1., x_edges=[0.], y_edges=[0.]):
         """Create a polygon shape
 
         Parameters
         ----------
         eps : float
             Permittivity value
-        x_edges : List[float]
+        x_edges : List or np.ndarray
             x-coordinates of polygon vertices
-        y_edges : List[float]
+        y_edges : List or np.ndarray
             y-coordinates of polygon vertices
 
         Note
@@ -135,7 +136,8 @@ class Poly(Shape):
     def compute_ft(self, gvec):
         """Compute Fourier transform of the polygon
 
-        The polygon is assumed to take a value of 1 inside and a value of 0 outside.
+        The polygon is assumed to take a value of 1 inside and a value of 0 
+        outside.
 
         The Fourier transform calculation follows that of Lee, IEEE TAP (1984).
 
@@ -144,7 +146,7 @@ class Poly(Shape):
         gvec : np.ndarray of shape (2, Ng)
             g-vectors at which FT is evaluated
         """
-        (gx, gy) = self.parse_ft_gvec(gvec)
+        (gx, gy) = self._parse_ft_gvec(gvec)
 
         (xj, yj) = self.x_edges, self.y_edges
         npts = xj.shape[0]
@@ -209,7 +211,7 @@ class Poly(Shape):
         return test.reshape((x.shape))
 
     def rotate(self, angle):
-        """Rotate the polygon around its center of mass by angle radians
+        """Rotate the polygon around its center of mass by `angle` radians
         """
 
         rotmat = bd.array([[bd.cos(angle), -bd.sin(angle)], \
