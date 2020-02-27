@@ -10,11 +10,11 @@ class Lattice(object):
         """
         Initialize a Bravais lattice.
         If a single argument is passed, then
-            - 'square': initializes a square lattice
-            - 'hexagonal': initializes a hexagonal lattice
+            - 'square': initializes a square lattice.
+            - 'hexagonal': initializes a hexagonal lattice.
             (lattice constant a = 1 in both cases)
         If two arguments are passed, they should each be 2-element arrays
-        defining the elementary vectors of the lattice
+        defining the elementary vectors of the lattice.
         """
 
         # Primitive vectors cell definition
@@ -66,10 +66,24 @@ class Lattice(object):
         return (a1, a2)
 
     def xy_grid(self, Nx=100, Ny=100, periods=None):
-        """ 
+        """
         Define an xy-grid for visualization purposes based on the lattice
-        vectors of the PhC.'periods' is a number or a list of two numbers that 
-        defines how many periods in the x- and y-directions are included
+        vectors.
+        
+        Parameters
+        ----------
+        Nx : int, optional
+            Number of points along `x`.
+        Ny : int, optional
+            Number of points along `y`.
+        periods : float, optional
+            A number or a list of two numbers that defines how many periods 
+            in the `x`- and `y`-directions are included. 
+        
+        Returns
+        -------
+        np.ndarray
+            Two arrays defining a linear grid in `x` and `y`.
         """
         if periods == None:
             if self.type == 'square' or self.type == 'rectangular':
@@ -89,12 +103,27 @@ class Lattice(object):
 
     def bz_path(self, pts, ns):
         """
-        Make a path in the Brillouin zone 
-            - pts is a list of points 
-            - ns is a list of length either 1 or len(pts) - 1, specifying 
-                how many points are to be added between each two pts
+        Make a path in the Brillouin zone.
+        
+        Parameters
+        ----------
+        pts : list
+            A list of points. Each element can be either a 2-element array 
+            defining (kx, ky), or one of {'G', 'K', 'M'} for a 'hexagonal' 
+            Lattice type, or one of {'G', 'X', 'M'} for a 'square' Lattice 
+            type. 
+        ns : int or list
+            A list of length either 1 or ``len(pts) - 1``, specifying 
+            how many points are to be added between each two **pts**.
+        
+        Returns
+        -------
+        path: dict 
+            A dictionary with the 'kpoints', corresponding 'indexes', and 
+            'labels' .      
         """
 
+        if not isinstance(ns, list): ns = list(ns)
         npts = len(pts)
         if npts < 2:
             raise ValueError("At least two points must be given")
@@ -119,10 +148,11 @@ class Lattice(object):
             inds.append(count)
         kpoints[:, -1] = p2
 
-        path = type('', (), {})() # Create an "empty" object
-        path.kpoints = kpoints
-        path.pt_labels = [str(pt) for pt in pts]
-        path.pt_inds = inds
+        path = {
+        'kpoints': kpoints, 
+        'labels': [str(pt) for pt in pts],
+        'indexes': inds
+        }
 
         return path
 

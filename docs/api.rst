@@ -99,6 +99,7 @@ Photonic crystal
    :toctree: generated/
 
    Lattice
+   Lattice.bz_path
    PhotCryst
    Layer
    ShapesLayer
