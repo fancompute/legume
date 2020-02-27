@@ -9,7 +9,6 @@ Examples
     examples/01_Shapes_layers_and_photonic_crystals
     examples/02_Plane_wave_expansion_2D_PhC
     examples/03_Guided_mode_expansion_multi_layer_grating
-    examples/04_Plane_wave_expansion_with_autograd
-    examples/05_Guided_mode_expansion_with_autograd
-    examples/06_Bands_of_a_phc_slab
-
+    examples/04_Guided_mode_expansion_bands_of_a_phc_slab
+    examples/05_Plane_wave_expansion_with_autograd
+    examples/06_Guided_mode_expansion_with_autograd
