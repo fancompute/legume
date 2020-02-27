@@ -11,4 +11,5 @@ Examples
     examples/03_Guided_mode_expansion_multi_layer_grating
     examples/04_Plane_wave_expansion_with_autograd
     examples/05_Guided_mode_expansion_with_autograd
+    examples/06_Bands_of_a_phc_slab
 
