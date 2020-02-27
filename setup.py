@@ -6,13 +6,12 @@ with open('README.md', 'r') as f:
 dependencies = [
         'numpy',
         'scipy',
-        'matplotlib',
-        'autograd'
+        'matplotlib'
 ]
 
 setup(
     name='legume-gme',
-    version='0.0.2',
+    version='0.1',
     description='Differentiable plane-wave and guided-mode expansion for photonic crystals',
     long_description=readme,
     long_description_content_type="text/markdown",
