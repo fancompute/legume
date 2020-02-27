@@ -2,22 +2,29 @@
 # -- Path setup --------------------------------------------------------------
 
 import os
-import sys
-import pathlib
+import re
+import codecs
 
-# sys.path.insert(0, os.path.abspath('.'))
-root = pathlib.Path(__file__).absolute().parent.parent
-os.environ["PYTHONPATH"] = str(root)
-sys.path.insert(0, str(root))
+here = os.path.abspath(os.path.dirname(__file__))
 
-import legume
+def read(*parts):
+    with codecs.open(os.path.join(here, *parts), 'r') as fp:
+        return fp.read()
+
+def find_version(*file_paths):
+    version_file = read(*file_paths)
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
+                              version_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
+#
 
 # -- Project information -----------------------------------------------------
 
 project = 'legume'
 copyright = '2020'
-release = legume.__version__
-
+release = find_version('..', 'legume', '__init__.py')
 
 # -- General configuration ---------------------------------------------------
 
