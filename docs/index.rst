@@ -18,10 +18,4 @@ legume: Differentiable guided mode expansion methods
    :caption: User Guide
 
    examples
-
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Reference
-
    api

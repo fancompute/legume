@@ -6,6 +6,14 @@ API Reference
 
 This page provides an auto-generated summary of legume's API.
 
+legume
+======
+
+   .. autosummary::
+      :toctree: generated/
+
+      set_backend
+
 
 GuidedModeExp
 =============

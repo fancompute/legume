@@ -1,4 +1,4 @@
-'''
+"""
 Backend for the simulations. Available backends:
  - numpy [default]
  - autograd
@@ -8,7 +8,7 @@ A backend can be set with the 'set_backend'
 
 Numpy is still used with some functionalities; if autograd backend is set, 
 it is used when needed only so as not to slow down everything
-'''
+"""
 
 # Numpy must be present
 import numpy as np
@@ -28,9 +28,9 @@ except ImportError:
     AG_AVAILABLE = False
 
 class Backend(object):
-    '''
+    """
     Backend Base Class 
-    '''
+    """
     # types
     int = np.int64
     float = np.float64
@@ -156,16 +156,17 @@ class AutogradBackend(Backend):
 
 backend = NumpyBackend()
 
-def set_backend(name: str):
-    '''
-    Set the backend for the simulations
-    This function monkeypatches the backend object by changing its class.
+def set_backend(name):
+    """
+    Set the backend for the simulations.
+    This function monkey-patches the backend object by changing its class.
     This way, all methods of the backend object will be replaced.
-    Args:
-        name: name of the backend. Allowed backend names:
-            - 'numpy'
-            - 'autograd' 
-    '''
+    
+    Parameters
+    ----------
+    name : {'numpy', 'autograd'}
+        Name of the backend. HIPS/autograd must be installed to use 'autograd'.
+    """
     # perform checks
     if name == 'autograd' and not AG_AVAILABLE:
         raise ValueError("Autograd backend is not available, autograd must \
