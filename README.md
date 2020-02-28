@@ -1,6 +1,4 @@
-# legume
-
-<img src="/docs/_static/legume-logo.png" title="logo" alt="logo">
+<img src="/docs/_static/legume-logo.png" align="middle" title="logo" alt="logo">
 
 legume (le GUided Mode Expansion) is a python implementation of the GME method for photonic crystal slabs, including multi-layer structures. Plane-wave expansion for purely 2D structures is also included. Also, we have an `autograd` backend that allows gradients of all output values with respect to all input parameters to be computed efficiently!
 
@@ -20,6 +18,12 @@ Go to our documentation to find a number of examples, as well as a detailed API 
 
 The examples can also be found in ipython notebook form in `/docs/examples`.
 
+Here's an example of a computation of the photonic bands of a photonic crystal, compared to Fig. 2(b) in Chapter 8 of the photonic crystal bible, [Molding the Flow of Light](http://ab-initio.mit.edu/book/).
+
+<img src="/img/phc_bands.png" title="photonic_bands" alt="Quasi-TE bands of a photonic crystal slab">
+
+We have only computed the quasi-TE modes of the slab (positive symmetry w.r.t. the plane bisecting the slab), which should be compared to the red lines in the figure on the right. The agreement is very good! And, the guided-mode expansion allows us to also compute the quasi-guided modes above light-line, together with their associated quality factor. These modes are typically hard to filter out in first-principle simulations, so `legume` is great for studying those. 
+
 ## Autograd
 
 <img src="/img/cavity_opt.gif" title="cavity_opt" alt="Optimizing the quality factor of a photonic crystal cavity">
@@ -33,7 +37,7 @@ If you find legume useful for your research, we would apprecite you citing our p
 ```
 @article{legume,
   title = {legume},
-  author = { ... },
+  author = {Minkov, Momchil and Williamson, Ian A. D. and Gerace, Dario and Andreani, Lucio C. and Lou, Beicheng and Song, Alex Y. and Hughes, Tyler W. and Fan, Shanhui},
   year = {2020},
   month = feb,
   volume = { ... },
