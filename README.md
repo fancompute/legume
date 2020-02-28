@@ -14,7 +14,7 @@ Alternatively, just `git clone` this repository, and make sure you have all the 
 
 ## Documentation and examples
 
-Go to our documentation to find a number of examples, as well as a detailed API reference.
+Go to our [documentation](https://legume.readthedocs.io/en/latest/index.html) to find a number of [examples](https://legume.readthedocs.io/en/latest/examples.html), as well as a detailed [API reference](https://legume.readthedocs.io/en/latest/api.html).
 
 The examples can also be found in ipython notebook form in `/docs/examples`.
 
