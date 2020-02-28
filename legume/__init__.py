@@ -7,7 +7,6 @@ from .phc import Shape, Circle, Poly, Square, Hexagon
 from .phc import PhotCryst, Layer, ShapesLayer, FreeformLayer, Lattice
 
 from . import gds
-from . import minimize
 from . import viz
 
 from .pwe import PlaneWaveExp
