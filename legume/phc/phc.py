@@ -6,9 +6,20 @@ from . import ShapesLayer, FreeformLayer, Lattice
 
 class PhotCryst(object):
     """
-    Class for a photonic crystal which can contain a number of layers
+    Class for a photonic crystal which can contain a number of layers.
     """
     def __init__(self, lattice, eps_l: float=1, eps_u: float=1):
+        """Initialize a photonic crystal.
+        
+        Parameters
+        ----------
+        lattice : Lattice
+            A lattice defining the 2D periodicity.
+        eps_l : float, optional
+            Permittivity of the lower cladding.
+        eps_u : float, optional
+            Permittivity of the upper cladding.
+        """
         # Define permittivity of lower and upper cladding
         # For now claddings are just ShapesLayer
         self.claddings = []
@@ -32,7 +43,7 @@ class PhotCryst(object):
     def z_grid(self, Nz=100, dist=1):
         """ 
         Define a z-grid for visualization purposes once some layers have been 
-        added
+        added.
         """
         zmin = self.layers[0].z_min - dist
         zmax = self.layers[-1].z_max + dist
@@ -41,7 +52,17 @@ class PhotCryst(object):
 
     def add_layer(self, d: float, eps_b: float=1, layer_type: str='shapes'):
         """
-        Add a layer with thickness d and background permittivity eps_b
+        Add a layer to the photonic crystal, on top of all currently existing
+        layers.
+        
+        Parameters
+        ----------
+        d : float
+            Layer thickness.
+        eps_b : float, optional
+            Layer background permittivity.
+        layer_type : {'shapes'}, optional
+            Currently only the ShapesLayer subclass is implemented.
         """
         if self.layers == []:
             z_min = 0
@@ -60,8 +81,17 @@ class PhotCryst(object):
 
     def add_shape(self, shapes, layer=-1, cladding=None):
         """
-        Add a shape to layer number layer_ind
-        Each shape in shapes must be an instance of legume.Shape
+        Add a list of shapes to a given layer.
+        
+        Parameters
+        ----------
+        shapes : Shape
+            A Shape object, or a list of such objects.
+        layer : int, optional
+            Layer index to which the shape is added. Default is last layer.
+        cladding : None, optional
+            If ``cladding == 0 or 'l'``, add the shapes to the lower cladding.
+            If ``cladding == 1 or 'u'``, add the shapes to the lower cladding.
         """
         if cladding is not None:
             if cladding==0 or cladding=='l':
@@ -84,8 +114,17 @@ class PhotCryst(object):
 
     def get_eps(self, points):
         """
-        Compute the permittivity of the PhC at a set of points defined by
-        a tuple of x, y, z positions which are same-shape arrays
+        Compute the permittivity of the PhC at a set of points.
+        
+        Parameters
+        ----------
+        points : tuple of np.ndarray
+            The `x`, `y`, and `z` positions of the points, arrays of same shape.
+        
+        Returns
+        -------
+        eps_r : np.ndarray
+            Array of same shape with the permittivity at each point.
         """
         (xmesh, ymesh, zmesh) = points
         a_shape = xmesh.shape
@@ -106,7 +145,9 @@ class PhotCryst(object):
         return eps_r
 
     def get_eps_bounds(self):
-        # Returns the minimum and maximum permittivity of the structure
+        """Returns the minimum and maximum permittivity of the structure.
+        """
+         
         eps_min = self.claddings[0].eps_b
         eps_max = self.claddings[0].eps_b
 

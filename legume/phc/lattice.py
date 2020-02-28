@@ -119,8 +119,8 @@ class Lattice(object):
         Returns
         -------
         path: dict 
-            A dictionary with the 'kpoints', corresponding 'indexes', and 
-            'labels' .      
+            A dictionary with the 'kpoints', 'labels', and the 
+            'indexes' corresponding to the labels.      
         """
 
         if not isinstance(ns, list): ns = list(ns)

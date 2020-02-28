@@ -5,9 +5,20 @@ from .shapes import Shape, Circle, Poly, Square
 
 class Layer(object):
     """
-    Class for a single layer in the potentially multi-layer PhC
+    Class for a single layer in the potentially multi-layer PhC.
     """
     def __init__(self, lattice, z_min: float=0, z_max: float=0):
+        """Initialize a Layer.
+        
+        Parameters
+        ----------
+        lattice : Lattice
+            A lattice defining the 2D periodicity.
+        z_min : float, optional
+            z-coordinate of the bottom of the layer.
+        z_max : float, optional
+            z-coordinate of the top of the layer.
+        """
         # Define beginning and end in z-direction
         self.z_min = z_min
         self.z_max = z_max
@@ -23,7 +34,7 @@ class Layer(object):
 
     def compute_ft(self, gvec):
         """
-        Compute fourier transform over gvec: [2 x Ng] numpy array
+        Compute the 2D Fourier transform of the layer permittivity.
         """
         raise NotImplementedError("compute_ft() needs to be implemented by"
             "Layer subclasses")
@@ -31,7 +42,7 @@ class Layer(object):
     def get_eps(self, points):
         """
         Compute the permittivity of the layer over a 'points' tuple containing
-        a meshgrid in x, y defined by arrays of same shape
+        a meshgrid in x, y defined by arrays of same shape.
         """
         raise NotImplementedError("get_eps() needs to be implemented by"
             "Layer subclasses")
@@ -42,6 +53,19 @@ class ShapesLayer(Layer):
     """
     def __init__(self, lattice, z_min: float=0, z_max: float=0,
                     eps_b: float=1.):
+        """Initialize a ShapesLayer.
+        
+        Parameters
+        ----------
+        lattice : Lattice
+            A lattice defining the 2D periodicity.
+        z_min : float, optional
+            z-coordinate of the bottom of the layer.
+        z_max : float, optional
+            z-coordinate of the top of the layer.
+        eps_b : float, optional
+            Layer background permittivity.
+        """
         super().__init__(lattice, z_min, z_max)
 
         # Define background permittivity
@@ -64,8 +88,7 @@ class ShapesLayer(Layer):
 
     def add_shape(self, shapes):
         """
-        Add a number of shapes to the layer
-        Each shape in shapes must be an instance of legume.Shape
+        Add a shape or a list of shapes to the layer.
         """
         if isinstance(shapes, Shape):
             shapes = [shapes]
@@ -81,7 +104,7 @@ class ShapesLayer(Layer):
 
     def compute_ft(self, gvec):
         """
-        Compute fourier transform over gvec: [2 x Ng] numpy array
+        Compute the 2D Fourier transform of the layer permittivity.
         """
         FT = bd.zeros(gvec.shape[1])
         for shape in self.shapes:
@@ -101,7 +124,7 @@ class ShapesLayer(Layer):
     def get_eps(self, points):
         """
         Compute the permittivity of the layer over a 'points' tuple containing
-        a meshgrid in x, y defined by arrays of same shape
+        a meshgrid in x, y defined by arrays of same shape.
         """
         xmesh, ymesh = points
         if ymesh.shape != xmesh.shape:
