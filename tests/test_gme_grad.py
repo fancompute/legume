@@ -1,8 +1,6 @@
 import unittest
 
 import numpy as np
-import autograd.numpy as npa
-from autograd import grad
 
 from legume import GuidedModeExp, Circle, Poly, PhotCryst, Lattice
 import legume
@@ -20,6 +18,12 @@ class TestGMEgrad(unittest.TestCase):
         '''
         Test the gradient for a rectangular-lattice PhC with a circular hole
         '''
+
+        try:
+            import autograd.numpy as npa
+            from autograd import grad
+        except:
+            return 0
         
         lattice = Lattice([1., 0], [0., .5])
 
