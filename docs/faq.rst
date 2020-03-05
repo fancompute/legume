@@ -88,25 +88,22 @@ diagonalization path is included. Here are some rules of thumb on what to use:
 How can I learn more about the method?
 --------------------------------------
 
-Our manuscript gives a lot of detail both on the guided-mode expansion method and 
-on our differentiable implementation. See Minkov et al., ...
+Our `paper <https://arxiv.org/abs/2003.00379>`_ gives a lot of detail both on the guided-mode expansion method and 
+on our differentiable implementation.
 
 
 How should I cite legume?
 -------------------------
 
-If you find **legume** useful for your research, we would apprecite you citing our paper. For your convenience, you can use the following BibTex entry::
+If you find **legume** useful for your research, we would apprecite you citing our `paper <https://arxiv.org/abs/2003.00379>`_. For your convenience, you can use the following BibTex entry:
 
-    @article{legume,
-      title = {legume},
-      author = { ... },
-      year = {2020},
-      month = feb,
-      volume = { ... },
-      pages = { ... },
-      doi = { ... },
-      journal = { ... },
-      number = { ... }
+.. code-block:: latex
+
+    @article{Minkov2020,
+    title = {Inverse design of photonic crystals through automatic differentiation},
+    author = {Minkov, Momchil and Williamson, Ian A. D. and Gerace, Dario and Andreani, Lucio C. and Lou, Beicheng and Song, Alex Y. and Hughes, Tyler W. and Fan, Shanhui},
+    year = {2020},
+    journal = {arXiv:2003.00379},
     }
 
 
