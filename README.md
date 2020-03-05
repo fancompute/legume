@@ -32,19 +32,14 @@ One exciting feature of `legume` is the `autograd` backend that can be used to a
 
 ## Citing
 
-If you find legume useful for your research, we would apprecite you citing our paper. For your convenience, you can use the following BibTex entry:
+If you find legume useful for your research, we would apprecite you citing our [paper](https://arxiv.org/abs/2003.00379). For your convenience, you can use the following BibTex entry:
 
 ```
-@article{legume,
-  title = {legume},
+@article{Minkov2020,
+  title = {Inverse design of photonic crystals through automatic differentiation},
   author = {Minkov, Momchil and Williamson, Ian A. D. and Gerace, Dario and Andreani, Lucio C. and Lou, Beicheng and Song, Alex Y. and Hughes, Tyler W. and Fan, Shanhui},
   year = {2020},
-  month = feb,
-  volume = { ... },
-  pages = { ... },
-  doi = { ... },
-  journal = { ... },
-  number = { ... }
+  journal = {arXiv:2003.00379},
 }
 ```
 
