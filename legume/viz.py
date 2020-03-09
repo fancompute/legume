@@ -618,7 +618,7 @@ def field(
 
         zval = 0. if z == None else z
         (fi, grid1, grid2) = struct.get_field_xy(field, kind, mind, z,
-                                         component, N1, N2)
+                                        component=component, Nx=N1, Ny=N2)
         if eps == True:
             if str_type == 'pwe':
                 epsr = struct.layer.get_eps(np.meshgrid(
@@ -639,7 +639,7 @@ def field(
                 "supported for PlaneWaveExp structures.")
 
         (fi, grid1, grid2) = struct.get_field_yz(field, kind, mind, x, 
-                                            component, N1, N2)
+                                            component=component, Ny=N1, Nz=N2)
         if eps==True:
             epsr = struct.phc.get_eps(np.meshgrid(
                             np.array(x), grid1, grid2)).squeeze().transpose()
@@ -653,7 +653,7 @@ def field(
                 "supported for PlaneWaveExp structures.")
 
         (fi, grid1, grid2) = struct.get_field_xz(field, kind, mind, y, 
-                                            component, N1, N2)
+                                            component=component, Nx=N1, Nz=N2)
         if eps==True:
             epsr = struct.phc.get_eps(np.meshgrid(
                             grid1, np.array(y), grid2)).squeeze().transpose()
