@@ -26,11 +26,27 @@ class Layer(object):
         # Slab thickness
         self.d = z_max - z_min
 
+        # Effective permittivity
+        self._eps_eff = None
+
         # Underlying lattice
         self.lattice = lattice
 
     def __repr__(self):
         return 'Layer'
+
+    @property
+    def eps_eff(self):
+        if self._eps_eff is None:
+            raise ValueError("Layer effective epsilon not set, use "
+                                "`layer.eps_eff = ...` to set")
+        else:
+            return self._eps_eff
+
+    @eps_eff.setter
+    def eps_eff(self, eps):
+        self._eps_eff = eps
+    
 
     def compute_ft(self, gvec):
         """

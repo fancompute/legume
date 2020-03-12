@@ -22,8 +22,8 @@ class GuidedModeExp(object):
         gmax : float, optional
             Maximum reciprocal lattice wave-vector length in units of 2pi/a.
         truncate_g : {'tbt', 'abs'}
-            Truncation of the reciprocal lattice vectors, 'tbt' takes a 
-            parallelogram in reciprocal space, while 'abs' takes a circle.
+            Truncation of the reciprocal lattice vectors, ``'tbt'`` takes a 
+            parallelogram in reciprocal space, while ``'abs'`` takes a circle.
         """
 
         self.phc = phc
@@ -92,18 +92,27 @@ class GuidedModeExp(object):
         return self._eigvecs
 
     @property
-    def coup_l(self):
-        """Coupling to 'te' and 'tm' radiative modes in the lower cladding.
+    def rad_coup(self):
+        """Coupling to TE and TM radiative modes in the claddings.
+        The dictionary has four keys: ``'l_te'``, ``'l_tm'``, ``'u_te'``, 
+        ``'u_tm'``, denoting cladding (l/u) and polarization (te/tm, or S/P). 
+        Each of these is a list of lists in which the first dimension 
+        corresponds to the k-point index and the second dimension corresponds 
+        to the mode index. Finally, the elements are numpy arrays with length 
+        equal to all the allowed diffraction orders. The corresponding 
+        reciprocal lattice vectors are stored in :attr:`GuidedModeExp.rad_gvec`.
         """
-        if self._coup_l is None: self._coup_l = []
-        return self._coup_l
+        if self._rad_coup is None: self._rad_coup = {}
+        return self._rad_coup
 
     @property
-    def coup_u(self):
-        """Coupling to 'te' and 'tm' radiative modes in the lower cladding.
+    def rad_gvec(self):
+        """Reciprocal lattice vectos corresponding to the radiation emission 
+        direction of the coupling constants stored in 
+        :attr:`GuidedModeExp.rad_coup`.
         """
-        if self._coup_u is None: self._coup_u = []
-        return self._coup_u
+        if self._rad_gvec is None: self._rad_gvec = {}
+        return self._rad_gvec
 
     @property
     def kpoints(self):
@@ -527,9 +536,11 @@ class GuidedModeExp(object):
             eig_sigma : float, optional
                 Target eigenvalue; numeig eigenvalues closest to eig_sigma are
                 stored. Default is 0.
-            eps_eff : {'average', 'background'}, optional
-                Using the 'average' or the 'background' permittivity of the 
-                layers in the guided mode computation.
+            eps_eff : {'average', 'background', 'custom'}, optional
+                Using the 'average', 'background' or a 'custom' permittivity of 
+                the layers in the guided mode computation. If 'custom', all the
+                photonic crystal layers, including the claddings, must have a 
+                pre-set ``eps_eff``.
             verbose : bool, optional
                 Print information at intermmediate steps. Default is True.
             """
@@ -566,7 +577,9 @@ class GuidedModeExp(object):
 
             Compute the inverse matrix of the fourier transform of the 
             permittivity in every phc layer.
+            
             Iterate over the k points:
+            
                 Compute the guided modes over all the (g + k) points.
 
                 Compute the Hermitian matrix for diagonalization.
@@ -574,6 +587,7 @@ class GuidedModeExp(object):
                 Compute the real part of the eigenvalues, stored in 
                 :attr:`GuidedModeExp.freqs`, and the corresponding eigenvectors,
                 stored in :attr:`GuidedModeExp.eigvecs`.
+
             If compute_im=True (as is default), run :meth:`GuidedModeExp.run_im`.
         
         Parameters
@@ -610,8 +624,11 @@ class GuidedModeExp(object):
             layer_eps = 'eps_avg'
         elif self.eps_eff=='background':
             layer_eps = 'eps_b'
+        elif self.eps_eff=='custom':
+            layer_eps = 'eps_eff'
         else:
-            raise ValueError("'eps_eff' can be 'average' or 'background'")
+            raise ValueError("'eps_eff' can be 'average', 'background' or "
+                                "'custom'")
         
         # Store an array of the effective permittivity for every layer
         #(including claddings)
@@ -736,32 +753,30 @@ class GuidedModeExp(object):
         """
         Compute the radiative rates associated to all the eigenmodes that were 
         computed during :meth:`GuidedModeExp.run`. Results are stored in 
-        :attr:`GuidedModeExp.freqs_im`, :attr:`GuidedModeExp.coup_l`, and 
-        :attr:`GuidedModeExp.coup_u`.
+        :attr:`GuidedModeExp.freqs_im`, :attr:`GuidedModeExp.rad_coup`, and 
+        :attr:`GuidedModeExp.rad_gvec`.
         """
         if len(self.freqs)==0:
             raise RuntimeError("Run the GME computation first!")
 
         freqs_i = [] # Imaginary part of frequencies
+
         # Coupling constants to lower- and upper-cladding radiative modes
-        cl = {'te': [], 'tm': []}      
-        cu = {'te': [], 'tm': []}       
+        rad_coup = {'l_te': [], 'l_tm': [], 'u_te': [], 'u_tm': []}     
+        rad_gvec = {'l': [], 'u': []}       
 
         for kind in range(len(self.freqs)):
             minds = np.arange(0, self.numeig)
-            (freqs_im, coup_l, coup_u) = self.compute_rad(kind, minds)
+            (freqs_im, rc, rv) = self.compute_rad(kind, minds)
             freqs_i.append(freqs_im)
-            for pol in ['te', 'tm']:
-                cl[pol].append(coup_l[pol])
-                cu[pol].append(coup_u[pol])
-
-        for pol in ['te', 'tm']:
-            cl[pol] = bd.array(cl[pol])
-            cu[pol] = bd.array(cu[pol])
-
+            for clad in ['l', 'u']:
+                rad_coup[clad + '_te'].append(rc[clad + '_te'])
+                rad_coup[clad + '_tm'].append(rc[clad + '_tm'])
+                rad_gvec[clad].append(rv[clad])
+            
         self._freqs_im = bd.array(freqs_i)
-        self._coup_l = cl
-        self._coup_u = cu
+        self._rad_coup = rad_coup
+        self._rad_gvec = rad_gvec
 
     def compute_rad(self, kind: int, minds: list=[0]):
         """
@@ -781,10 +796,11 @@ class GuidedModeExp(object):
         freqs_im : np.ndarray
             Imaginary part of the frequencies of the eigenmodes computed by the 
             guided-mode expansion.
-        coup_l : dict 
-            Coupling to 'te' and 'tm' radiative modes in the lower cladding.
-        coup_u : dict
-            Coupling to 'te' and 'tm' radiative modes in the upper cladding.
+        rad_coup : dict 
+            Coupling to TE and TM radiative modes in the lower/upper cladding.
+        rad_gvec : dict
+            Reciprocal lattice vectors in the lower/upper cladding 
+            corresponding to ``rad_coup``.
         """
         if len(self.freqs)==0:
             raise RuntimeError("Run the GME computation first!")
@@ -810,9 +826,11 @@ class GuidedModeExp(object):
         pq = np.outer(pkx, qkx) + np.outer(pky, qky)
         qq = np.outer(qkx, qkx) + np.outer(qky, qky)
 
-        # Iterate over all the modes to be computed
+        # Variables to store the results
         rad_tot = []
-        (coup_l, coup_u) = ({'te': [], 'tm': []}, {'te': [], 'tm': []})
+        rad_gvec = {'l': [], 'u': []}
+        rad_coup = {'l_te': [], 'l_tm': [], 'u_te': [], 'u_tm': []}
+        # Iterate over all the modes to be computed  
         for im in minds:
             omr = 2*np.pi*self.freqs[kind, im]
             evec = self.eigvecs[kind][:, im]
@@ -826,7 +844,7 @@ class GuidedModeExp(object):
             gkr = [gk[indmode] for indmode in indmoder]
 
             # Coupling constants to TE/TM modes in lower and upper cladding
-            rad_coup = {'te': [bd.zeros((indmode.size, ), dtype=bd.complex)
+            rad_c = {'te': [bd.zeros((indmode.size, ), dtype=bd.complex)
                             for indmode in indmoder],
                         'tm': [bd.zeros((indmode.size, ), dtype=bd.complex) 
                             for indmode in indmoder]}
@@ -873,7 +891,7 @@ class GuidedModeExp(object):
                     # print(kind, im, indmode1.shape, self.modes_numg[kind][im1])
                     rad = rad*bd.conj(evec[count:
                         count+self.modes_numg[kind][im1]][:, np.newaxis])
-                    rad_coup['te'][clad_ind] += bd.sum(rad, axis=0)
+                    rad_c['te'][clad_ind] += bd.sum(rad, axis=0)
 
                     # Radiation to TM-polarized states
                     if mode1%2 == 0:
@@ -896,7 +914,7 @@ class GuidedModeExp(object):
                     rad = rad*bd.conj(evec[count:
                         count+self.modes_numg[kind][im1]][:, np.newaxis])
                     # Add everything up
-                    rad_coup['tm'][clad_ind] += bd.sum(rad, axis=0)
+                    rad_c['tm'][clad_ind] += bd.sum(rad, axis=0)
                 count += self.modes_numg[kind][im1]
 
             # Density of states of leaky modes
@@ -904,27 +922,32 @@ class GuidedModeExp(object):
                     self.phc.claddings[i].eps_avg*omr**2 - gkr[i]**2) / \
                     4 / np.pi for i in [0, 1]]
 
+            # Store the reciprocal lattice vectors corresponding to the 
+            # radiation channels (diffraction orders)
+            rad_gvec['l'].append(self.gvec[:, indmoder[0]])
+            rad_gvec['u'].append(self.gvec[:, indmoder[1]])
+
             rad_t = 0 # variable suming up contributions from all the channels
             (c_l, c_u) = ({}, {})
             for pol in ['te', 'tm']:
                 # Couplings normalized such that Im(omega^2/c^2) is equal to
                 # sum(square(abs(c_l))) + sum(square(abs(c_u)))
-                c_l[pol] = bd.sqrt(np.pi*rad_dos[0])*rad_coup[pol][0]
-                c_u[pol] = bd.sqrt(np.pi*rad_dos[1])*rad_coup[pol][1]
+                c_l[pol] = bd.sqrt(np.pi*rad_dos[0])*rad_c[pol][0]
+                c_u[pol] = bd.sqrt(np.pi*rad_dos[1])*rad_c[pol][1]
                 rad_t = rad_t + \
                     bd.sum(bd.square(bd.abs(c_l[pol]))) + \
                     bd.sum(bd.square(bd.abs(c_u[pol])))
 
                 # Store the coupling constants (they are effectively in units
                 # of angular frequency omega)
-                coup_l[pol].append(c_l[pol])
-                coup_u[pol].append(c_u[pol])
+                rad_coup['l_' + pol].append(c_l[pol])
+                rad_coup['u_' + pol].append(c_u[pol])
 
             rad_tot.append(bd.imag(bd.sqrt(omr**2 + 1j*rad_t)))
 
         # Compute radiation rate in units of frequency  
         freqs_im = bd.array(rad_tot)/2/np.pi
-        return (freqs_im, coup_l, coup_u)
+        return (freqs_im, rad_coup, rad_gvec)
 
     def get_eps_xy(self, z:float, xgrid=None, ygrid=None, Nx=100, Ny=100):
         """

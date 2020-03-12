@@ -10,9 +10,12 @@ class Lattice(object):
         """
         Initialize a Bravais lattice.
         If a single argument is passed, then
+
             - 'square': initializes a square lattice.
             - 'hexagonal': initializes a hexagonal lattice.
-            (lattice constant a = 1 in both cases)
+
+        with lattice constant a = 1 in both cases.
+
         If two arguments are passed, they should each be 2-element arrays
         defining the elementary vectors of the lattice.
         """
