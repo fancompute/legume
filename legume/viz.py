@@ -709,8 +709,11 @@ def field(
         title_str += "$f = %.2f$" % (struct.freqs[kind, mind])
         if str_type == 'gme':
             if struct.freqs_im != []:
-                title_str += " $Q = %.2E$\n" % (struct.freqs[kind, mind]/2/
+                if np.abs(struct.freqs_im[kind, mind]) > 1e-20:
+                    title_str += " $Q = %.2E$\n" % (struct.freqs[kind, mind]/2/
                                             struct.freqs_im[kind, mind])
+                else:
+                    title_str += " $Q = Inf\n"
 
         ax.set_title(title_str)
 
