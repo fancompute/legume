@@ -42,6 +42,15 @@ class GuidedModeExp(object):
         # (in case gmode_inds includes modes that are above the gmax cutoff)
         self.gmode_include = []
 
+        # Initialize all the attributes defined as properties below
+        self._freqs = []
+        self._freqs_im = []
+        self._eigvecs = []
+        self._rad_coup = {}
+        self._rad_gvec = {}
+        self._kpoints = []
+        self._gvec = []
+
         # Initialize the reciprocal lattice vectors and compute the FT of all
         # the layers of the PhC
         if self.truncate_g == 'tbt':
@@ -73,7 +82,6 @@ class GuidedModeExp(object):
         """Real part of the frequencies of the eigenmodes computed by the 
         guided-mode expansion.
         """
-        if self._freqs is None: self._freqs = []
         return self._freqs
 
     @property
@@ -81,14 +89,12 @@ class GuidedModeExp(object):
         """Imaginary part of the frequencies of the eigenmodes computed by the 
         guided-mode expansion.
         """
-        if self._freqs_im is None: self._freqs_im = []
         return self._freqs_im
 
     @property
     def eigvecs(self):
         """Eigenvectors of the eigenmodes computed by the guided-mode expansion.
         """
-        if self._eigvecs is None: self._eigvecs = []
         return self._eigvecs
 
     @property
@@ -102,7 +108,6 @@ class GuidedModeExp(object):
         equal to all the allowed diffraction orders. The corresponding 
         reciprocal lattice vectors are stored in :attr:`GuidedModeExp.rad_gvec`.
         """
-        if self._rad_coup is None: self._rad_coup = {}
         return self._rad_coup
 
     @property
@@ -111,7 +116,6 @@ class GuidedModeExp(object):
         direction of the coupling constants stored in 
         :attr:`GuidedModeExp.rad_coup`.
         """
-        if self._rad_gvec is None: self._rad_gvec = {}
         return self._rad_gvec
 
     @property
@@ -119,7 +123,6 @@ class GuidedModeExp(object):
         """Numpy array of shape (2, Nk) with the [kx, ky] coordinates of the 
         k-vectors over which the simulation is run.
         """
-        if self._kpoints is None: self._kpoints = []
         return self._kpoints
 
     @property
@@ -127,7 +130,6 @@ class GuidedModeExp(object):
         """Numpy array of shape (2, Ng) with the [gx, gy] coordinates of the 
         reciprocal lattice vectors over which the simulation is run.
         """
-        if self._gvec is None: self._gvec = []
         return self._gvec
 
     def _init_reciprocal_tbt(self):
