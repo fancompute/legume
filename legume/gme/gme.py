@@ -895,7 +895,11 @@ class GuidedModeExp(object):
                     # print(kind, im, indmode1.shape, self.modes_numg[kind][im1])
                     rad = rad*bd.conj(evec[count:
                         count+self.modes_numg[kind][im1]][:, np.newaxis])
-                    rad_c['te'][clad_ind] += bd.sum(rad, axis=0)
+                    # We divide by 1j so that the coupling constants are w.r.t.
+                    # TE and TM waves with E field that is in-phase
+                    # (See equations in legume paper where the TE fields are 
+                    # proportional to i, we're just getting rid of that here)
+                    rad_c['te'][clad_ind] += -1j*bd.sum(rad, axis=0)
 
                     # Radiation to TM-polarized states
                     if mode1%2 == 0:

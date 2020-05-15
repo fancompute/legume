@@ -28,9 +28,8 @@ produces strange results, it might just be that the method is not that
 well-suited for the structure you are simulating. We're hoping to improve that 
 in future version of **legume**! 
 
-
-How do I incorporate symmetry?
-------------------------------
+How do I select which guided bands to include
+---------------------------------------------
 
 The expansion basis in the GME consists of the guided modes of an effective homogeneous
 structure. These can be classified as TE/TM, where in our notation the reference 
@@ -38,6 +37,18 @@ plane is the slab plane. The guided modes alternate between TE and TM, such
 that ``gmode_inds = [0, 2, 4, ...]`` are TE and ``gmode_inds = [1, 3, 5, ...]`` are 
 TM. However, this classification is often broken by the photonic crystal 
 permittivity. 
+
+.. image:: _static/guided_modes.png
+  :width: 400
+  :alt: Guided-modes of effective homogeneous structure
+
+
+How do I incorporate symmetry?
+------------------------------
+
+The TE/TM classification of the guided modes of the homogeneous structure is 
+often broekn by the photonic crystal permittivity. Here is how you can still
+incorporate some structural symmetries.
 
 For gratings (permittivity is periodic in one direction and homogeneous in the 
 other), the TE/TM classification holds. You can selectively compute the modes
@@ -68,7 +79,7 @@ guided-mode expansion:
 
 .. image:: _static/gme_graph.png
   :width: 400
-  :alt: Guided-mode expansion computation
+  :alt: Guided-mode expansion computation graph
 
 The ``'approx'`` option discards the gradient due to the top path in this 
 graph, i.e. the gradient due to the changing basis. Only the gradient from the 
