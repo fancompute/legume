@@ -132,6 +132,16 @@ class GuidedModeExp(object):
         """
         return self._gvec
 
+    def _print(self, text, flush=False, end='\n'):
+            """Print if verbose==True
+            """
+            if self.verbose==True: 
+                if flush==False:
+                    print(text, end=end)
+                else:
+                    sys.stdout.write("\r" + text)
+                    sys.stdout.flush()
+
     def _init_reciprocal_tbt(self):
         """
         Initialize reciprocal lattice vectors with a parallelogram truncation
@@ -355,24 +365,6 @@ class GuidedModeExp(object):
             self.eps_ft.append(bd.reshape(eps_ft, 
                         (self.gvec[0, :].size, self.gvec[0, :].size)))
 
-    def _compute_eps_inv(self):
-        """
-        Construct the inverse FT matrices for the permittivity in each layer
-        """
-
-        # List of inverse permittivity matrices for every layer
-        self.eps_inv_mat = []
-
-        if self.truncate_g == 'tbt':
-            for it, T1 in enumerate(self.T1):
-                # For now we just use the numpy inversion. Later on we could 
-                # implement the Toeplitz-Block-Toeplitz inversion (faster)
-                eps_mat = bd.toeplitz_block(self.n1g, T1, self.T2[it])
-                self.eps_inv_mat.append(bd.inv(eps_mat))
-        elif self.truncate_g == 'abs':
-            for eps_mat in self.eps_ft:
-                self.eps_inv_mat.append(bd.inv(eps_mat))
-
     def _construct_mat(self, kind):
         """
         Construct the Hermitian matrix for diagonalization for a given k
@@ -499,6 +491,26 @@ class GuidedModeExp(object):
         """
         return bd.triu(mat) + bd.transpose(bd.conj(bd.triu(mat, 1)))
 
+    def compute_eps_inv(self):
+        """
+        Construct the inverse FT matrices for the permittivity in each layer
+        """
+        try:
+            self.eps_inv_mat
+        except AttributeError:
+            # List of inverse permittivity matrices for every layer
+            self.eps_inv_mat = []
+
+            if self.truncate_g == 'tbt':
+                for it, T1 in enumerate(self.T1):
+                    # For now we just use the numpy inversion. Later on we could 
+                    # implement the Toeplitz-Block-Toeplitz inversion (faster)
+                    eps_mat = bd.toeplitz_block(self.n1g, T1, self.T2[it])
+                    self.eps_inv_mat.append(bd.inv(eps_mat))
+            elif self.truncate_g == 'abs':
+                for eps_mat in self.eps_ft:
+                    self.eps_inv_mat.append(bd.inv(eps_mat))
+
     def set_run_options(self, gmode_compute='exact', gmode_inds: list=[0], 
             gmode_npts: int=1000,
             gmode_step: float=1e-2, gmode_tol: float=1e-10, numeig: int=10,
@@ -607,16 +619,6 @@ class GuidedModeExp(object):
         self.set_run_options(**kwargs)
        
         t_start = time.time()
-        
-        def print_vb(text, flush=False, end='\n'):
-            """Print if verbose==True
-            """
-            if self.verbose==True: 
-                if flush==False:
-                    print(text, end=end)
-                else:
-                    sys.stdout.write("\r" + text)
-                    sys.stdout.flush()
 
         # Bloch momenta over which band structure is simulated 
         self._kpoints = kpoints
@@ -685,7 +687,7 @@ class GuidedModeExp(object):
 
         # Compute inverse matrix of FT of permittivity
         t = time.time()
-        self._compute_eps_inv()
+        self.compute_eps_inv()
         t_eps_inv = time.time()-t
 
         # Loop over all k-points, construct the matrix, diagonalize, and compute
@@ -696,7 +698,7 @@ class GuidedModeExp(object):
         self._eigvecs = []
         for ik, k in enumerate(kpoints.T):
             
-            print_vb("Running k-point %d of %d" % (ik+1, kpoints.shape[1]), 
+            self._print("Running k-point %d of %d" % (ik+1, kpoints.shape[1]), 
                         flush=True)            
             mat = self._construct_mat(kind=ik)
             if self.numeig > mat.shape[0]:
@@ -732,22 +734,22 @@ class GuidedModeExp(object):
         # convention for the units (2pi a/c)
         self._freqs = bd.array(freqs)
 
-        print_vb("", flush=True)
-        print_vb("%1.4fs total time for real part of frequencies, of which"
+        self._print("", flush=True)
+        self._print("%1.4fs total time for real part of frequencies, of which"
                     % (time.time()-t_start))
-        print_vb("  %1.4fs for guided modes computation using"
+        self._print("  %1.4fs for guided modes computation using"
                 " the gmode_compute='%s' method"
                 % (self.t_guided, self.gmode_compute.lower()))
-        print_vb("  %1.4fs for inverse matrix of Fourier-space "
+        self._print("  %1.4fs for inverse matrix of Fourier-space "
             "permittivity"% t_eps_inv)
 
         if self.compute_im==True:
             t = time.time()
             self.run_im()
-            print_vb("%1.4fs for imaginary part computation"
+            self._print("%1.4fs for imaginary part computation"
                     % (time.time()-t))
         else:
-            print_vb("Skipping imaginary part computation, use run_im() to"
+            self._print("Skipping imaginary part computation, use run_im() to"
                 " run it, or compute_rad() to compute the radiative rates"
                 " of selected eigenmodes")
 
