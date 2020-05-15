@@ -252,7 +252,7 @@ defvjp(fsolve_ag, *vjp_factory_fsolve([False, True, True]))
     array of the same size as `fns`.
 """
 
-@ag.primitive
+@primitive
 def fmap(fns, params):
     """ autograd-ready version of functools.fmap applied to a list of functions
     `fns` taking the same parmeters `params`
@@ -264,11 +264,13 @@ def fmap(fns, params):
     """
 
     # use standard map function and convert to a Numpy array
-    return np.array(list(map(lambda f: f(params), fns)))
+    return np.array(list(map(lambda f: f(params), fns))).ravel()
 
 
 def vjp_maker_fmap(ans, fns, params):
     # get the gradient of each function and stack along the 0-th dimension
-    grads = np.stack(map(lambda f: ag.grad(f)(params), fns), axis=0)
+    grads = np.stack(list(map(lambda f: grad(f)(params), fns)), axis=0)
     # this literally does the vector-jacobian product
     return lambda v: np.dot(v.T, grads)
+
+defvjp(fmap, None, vjp_maker_fmap)
