@@ -240,3 +240,35 @@ def vjp_factory_fsolve(ginds):
 # NB: This definition is for the specific fsolve with three arguments
 # used for the guided modes!!!
 defvjp(fsolve_ag, *vjp_factory_fsolve([False, True, True]))
+
+
+"""=========== MAP FUNCTION EVALUATION =========== """
+""" A variation of the `functools.map` function applied to a list of functions,
+    defined as follows
+        `fmap(fns, params) = map(lambda f: f(params), fns)`
+        (the output is converted to a numpy array)
+
+    We assume that each `f` in `fns` returns a scalar such that the output is an 
+    array of the same size as `fns`.
+"""
+
+@ag.primitive
+def fmap(fns, params):
+    """ autograd-ready version of functools.fmap applied to a list of functions
+    `fns` taking the same parmeters `params`
+    Arguments:
+        `fns`: list of functions of `params` that return a scalar
+        `params`: array of parameters feeding into each individual computation
+    Returns:
+        Numpy array of same size as the `fns` list
+    """
+
+    # use standard map function and convert to a Numpy array
+    return np.array(list(map(lambda f: f(params), fns)))
+
+
+def vjp_maker_fmap(ans, fns, params):
+    # get the gradient of each function and stack along the 0-th dimension
+    grads = np.stack(map(lambda f: ag.grad(f)(params), fns), axis=0)
+    # this literally does the vector-jacobian product
+    return lambda v: np.dot(v.T, grads)
