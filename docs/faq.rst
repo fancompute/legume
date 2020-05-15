@@ -28,19 +28,39 @@ produces strange results, it might just be that the method is not that
 well-suited for the structure you are simulating. We're hoping to improve that 
 in future version of **legume**! 
 
-How do I select which guided bands to include
----------------------------------------------
-
-The expansion basis in the GME consists of the guided modes of an effective homogeneous
-structure. These can be classified as TE/TM, where in our notation the reference 
-plane is the slab plane. The guided modes alternate between TE and TM, such 
-that ``gmode_inds = [0, 2, 4, ...]`` are TE and ``gmode_inds = [1, 3, 5, ...]`` are 
-TM. However, this classification is often broken by the photonic crystal 
-permittivity. 
+What should I know about the guided-mode basis?
+-----------------------------------------------
 
 .. image:: _static/guided_modes.png
   :width: 400
   :alt: Guided-modes of effective homogeneous structure
+
+The expansion basis in the GME consists of the guided modes of an effective 
+homogeneous structure (panels (a)-(b)) in the Figure. By default, the 
+effective permittivities in (b) are taken as the average value in every layer.
+This is controlled by the ``gmode_eps`` keyword option in the run options. 
+Setting ``gmode_eps = 'background'`` will take the background permittivity 
+instead, while there's also the option to have custom values by setting
+``gmode_eps = 'custom'``. In that case, every layer (including the claddings)
+in the ``PhotCryst`` object should have a pre-defined effective permittivity 
+``eps_eff``, which will be used in the guided-mode computation. This is simply 
+set as an attribute of the layer, e.g. 
+
+.. code-block:: python
+
+  phc.layers[0].eps_eff = 10   # Slab custom effective epsilon
+  phc.calddings[0].eps_eff = 1 # Lower cladding 
+  phc.claddings[1].eps_eff = 5 # Upper cladding 
+
+The guided modes can be classified as TE/TM, where in our notation the reference 
+plane is the slab plane (xy). The guided modes alternate between TE and TM, such 
+that ``gmode_inds = [0, 2, 4, ...]`` are TE and ``gmode_inds = [1, 3, 5, ...]`` 
+are TM (panel (c)). However, this classification is often broken by the 
+photonic crystal structure (we discuss symmetries further below).
+
+We only include the fully-guided modes in the computation (the ones that lie
+below both light lines in (c)). This is what makes the computation approximate, 
+as the basis set is not complete. 
 
 
 How do I incorporate symmetry?
@@ -94,6 +114,19 @@ diagonalization path is included. Here are some rules of thumb on what to use:
   and/or if your parameters include the layer thicknesses, then the ``'approx'`` 
   gradients could be significantly off, ``'exact'`` is recommended (and is the 
   default).
+
+What if I only need the Q of some of the modes?
+-----------------------------------------------
+
+In some simulations, the computation of the radiative losses could be the time 
+bottleneck. In some cases, e.g. when optimizing a cavity, you only need to 
+compute the quality factor of a single mode. If you run the GME by default, 
+the Q-s of all modes will be computed instead, but you can set the option 
+``compute_im = False`` to avoid this. Running the GME with this option will 
+compute all modes, but not the imaginary part of their frequencies (which is 
+done perturbatively after the first stage of the computation). Then, you can 
+use the :meth:`legume.GuidedModeExp.compute_rad` method to only compute the loss rates 
+of selected modes.
 
 
 How can I learn more about the method?
