@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.com/fancompute/legume.svg?token=ZCPktA3Ki2eYVXYnfbrz&branch=master)](https://travis-ci.com/fancompute/legume.svg?branch=master)
+
 <img src="https://github.com/fancompute/legume/blob/master/docs/_static/legume-logo.png" align="middle" title="logo" alt="logo">
 
 legume (le GUided Mode Expansion) is a python implementation of the GME method for photonic crystal slabs, including multi-layer structures. Plane-wave expansion for purely 2D structures is also included. Also, we have an `autograd` backend that allows gradients of all output values with respect to all input parameters to be computed efficiently!
