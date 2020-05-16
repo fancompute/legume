@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/fancompute/legume.svg?token=ZCPktA3Ki2eYVXYnfbrz&branch=master)](https://travis-ci.com/fancompute/legume.svg?branch=master)
+[![Build Status](https://travis-ci.com/fancompute/legume.svg?token=ZCPktA3Ki2eYVXYnfbrz&branch=master)](https://travis-ci.com/fancompute/legume.svg?branch=master) [![Documentation Status](https://readthedocs.org/projects/legume/badge/?version=latest)](https://legume.readthedocs.io/en/latest/?badge=latest)
 
 <img src="https://github.com/fancompute/legume/blob/master/docs/_static/legume-logo.png" align="middle" title="logo" alt="logo">
 
