@@ -101,7 +101,8 @@ def bands(
 
     return ax
 
-def _plot_eps(eps_r, clim=None, ax=None, extent=None, cmap='Greys', cbar=False):
+def _plot_eps(eps_r, clim=None, ax=None, extent=None, cmap='Greys', 
+    cbar=False, cax=None):
 
     if ax is None:
         fig, ax = plt.subplots(1, constrained_layout=True)
@@ -111,7 +112,13 @@ def _plot_eps(eps_r, clim=None, ax=None, extent=None, cmap='Greys', cbar=False):
         im.set_clim(vmin=clim[0], vmax=clim[1])
 
     if cbar:
-        plt.colorbar(im, ax=ax)
+        # cax = ax.figure.add_axes([ax.get_position().x1+0.01,
+        #     ax.get_position().y0, 0.02, ax.get_position().height])
+        # plt.colorbar(im, cax=cax) 
+        if cax is not None:
+            plt.colorbar(im, ax=ax, cax=cax)
+        else:
+            plt.colorbar(im, ax=ax)
         
     return im
 
@@ -161,7 +168,7 @@ def eps(layer, Nx=100, Ny=100, ax=None, clim=None,
     _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
 
 def eps_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
-             cbar=False, cmap='Greys', plot=True):
+             cbar=False, cmap='Greys', cax=None, plot=True):
     """Plot permittivity cross section of a photonic crystal in an xz plane
 
     Parameters
@@ -184,9 +191,12 @@ def eps_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
     cbar : bool, optional
         Whether or not a colorbar should be added to the plot.
         Default is False.
-    cmap : bool, optional
+    cmap : string, optional
         Matplotlib colormap to use for plot
         Default is 'Greys'.
+    cax : matplotlib axis object, optional
+        Axis handle for the colorbar
+        Default it None.
     plot : bool, optional
         Whether or not the a plot should be generated. Useful for cases where
         only the array values are needed, e.g. for logging during optimization.
@@ -206,12 +216,13 @@ def eps_xz(phc, y=0, Nx=100, Nz=50, ax=None, clim=None,
     extent = [xgrid[0], xgrid[-1], zgrid[0], zgrid[-1]]
 
     if plot:
-        _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+        _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap,
+            cax=cax)
 
     return eps_r
 
 def eps_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None,
-             cbar=False, cmap='Greys', plot=True):
+             cbar=False, cmap='Greys', cax=None, plot=True):
     """Plot permittivity cross section of a photonic crystal in an xy plane
 
     Parameters
@@ -234,9 +245,12 @@ def eps_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None,
     cbar : bool, optional
         Whether or not a colorbar should be added to the plot.
         Default is False.
-    cmap : bool, optional
+    cmap : string, optional
         Matplotlib colormap to use for plot
         Default is 'Greys'.
+    cax : matplotlib axis object, optional
+        Axis handle for the colorbar
+        Default it None.
     plot : bool, optional
         Whether or not the a plot should be generated. Useful for cases where
         only the array values are needed, e.g. for logging during optimization.
@@ -255,13 +269,14 @@ def eps_xy(phc, z=0, Nx=100, Ny=100, ax=None, clim=None,
     extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
 
     if plot:
-        _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+        _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap,
+            cax=cax)
 
     return eps_r
 
 
 def eps_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None,
-             cbar=False, cmap='Greys', plot=True):
+             cbar=False, cmap='Greys', cax=None, plot=True):
     """Plot permittivity cross section of a photonic crystal in an yz plane
 
     Parameters
@@ -284,9 +299,12 @@ def eps_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None,
     cbar : bool, optional
         Whether or not a colorbar should be added to the plot.
         Default is False.
-    cmap : bool, optional
+    cmap : string, optional
         Matplotlib colormap to use for plot
         Default is 'Greys'.
+    cax : matplotlib axis object, optional
+        Axis handle for the colorbar
+        Default it None.
     plot : bool, optional
         Whether or not the a plot should be generated. Useful for cases where
         only the array values are needed, e.g. for logging during optimization.
@@ -305,7 +323,8 @@ def eps_yz(phc, x=0, Ny=100, Nz=50, ax=None, clim=None,
     extent = [ygrid[0], ygrid[-1], zgrid[0], zgrid[-1]]
 
     if plot:
-        _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap)
+        _plot_eps(eps_r, clim=clim, ax=ax, extent=extent, cbar=cbar, cmap=cmap,
+            cax=cax)
 
     return eps_r
 
@@ -345,7 +364,8 @@ def shapes(layer, ax=None, npts=101, color='k', lw=1, pad=True):
 
 
 def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True, 
-                cmap='Greys', gridspec=None, fig=None, figsize=(4,8)):
+                cmap='Greys', gridspec=None, fig=None, figsize=None,
+                xy=True, xz=False, yz=False):
     """Plot permittivity for all cross sections of a photonic crystal
 
     Parameters
@@ -375,9 +395,19 @@ def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True,
     fig : Matplotlib figure object, optional
         Figure to use for creating the plots.
         Default is None.
-    figsize : Tuple, optional
+    figsize : int, float or tuple, optional
         Size of Matplotlib figure to create.
-        Default is (4,8).
+        Default is None, which sets the width to 4in and the height depending 
+        on the aspect ratios. If int or float, it's taken as the figure width.
+    xy : bool, optional
+        Plot the xy cross-section in every layer.
+        Default is True.
+    xz : bool, optional
+        Also plot an xz cross-section.
+        Default is False.
+    yz : bool, optional
+        Also plot a yz cross-section.
+        Default is False.
     """
     if isinstance(struct, GuidedModeExp):
         phc = struct.phc
@@ -395,44 +425,86 @@ def structure(struct, Nx=100, Ny=100, Nz=50, cladding=False, cbar=True,
         all_layers = phc.layers
     N_layers = len(all_layers)
 
+    (xb, yb) = all_layers[0].lattice.xy_grid(Nx=2, Ny=2)
+    zb = phc.z_grid(Nz=2)
+    ar_xy = (yb[1]-yb[0])/(xb[1]-xb[0]) # aspect ratio
+    ar_xz = (zb[1]-zb[0])/(xb[1]-xb[0])
+    ar_yz = (zb[1]-zb[0])/(yb[1]-yb[0])
+
+    ars = []
+    if xz==True: ars.append(ar_xz)
+    if yz==True: ars.append(ar_yz)
+    if xy==True: ars = ars + [ar_xy for i in range(N_layers)] 
+ 
+    if isinstance(figsize, float) or isinstance(figsize, int): 
+        xw = figsize
+    else:
+        xw = 4
+
+    # Width in x of the image, colorbar takes 5% by default, and exclude some
+    # space for the axis label
+    cbwidth = 0.05
+    xwi = xw-0.3 if cbar == False else (1-cbwidth)*xw-0.8
+
+    if not isinstance(figsize, tuple):
+        figsize = (xw, xwi*sum(ars) + len(ars)*0.2)
+
     if gridspec is None and fig is None:
         fig = plt.figure(constrained_layout=True, figsize=figsize)
-        gs = mpl.gridspec.GridSpec(N_layers+1, 2, figure=fig)
+        if cbar == False:
+            gs = mpl.gridspec.GridSpec(len(ars), 1, figure=fig, 
+                height_ratios=ars)
+        else:
+            gs = mpl.gridspec.GridSpec(len(ars), 2, figure=fig, 
+                height_ratios=ars, width_ratios=[1-cbwidth, cbwidth])
     elif gridspec is not None and fig is not None:
-        gs = mpl.gridspec.GridSpecFromSubplotSpec(N_layers+1, 2, gridspec)
+        if cbar == False:
+            gs = mpl.gridspec.GridSpecFromSubplotSpec(len(ars), 1, gridspec)
+        else:
+            gs = mpl.gridspec.GridSpecFromSubplotSpec(len(ars), 2, gridspec)
     else:
         raise ValueError("Parameters gridspec and fig should be both specified "
                             "or both unspecified")
+    axind = 0 
 
-    ax1 = fig.add_subplot(gs[0, 0])
-    ax2 = fig.add_subplot(gs[0, 1])
-    ax = []
-    for i in range(N_layers):
-        ax.append(fig.add_subplot(gs[1+i, :]))
+    if xz == True:
+        ax1 = fig.add_subplot(gs[axind, 0])
+        cax = None if cbar==False else fig.add_subplot(gs[axind, 1])
+        eps_xz(phc, ax=ax1, Nx=Nx, Nz=Nz,
+                clim=[eps_min, eps_max], cbar=cbar, cmap=cmap, cax=cax)
+        ax1.set_title("xz at y = 0")
+        axind += 1
 
-    eps_xz(phc, ax=ax1, Nx=Nx, Nz=Nz,
-                clim=[eps_min, eps_max], cbar=False, cmap=cmap)
-    ax1.set_title("xz at y = 0")
-    eps_yz(phc, ax=ax2, Ny=Ny, Nz=Nz,
-                clim=[eps_min, eps_max], cbar=cbar, cmap=cmap)
-    ax2.set_title("yz at x = 0")
+    if yz == True:
+        ax2 = fig.add_subplot(gs[axind, 0])
+        cax = None if cbar==False else fig.add_subplot(gs[axind, 1])
+        eps_yz(phc, ax=ax2, Ny=Ny, Nz=Nz,
+                clim=[eps_min, eps_max], cbar=cbar, cmap=cmap, cax=cax)
+        ax2.set_title("yz at x = 0")
+        axind += 1
 
-    for indl in range(N_layers):
-        zpos = (all_layers[indl].z_max + all_layers[indl].z_min)/2
-        eps_xy(phc, z=zpos, ax=ax[indl], Nx=Nx, Ny=Ny,
-                clim=[eps_min, eps_max], cbar=False, cmap=cmap)
-        if cladding==True:
-            if indl > 0 and indl < N_layers-1:
+    if xy == True:
+        ax = []
+
+        for indl in range(N_layers):
+            zpos = (all_layers[indl].z_max + all_layers[indl].z_min)/2
+            ax.append(fig.add_subplot(gs[axind+indl, 0]))
+            cax = None if cbar==False else fig.add_subplot(gs[axind+indl, 1])
+            eps_xy(phc, z=zpos, ax=ax[indl], Nx=Nx, Ny=Ny,
+                    clim=[eps_min, eps_max], cbar=cbar, cmap=cmap, cax=cax)
+            if cladding==True:
+                if indl > 0 and indl < N_layers-1:
+                    ax[indl].set_title("xy in layer %d" % indl)
+                elif indl==N_layers-1:
+                    ax[0].set_title("xy in lower cladding")
+                    ax[-1].set_title("xy in upper cladding")
+            else:
                 ax[indl].set_title("xy in layer %d" % indl)
-            elif indl==N_layers-1:
-                ax[0].set_title("xy in lower cladding")
-                ax[-1].set_title("xy in upper cladding")
-        else:
-            ax[indl].set_title("xy in layer %d" % indl)
 
 
 def eps_ft(struct, Nx=100, Ny=100, cladding=False, cbar=True, 
-                cmap='Greys', gridspec=None, fig=None, figsize=(4,8)):
+                cmap='Greys', gridspec=None, fig=None, figsize=None,
+                xz=False, yz=False):
     """Plot a permittivity cross section computed from an inverse FT
 
     The Fourier transform is computed with respect to the GME reciprocal
@@ -462,9 +534,10 @@ def eps_ft(struct, Nx=100, Ny=100, cladding=False, cbar=True,
     fig : Matplotlib figure object, optional
         Figure to use for creating the plots.
         Default is None.
-    figsize : Tuple, optional
+    figsize : int, float or tuple, optional
         Size of Matplotlib figure to create.
-        Default is (4,8).
+        Default is None, which sets the width to 4in and the height depending 
+        on the aspect ratios. If int or float, it's taken as the figure width.
     """
 
     # Do some parsing of the inputs 
@@ -488,32 +561,53 @@ def eps_ft(struct, Nx=100, Ny=100, cladding=False, cbar=True,
         all_layers = struct.phc.layers if str_type == 'gme' else [struct.layer]
     N_layers = len(all_layers)
 
-    # Initialize gridspec and figure
+    (xb, yb) = all_layers[0].lattice.xy_grid(Nx=2, Ny=2)
+    ar = (yb[1]-yb[0])/(xb[1]-xb[0]) # aspect ratio
+
+    if isinstance(figsize, float) or isinstance(figsize, int): 
+        xw = figsize
+    else:
+        xw = 4
+
+    # Width in x of the image, colorbar takes 5% by default, and exclude some
+    # space for the axis label
+    cbwidth = 0.05
+    xwi = xw-0.3 if cbar == False else (1-cbwidth)*xw-0.8
+
+    if not isinstance(figsize, tuple):
+        figsize = (xw, xwi*N_layers*ar + N_layers*0.2)
+
     if gridspec is None and fig is None:
         fig = plt.figure(constrained_layout=True, figsize=figsize)
-        gs = mpl.gridspec.GridSpec(N_layers, 1, figure=fig)
+        if cbar == False:
+            gs = mpl.gridspec.GridSpec(N_layers, 1, figure=fig)
+        else:
+            gs = mpl.gridspec.GridSpec(N_layers, 2, figure=fig,
+                     width_ratios=[1-cbwidth, cbwidth])
     elif gridspec is not None and fig is not None:
-        gs = mpl.gridspec.GridSpecFromSubplotSpec(N_layers, 1, gridspec)
+        if cbar == False:
+            gs = mpl.gridspec.GridSpecFromSubplotSpec(len(ars), 1, gridspec)
+        else:
+            gs = mpl.gridspec.GridSpecFromSubplotSpec(len(ars), 2, gridspec)
     else:
         raise ValueError("Parameters gridspec and fig should be both specified "
                             "or both unspecified")
 
-    ax = []
-    for i in range(N_layers):
-        ax.append(fig.add_subplot(gs[i, :]))
-
     (eps_min, eps_max) = (all_layers[0].eps_b, all_layers[0].eps_b)
     ims = []
+    ax = []
+
     for (indl, layer) in enumerate(all_layers):
+        ax.append(fig.add_subplot(gs[indl, :]))
         (eps_r, xgrid, ygrid) = struct.get_eps_xy(Nx=Nx, Ny=Ny,
                                 z=(layer.z_min + layer.z_max)/2)
 
         eps_min = min([eps_min, np.amin(np.real(eps_r))])
         eps_max = max([eps_max, np.amax(np.real(eps_r))])
         extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
-
+        cax = None if cbar==False else fig.add_subplot(gs[indl, 1])
         im = _plot_eps(np.real(eps_r), ax=ax[indl], extent=extent, 
-                        cbar=False)
+                        cbar=cbar, cax=cax)
         ims.append(im)
         if cladding:
             if indl > 0 and indl < N_layers-1:
@@ -525,8 +619,7 @@ def eps_ft(struct, Nx=100, Ny=100, cladding=False, cbar=True,
             ax[indl].set_title("xy in layer %d" % indl)
     
     for il in range(N_layers):
-        ims[il].set_clim(vmin=eps_min, vmax=eps_max)
-    plt.colorbar(ims[-1])
+        ims[il].set_clim(vmin=eps_min, vmax=eps_max) 
 
 
 def reciprocal(struct):
