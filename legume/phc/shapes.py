@@ -284,3 +284,63 @@ class Hexagon(Poly):
     def __repr__(self):
         return "Hexagon(eps = %.2f, x_cent = %.4f, y_cent = %.4f, a = %.4f)" % \
                (self.eps, self.x_cent, self.y_cent, self.a)
+
+class FourierShape(Poly):
+    """Hexagon shape
+    """
+    def __init__(self, eps=1, x_cent=0, y_cent=0, f_as=np.array([0.]), 
+                    f_bs=np.array([]), npts=100):
+        """Create a shape defined by its Fourier coefficients in polar 
+        coordinates.
+
+        Parameters
+        ----------
+        eps : float
+            Permittivity value
+        x_cent : float
+            x-coordinate of shape center
+        y_cent : float
+            y-coordinate of shape center
+        f_as : Numpy array
+            Fourier coefficients an
+        f_bs : Numpy array
+            Fourier coefficients bn
+        npts : int
+            Number of points in the polygonal discretization
+
+        Note
+        ----
+        We use the discrete Fourier expansion 
+        ``R(phi) = a0/2 + sum(an*cos(n*phi)) + sum(bn*sin(n*phi))``
+        The coefficients ``f_as`` are an array containing ``[a0, a1, ...]``,  
+        while ``f_bs`` define ``[b1, b2, ...]``.
+
+        Note
+        ----
+        This is a subclass of Poly because we discretize the shape into 
+        a polygon and use that to compute the fourier transform for the 
+        mode expansions.
+
+        """
+        self.x_cent = x_cent
+        self.y_cent = y_cent
+        self.npts = npts
+
+        phis = bd.linspace(0, 2*np.pi, npts+1)
+
+        R_phi = f_as[0]/2*bd.ones(phis.shape)
+        for (n, an) in enumerate(f_as[1:]):
+            R_phi = R_phi + an*bd.cos((n+1)*phis)
+
+        for (n, bn) in enumerate(f_bs):
+            R_phi = R_phi + bn*bd.sin((n+1)*phis)
+
+        x_edges = R_phi*bd.cos(phis)
+        y_edges = R_phi*bd.sin(phis)
+
+        super().__init__(eps, x_edges, y_edges) 
+
+    def __repr__(self):
+        return "FourierShape(eps = %.2f, x_cent = %.4f, y_cent = %.4f"\
+                ", npts = %d)" % \
+               (self.eps, self.x_cent, self.y_cent, self.npts)

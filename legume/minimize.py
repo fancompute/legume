@@ -33,16 +33,25 @@ class Minimize(object):
         """Parse the input bounds, which can be 'None', a list with two
         elements, or a list of tuples with 2 elements each
         """
-        if bounds == None: 
-            return None
-        elif len(bounds) == 2:
-            return [tuple(bounds) for i in range(self.params.size)]
-        elif len(bounds) == self.params.size:
-            return bounds
-        else:
+        try:
+            if bounds == None:
+                return None
+            elif not isinstance(bounds[0], tuple):
+                if len(bounds)==2:
+                    return [tuple(bounds) for i in range(self.params.size)]
+                else:
+                    raise ValueError
+            elif len(bounds) == self.params.size:
+                if all([len(b)==2 for b in bounds]):
+                    return bounds
+                else:
+                    raise ValueError
+            else:
+                raise ValueError
+        except:
             raise ValueError("'bounds' should be a list of two elements "
                 "[lb, ub], or a list of the same length as the number of "
-                "parameters with tuples (lb, ub)")
+                "parameters where each element is a tuple (lb, ub)")
 
     def _disp(self, t_elapsed):
         """Display information at every iteration
