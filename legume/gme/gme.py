@@ -684,6 +684,7 @@ class GuidedModeExp(object):
 
         else:
             self.t_guided = 0
+        self.t_eig = 0 # For timing of the diagonalization
 
         # Compute inverse matrix of FT of permittivity
         t = time.time()
@@ -708,6 +709,7 @@ class GuidedModeExp(object):
 
             # NB: we shift the matrix by np.eye to avoid problems at the zero-
             # frequency mode at Gamma
+            t_eig = time.time()
             if self.eig_solver == 'eigh':
                 (freq2, evecs) = bd.eigh(mat + bd.eye(mat.shape[0]))
                 freq1 = bd.sqrt(bd.abs(freq2 - bd.ones(mat.shape[0])))/2/np.pi
@@ -726,6 +728,7 @@ class GuidedModeExp(object):
                 evec = evecs[:, i_sort]
             else:
                 raise ValueError("'eig_solver' can be 'eigh' or 'eigsh'")
+            self.t_eig += time.time() - t_eig
             
             freqs.append(freq)
             self._eigvecs.append(evec)
@@ -742,6 +745,8 @@ class GuidedModeExp(object):
                 % (self.t_guided, self.gmode_compute.lower()))
         self._print("  %1.4fs for inverse matrix of Fourier-space "
             "permittivity"% t_eps_inv)
+        self._print("  %1.4fs for matrix diagionalization using the '%s' solver"
+                % (self.t_eig, self.eig_solver.lower()))
 
         if self.compute_im==True:
             t = time.time()

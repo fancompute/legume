@@ -89,14 +89,8 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 
     # D22real is used in the fsolve; D22test is vectorized and used on a test 
     # array of omega-s to find sign flips
-    if pol.lower()=='te':
-        D22real = lambda x,*args: bd.real(D22_TE(x,*args))
-        D22test = lambda x,*args: D22s_vec(x,*args,pol='TE').real
-    elif pol.lower()=='tm':
-        D22real = lambda x,*args: bd.real(D22_TM(x,*args))
-        D22test = lambda x,*args: D22s_vec(x,*args,pol='TM').real
-    else:
-        raise ValueError("Polarization should be 'TE' or 'TM'.")
+    D22real = lambda x,*args: bd.real(D22(x, *args, pol=pol))
+    D22test = lambda x,*args: bd.real(D22s_vec(x, *args, pol=pol))
 
     # Making sure the bounds go all the way to omega_ub
     omega_bounds = np.append(np.arange(omega_lb, omega_ub, step), omega_ub) 
@@ -127,7 +121,7 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
                                 chi_array, pol)
             # Normalize
             norm = normalization_coeff(omega, g, eps_array, d_array, 
-                                AB, pol)
+                                chi_array, AB, pol)
             coeffs.append(AB / bd.sqrt(norm))
         else:
             raise ValueError("Polarization should be 'TE' or 'TM'")
@@ -137,7 +131,7 @@ def guided_mode_given_g(g, eps_array, d_array, n_modes=1,
 def chi(omega, g, eps):
     """
     Function to compute chi_j, the z-direction wave-vector in each layer j
-    Either omega is an array and eps is a number, or vice versa
+    Either omega is an array and eps is a float, or vice versa.
     Input
         omega           : frequency * 2π , in units of light speed/unit length
         eps             : slab permittivity array
@@ -149,11 +143,27 @@ def chi(omega, g, eps):
     return bd.where(bd.real(sqarg) >=0, bd.sqrt(sqarg),
                          1j*bd.sqrt(-sqarg))
 
-def chi_vec(omegas, g, eps):
+def chis_3layer(omega, g, eps_array):
     """
-    Here omegas is an array and eps is a single number
     """
-    return np.sqrt(eps*omegas**2 - g**2, dtype=np.complex)
+    (eps1, eps2, eps3) = [e for e in eps_array]
+    chis1 = 1j*bd.sqrt(g**2 - eps1*omega**2)
+    chis2 = bd.sqrt(-g**2 + eps2*omega**2).astype(bd.complex)
+    chis3 = 1j*bd.sqrt(g**2 - eps3*omega**2)
+    
+    return (chis1, chis2, chis3)
+
+# def chis_nlayer(omega, g, eps_array):
+#     """
+#     """
+#     chis = []
+#     for e in eps_array:
+#         if g**2 - e*omega**2 > 0:
+#             chis.append(1j*bd.sqrt(g**2 - e*omega**2))
+#         else:
+#             chis.append(bd.sqrt(-g**2 + e*omega**2).astype(bd.complex))
+    
+#     return bd.array(chis)
 
 def S_T_matrices_TM(omega, g, eps_array, d_array):
     """
@@ -175,24 +185,6 @@ def S_T_matrices_TM(omega, g, eps_array, d_array):
         [bd.zeros(T11.shape),T22]]).transpose([2,0,1])
     return S_matrices, T_matrices
 
-def D22_TM(omega, g, eps_array, d_array):
-    """
-    Function to get TM guided modes by solving D22=0
-    Input
-        omega           : frequency * 2π , in units of light speed/unit length
-        g               : wave vector along propagation direction 
-        eps_array       : shape[M+1,1], slab permittivities
-        d_array         : thicknesses of each layer
-    Output
-        D_22 
-    """
-    S_matrices, T_matrices = S_T_matrices_TM(omega, g, eps_array, d_array)
-    D = S_matrices[0,:,:]
-    for i,S in enumerate(S_matrices[1:]):
-        T = T_matrices[i]
-        D = bd.dot(S, bd.dot(T, bd.dot(T, D)))
-    return D[1,1]
-
 def S_T_matrices_TE(omega, g, eps_array, d_array):
     """
     Function to get a list of S and T matrices for D22 calculation
@@ -213,7 +205,7 @@ def S_T_matrices_TE(omega, g, eps_array, d_array):
         [bd.zeros(T11.shape),T22]]).transpose([2,0,1])
     return S_matrices, T_matrices
 
-def D22_TE(omega, g, eps_array, d_array):
+def D22(omega, g, eps_array, d_array, pol='TM'):
     """
     Function to get TE guided modes by solving D22=0
     Input
@@ -224,12 +216,34 @@ def D22_TE(omega, g, eps_array, d_array):
     Output
         D_22
     """
-    S_matrices, T_matrices = S_T_matrices_TE(omega, g, eps_array, d_array)
-    D = S_matrices[0,:,:]
-    for i,S in enumerate(S_matrices[1:]):
-        T = T_matrices[i]
-        D = bd.dot(S, bd.dot(T, bd.dot(T, D)))
-    return D[1,1]
+    if eps_array.size == 3:
+        (eps1, eps2, eps3) = [e for e in eps_array]
+        (chis1, chis2, chis3) = chis_3layer(omega, g, eps_array)
+        # [chis1, chis2, chis3] = [c for c in chis_nlayer(omega, g, eps_array)]
+
+        tcos = -1j*bd.cos(chis2*d_array)
+        tsin = -bd.sin(chis2*d_array)
+
+        if pol.lower() == 'te':
+            D22 = chis2*(chis1 + chis3)*tcos + \
+                    (chis1*chis3 + bd.square(chis2))*tsin
+        elif pol.lower() == 'tm':    
+            D22 = chis2/eps2*(chis1/eps1 + chis3/eps3)*tcos + \
+                    (chis1/eps1*chis3/eps3 + bd.square(chis2/eps2))*tsin
+        return D22
+    else:
+        if pol.lower() == 'te':
+            S_mat, T_mat = S_T_matrices_TE(omega, g, eps_array, d_array)
+        elif pol.lower() == 'tm':
+            S_mat, T_mat = S_T_matrices_TM(omega, g, eps_array, d_array)
+        else:
+            raise ValueError("Polarization should be 'TE' or 'TM'.")
+
+        D = S_mat[0,:,:]
+        for i,S in enumerate(S_mat[1:]):
+            T = T_mat[i]
+            D = bd.dot(S, bd.dot(T, bd.dot(T, D)))
+        return D[1,1]
 
 def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
     """
@@ -248,6 +262,8 @@ def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
     It is currently not used in the root finding, but it could be useful if 
     there is a routine that can take advantage of the vectorization. 
     """
+    if isinstance(omegas, float):
+        omegas = np.array([omegas])
 
     N_oms = omegas.size # mats below will be of shape [2*N_oms, 2]
 
@@ -291,27 +307,44 @@ def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
 
         return S_dot_T
 
-    # Starting matrix array is constructed from S0
-    (eps1, eps2) = (eps_array[0], eps_array[1])
-    chis1 = chi(omegas, g, eps1)
-    chis2 = chi(omegas, g, eps2)
+    if eps_array.size == 3:
+        (eps1, eps2, eps3) = [e for e in eps_array]
+        # (chis1, chis2, chis3) = [chi(omegas, g, e) for e in eps_array]
+        (chis1, chis2, chis3) = chis_3layer(omegas, g, eps_array)
 
-    if pol.lower() == 'te':
-        (S11, S12, S21, S22) = S_TE(eps1, eps2, chis1, chis2)
-    elif pol.lower() == 'tm':
-        (S11, S12, S21, S22) = S_TM(eps1, eps2, chis1, chis2)
+        tcos = -1j*bd.cos(chis2*d_array)
+        tsin = -bd.sin(chis2*d_array)
 
-    mats = np.zeros((2*N_oms, 2), dtype=np.complex)
-    mats[0::2, 0] = S11
-    mats[1::2, 0] = S21
-    mats[0::2, 1] = S12
-    mats[1::2, 1] = S22
+        if pol.lower() == 'te':
+            D22s = chis2*(chis1 + chis3)*tcos + \
+                    (chis1*chis3 + bd.square(chis2))*tsin
+        elif pol.lower() == 'tm':    
+            D22s = chis2/eps2*(chis1/eps1 + chis3/eps3)*tcos + \
+                    (chis1/eps1*chis3/eps3 + bd.square(chis2/eps2))*tsin
 
-    for il in range(1, eps_array.size - 1):
-        mats = S_T_prod(mats, omegas, g, eps_array[il], 
-                            eps_array[il+1], d_array[il-1])
+    else:
+        # Starting matrix array is constructed from S0
+        (eps1, eps2) = (eps_array[0], eps_array[1])
+        chis1 = chi(omegas, g, eps1)
+        chis2 = chi(omegas, g, eps2)
 
-    D22s = mats[1::2, 1]
+        if pol.lower() == 'te':
+            (S11, S12, S21, S22) = S_TE(eps1, eps2, chis1, chis2)
+        elif pol.lower() == 'tm':
+            (S11, S12, S21, S22) = S_TM(eps1, eps2, chis1, chis2)
+
+        mats = np.zeros((2*N_oms, 2), dtype=np.complex)
+        mats[0::2, 0] = S11
+        mats[1::2, 0] = S21
+        mats[0::2, 1] = S12
+        mats[1::2, 1] = S22
+
+        for il in range(1, eps_array.size - 1):
+            mats = S_T_prod(mats, omegas, g, eps_array[il], 
+                                eps_array[il+1], d_array[il-1])
+
+        D22s = mats[1::2, 1]
+
     return D22s
 
 def AB_matrices(omega, g, eps_array, d_array, chi_array=None, pol='TE'):
@@ -345,13 +378,15 @@ def AB_matrices(omega, g, eps_array, d_array, chi_array=None, pol='TE'):
         ABs.append(term)
     return bd.array(ABs)
 
-def normalization_coeff(omega, g, eps_array, d_array, ABref, pol='TE'):
+def normalization_coeff(omega, g, eps_array, d_array, chi_array, ABref, 
+                            pol='TE'):
     """
     Normalization of the guided modes (i.e. the A and B coeffs)
     """
     assert len(d_array)==len(eps_array)-2, \
         'd_array should have length = num_layers'
-    chi_array = chi(omega, g, eps_array)
+    if chi_array is None:
+        chi_array = chi(omega, g, eps_array)
     As = ABref[:, 0].ravel()
     Bs = ABref[:, 1].ravel()
     if pol == 'TM': 
