@@ -148,7 +148,7 @@ def chis_3layer(omega, g, eps_array):
     """
     (eps1, eps2, eps3) = [e for e in eps_array]
     chis1 = 1j*bd.sqrt(g**2 - eps1*omega**2)
-    chis2 = bd.sqrt(-g**2 + eps2*omega**2).astype(bd.complex)
+    chis2 = bd.array(bd.sqrt(-g**2 + eps2*omega**2), dtype=bd.complex)
     chis3 = 1j*bd.sqrt(g**2 - eps3*omega**2)
     
     return (chis1, chis2, chis3)
@@ -218,8 +218,8 @@ def D22(omega, g, eps_array, d_array, pol='TM'):
     """
     if eps_array.size == 3:
         (eps1, eps2, eps3) = [e for e in eps_array]
+        # (chis1, chis2, chis3) = [chi(omega, g, e) for e in eps_array]
         (chis1, chis2, chis3) = chis_3layer(omega, g, eps_array)
-        # [chis1, chis2, chis3] = [c for c in chis_nlayer(omega, g, eps_array)]
 
         tcos = -1j*bd.cos(chis2*d_array)
         tsin = -bd.sin(chis2*d_array)

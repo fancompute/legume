@@ -286,7 +286,7 @@ class Hexagon(Poly):
                (self.eps, self.x_cent, self.y_cent, self.a)
 
 class FourierShape(Poly):
-    """Hexagon shape
+    """Fourier coefficinets of the polar coordinates
     """
     def __init__(self, eps=1, x_cent=0, y_cent=0, f_as=np.array([0.]), 
                     f_bs=np.array([]), npts=100):
@@ -302,9 +302,9 @@ class FourierShape(Poly):
         y_cent : float
             y-coordinate of shape center
         f_as : Numpy array
-            Fourier coefficients an
+            Fourier coefficients an (see Note)
         f_bs : Numpy array
-            Fourier coefficients bn
+            Fourier coefficients bn (see Note)
         npts : int
             Number of points in the polygonal discretization
 
@@ -319,7 +319,8 @@ class FourierShape(Poly):
         ----
         This is a subclass of Poly because we discretize the shape into 
         a polygon and use that to compute the fourier transform for the 
-        mode expansions.
+        mode expansions. For intricate shapes, increase ``npts``
+        to make the discretization smoother. 
 
         """
         self.x_cent = x_cent
@@ -334,6 +335,10 @@ class FourierShape(Poly):
 
         for (n, bn) in enumerate(f_bs):
             R_phi = R_phi + bn*bd.sin((n+1)*phis)
+
+        if np.any(R_phi < 0):
+            raise ValueError("Coefficients of FourierShape should be such "
+                "that R(phi) is non-negative for all phi.")
 
         x_edges = R_phi*bd.cos(phis)
         y_edges = R_phi*bd.sin(phis)

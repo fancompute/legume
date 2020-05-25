@@ -115,6 +115,7 @@ Geometry
    Poly
    Square
    Hexagon
+   FourierShape
 
 
 Visualization
