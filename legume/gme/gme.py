@@ -489,7 +489,8 @@ class GuidedModeExp(object):
         Make the matrix Hermitian (note that only upper part of the blocks, i.e.
         (im2 >= im1) was computed
         """
-        return bd.triu(mat) + bd.transpose(bd.conj(bd.triu(mat, 1)))
+        return bd.triu(mat, 1) + bd.transpose(bd.conj(bd.triu(mat, 1))) + \
+                bd.real(bd.diag(bd.diag(mat)))
 
     def compute_eps_inv(self):
         """
@@ -720,8 +721,8 @@ class GuidedModeExp(object):
                 evec = evecs[:, i_near[i_sort]]
             elif self.eig_solver == 'eigsh':
                 (freq2, evecs) = bd.eigsh(mat + bd.eye(mat.shape[0]), 
-                                        self.numeig, 
-                                        sigma=(self.eig_sigma*2*np.pi)**2)
+                                        k=self.numeig, 
+                                        sigma=(self.eig_sigma*2*np.pi)**2 + 1)
                 freq1 = bd.sqrt(bd.abs(freq2 - bd.ones(self.numeig)))/2/np.pi
                 i_sort = bd.argsort(freq1)
                 freq = freq1[i_sort]

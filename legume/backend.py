@@ -91,6 +91,7 @@ class NumpyBackend(Backend):
         return isinstance(arr, np.ndarray)
 
     # constructors
+    diag = staticmethod(np.diag)
     array = staticmethod(np.array)
     ones = staticmethod(np.ones)
     zeros = staticmethod(np.zeros)
@@ -147,6 +148,7 @@ if AG_AVAILABLE:
         power = staticmethod(npa.power)
 
         # constructors
+        diag = staticmethod(npa.diag)
         array = staticmethod(npa.array)
         ones = staticmethod(npa.ones)
         zeros = staticmethod(npa.zeros)
