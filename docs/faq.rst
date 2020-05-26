@@ -14,13 +14,13 @@ following order:
 - First, make sure you have set a high enough ``gmax``, which is defined upon 
   initialization of ``GuidedModeExp``.
 - Then, increase the number of guided bands included in the simulation by 
-  adding more indexes to the ``gmode_inds`` list supplied to ``GuidedModeExp.run()``.
+  adding more indexes to the ``gmode_inds`` list supplied to :meth:`legume.GuidedModeExp.run`.
   Note that after including more modes in ``gmode_inds``, you should test again the 
   convergence w.r.t. ``gmax``.
 - If your bands look particularly weird and discontinuous, there might be an 
   issue in the computation of the guided modes of the effective homogeneous 
   structure (the expansion basis). Try decreasing ``gmode_step`` supplied in 
-  ``GuidedModeExp.run()`` to ``1e-3`` or ``1e-4`` and see if things look better.
+  :meth:`legume.GuidedModeExp.run` to ``1e-3`` or ``1e-4`` and see if things look better.
 
 Finally, note that GME is only an approximate method. So, even if the 
 simulation is converged with respect to all of the above parameters but still 
@@ -179,6 +179,33 @@ example if you compute `radiative couplings`_ to S and P polarization, the
 relative phase between the two should be physical. 
 
 .. _radiative couplings: examples/03_Guided_mode_expansion_multi_layer_grating.html#Asymmetric-coupling
+
+Can I speed things up if I need only a few eigenmodes?
+------------------------------------------------------
+
+The run options that can be supplied in :meth:`legume.GuidedModeExp.run` include 
+``numeig`` and ``eig_sigma``, which define that ``numeig`` eigenmodes 
+closest to ``eig_sigma`` are to be computed. However, note that the default solver 
+defined by the ``eig_solver`` option is ``numpy.linalg.eigh``, which always computes 
+*all* eigenvalues. Thus, ``numeig`` in this case only defines the number of 
+modes which will be *stored*, but it does not affect performance. If you're 
+looking for a small number of eigenvalues, you can try setting ``eig_solver = eigsh``, 
+which will use the ``scipy.sparse.linalg.eigsh`` method. In many cases this will
+*not* be (much) faster, but it's worth a try. 
+
+**Note**: using the ``eigsh`` solver when computing gradients comes with some 
+extra pros and cons. The added advantage is that the required memory should be lower, 
+because ``autograd`` does not need to store all the eigenvectors for the backward 
+pass (however, the matrices themselves are still stored, which could already 
+amount to a lot of memory). On the flip side, *all* the eigenvectors are needed 
+to compute *exact* gradients of any quantity that depends even on a single 
+eigenvector, so e.g. on loss rates or field profiles of the PhC eigenmodes. Thus, 
+the gradient of these quantities will be only approximate if computing only 
+a restricted number of eigenvectors (this does *not* apply to the ``eigh`` solver). 
+The gradients 
+could still be good enough for an optimization though, and, if the objective 
+function depends only on the *frequencies* of the PhC modes, then the gradients 
+should be exact. 
 
 How can I learn more about the method?
 --------------------------------------
