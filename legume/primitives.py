@@ -141,27 +141,70 @@ defvjp(inv_ag, vjp_maker_inv)
 
 eigsh_ag = primitive(sp.linalg.eigsh)
 
-def vjp_maker_eigsh(ans, x, numeig=10, sigma=0.):
-    """Gradient for eigenvalues and vectors of a hermitian matrix."""
-    N = x.shape[-1]
-    w, v = ans              # Eigenvalues, eigenvectors.
-    vc = np.conj(v)
+# def vjp_maker_eigsh(ans, x, **kwargs):
+#     """Gradient for eigenvalues and vectors of a hermitian matrix."""
+#     numeig = kwargs['k']
+#     N = x.shape[-1]
+#     w, v = ans              # Eigenvalues, eigenvectors.
+#     vc = np.conj(v)
+    
+#     def vjp(g):
+#         wg, vg = g          # Gradient w.r.t. eigenvalues, eigenvectors.
+#         w_repeated = np.repeat(w[..., np.newaxis], numeig, axis=-1)
+
+#         # Eigenvalue part
+#         vjp_temp = np.dot(vc * wg[..., np.newaxis, :], T(v)) 
+
+#         # Add eigenvector part only if non-zero backward signal is present.
+#         # This can avoid NaN results for degenerate cases if the function 
+#         # depends on the eigenvalues only.
+#         if np.any(vg):
+#             off_diag = np.ones((numeig, numeig)) - np.eye(numeig)
+#             F = off_diag / (T(w_repeated) - w_repeated + np.eye(numeig))
+#             vjp_temp += np.dot(np.dot(vc, F * np.dot(T(v), vg)), T(v))
+
+#         return vjp_temp
+
+#     return vjp
+
+def vjp_maker_eigsh(ans, mat, **kwargs):
+    """Steven Johnson method extended to a Hermitian matrix
+    https://math.mit.edu/~stevenj/18.336/adjoint.pdf
+    """
+    numeig = kwargs['k']
+    N = mat.shape[0]
     
     def vjp(g):
-        wg, vg = g          # Gradient w.r.t. eigenvalues, eigenvectors.
-        w_repeated = np.repeat(w[..., np.newaxis], numeig, axis=-1)
+        vjp_temp = np.zeros_like(mat)
+        for iv in range(numeig):
+            a = ans[0][iv]
+            v = ans[1][:, iv]
+            vc = np.conj(v)
+            ag = g[0][iv]
+            vg = g[1][:, iv]
 
-        # Eigenvalue part
-        vjp_temp = np.dot(vc * wg[..., np.newaxis, :], T(v)) 
+            # Eigenvalue part
+            vjp_temp += ag*np.outer(vc, v)
 
-        # Add eigenvector part only if non-zero backward signal is present.
-        # This can avoid NaN results for degenerate cases if the function 
-        # depends on the eigenvalues only.
-        if np.any(vg):
-            off_diag = np.ones((numeig, numeig)) - np.eye(numeig)
-            F = off_diag / (T(w_repeated) - w_repeated + np.eye(numeig))
-            vjp_temp += np.dot(np.dot(vc, F * np.dot(T(v), vg)), T(v))
+            # Add eigenvector part only if non-zero backward signal is present.
+            # This can avoid NaN results for degenerate cases if the function 
+            # depends on the eigenvalues only.
+            if np.any(vg):
+                # Projection operator on space orthogonal to v
+                P = np.eye(N, N) - np.outer(vc, v)
+                Amat = T(mat - a*np.eye(N, N))
+                b = P.dot(vg)
 
+                # Initial guess orthogonal to v
+                v0 = P.dot(np.random.randn(N))
+
+                # Find a solution lambda_0 using conjugate gradient 
+                (l0, _) = sp.linalg.cg(Amat, b, x0=v0, atol=0)
+                # Project to correct for round-off errors
+                l0 = P.dot(l0)
+
+                vjp_temp -= np.outer(l0, v)
+ 
         return vjp_temp
 
     return vjp
