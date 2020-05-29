@@ -12,4 +12,5 @@ Examples
     examples/04_Guided_mode_expansion_bands_of_a_phc_slab
     examples/05_Plane_wave_expansion_with_autograd
     examples/06_Guided_mode_expansion_with_autograd
-    examples/07_Zero_index_BICs_with_GME
+    examples/07_Enhancing_your_GME_optimization
+    examples/08_Zero_index_BICs_with_GME

@@ -1,5 +1,6 @@
 import numpy as np
 from autograd.numpy.numpy_boxes import ArrayBox
+from autograd import value_and_grad
 from scipy.optimize import minimize
 import time
 
@@ -7,10 +8,9 @@ class Minimize(object):
     """Wrapping up custom and SciPy optimizers in a common class
     """
 
-    def __init__(self, objective, jac):
+    def __init__(self, objective):
 
         self.objective = objective
-        self.jac = jac
 
         # Some internal variables
         self.iteration = 0
@@ -102,11 +102,7 @@ class Minimize(object):
             self.iteration += 1
 
             self.t_store = time.time()
-            if self.jac==True:
-                of, grad = self.objective(self.params, *args)
-            else:
-                of = self.objective(self.params, *args)
-                grad = self.jac(self.params, *args)
+            of, grad = value_and_grad(self.objective)(self.params, *args)
             t_elapsed = time.time() - self.t_store
 
             self.of_list.append(self._get_value(of)) 
@@ -182,7 +178,7 @@ class Minimize(object):
         self.of_list = []
 
         # Get initial of value
-        of, _ = self.objective(self.params, *args)
+        of = self.objective(self.params, *args)
         self.of_list.append(self._get_value(of)) 
 
         def of(params, *args, **kwargs):
@@ -194,9 +190,9 @@ class Minimize(object):
                 arglist.append(self)
                 args = tuple(arglist)
 
-            out = list(self.objective(params, *args, **kwargs))
+            out = value_and_grad(self.objective)(params, *args, **kwargs)
             self.of_last = self._get_value(out[0])
-            return tuple(out)
+            return out
 
         def cb(xk):
             """Callback function for the SciPy minimizer
@@ -215,7 +211,7 @@ class Minimize(object):
                 callback(self)
 
         res_opt = minimize(of, self.params, args=args, method='L-BFGS-B',
-            jac=self.jac, bounds=self.bounds, tol=None, callback=cb,
+            jac=True, bounds=self.bounds, tol=None, callback=cb,
             options={'disp': False,
                  'maxcor': 10,
                  'ftol': 1e-8,
