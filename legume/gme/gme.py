@@ -504,10 +504,16 @@ class GuidedModeExp(object):
 
             if self.truncate_g == 'tbt':
                 for it, T1 in enumerate(self.T1):
+                    self.hom_layer = []
                     # For now we just use the numpy inversion. Later on we could 
                     # implement the Toeplitz-Block-Toeplitz inversion (faster)
-                    eps_mat = bd.toeplitz_block(self.n1g, T1, self.T2[it])
-                    self.eps_inv_mat.append(bd.inv(eps_mat))
+                    if bd.sum(bd.abs(T1[1:])) < 1e-10:
+                        self.eps_inv_mat.append(bd.eye(T1.size, T1.size)/T1[0])
+                        self.hom_layer.append(True)
+                    else:
+                        eps_mat = bd.toeplitz_block(self.n1g, T1, self.T2[it])
+                        self.eps_inv_mat.append(bd.inv(eps_mat))
+                        self.hom_layer.append(False)
             elif self.truncate_g == 'abs':
                 for eps_mat in self.eps_ft:
                     self.eps_inv_mat.append(bd.inv(eps_mat))

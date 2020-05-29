@@ -2,6 +2,7 @@ import numpy as np
 
 from legume.backend import backend as bd
 from .slab_modes import I_alpha, J_alpha
+from memory_profiler import profile
 
 """
 Everything is as defined in the legume manuscript
@@ -17,6 +18,15 @@ def IJ_layer(il, Nl, arg, ds):
         return J_alpha(arg)
     else:
         return I_alpha(arg, ds[il-1])
+
+# def ABI(As1, As2, c1, c2, il, Nl, d_array):
+#     """
+#     Computes a matrix A_mu A_nu I(c1_mu + c1_nu)
+#     """
+#     A12 = bd.outer(As1, As2)
+#     c12 = c1[:, bd.newaxis] + c2
+#     I = IJ_layer(il, Nl, c12, d_array)
+#     return A12 * I
 
 def mat_te_te(eps_array, d_array, eps_inv_mat, indmode1, oms1,
                     As1, Bs1, chis1, indmode2, oms2, As2, Bs2, 
