@@ -2,7 +2,6 @@ import numpy as np
 
 from legume.backend import backend as bd
 from .slab_modes import I_alpha, J_alpha
-from memory_profiler import profile
 
 """
 Everything is as defined in the legume manuscript
