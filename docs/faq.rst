@@ -35,26 +35,56 @@ GME requrest the diagonalization of dense matrices, and you might start running
 out of memory for simulations in which computational time is not that much of 
 an issue. This is also because the scaling with ``gmax`` is pretty bad: the 
 *linear* dimension of the matrix for diagonalization scales as ``gmax**2``, 
-and so the total memory needed to store it scales as ``gmax**4``. So, 
-unfortunately, if you're running out of memory in a simulation there's not much 
-you can do but decrease ``gmax``. 
-
-That said, if you're running out of memory in a *gradient* computation, there 
-could be something you can try. Reverse-mode autodiff is generally the best 
+and so the total memory needed to store it scales as ``gmax**4``. You can improve 
+the memory usage a bit by using the ``eigsh`` solver to only compute a few eigenmodes 
+as discussed in the next question. But things get even 
+worse in *gradient* computations. Reverse-mode autodiff is generally the best 
 approach for optimization problems in terms of computational time, but this can 
 sometimes come at a memory cost. This is because *all* of the intermediate 
 values of the forward simulation have to be stored for the backward pass. 
 So, if you are for example doing a loop through different *k*-points, the dense 
 matrices and their eigenvectors at every *k* will be stored, which can add up 
 to a lot. There is no easy way to fix this (and no direct way within 
-``autograd``), but we've included a function that can provide a workaround. For 
-details, have a look at `this example`_.
+``autograd``), but we've included a function that can provide a workaround. 
 
-.. _this example: examples/06_Guided_mode_expansion_with_autograd.html#Refining-the-optimization
+For details on things you can try, have a look at `this example`_.
+
+.. _this example: examples/07_Enhancing_your_GME_optimization.html
 
 Finally, it's worth mentioning that there are probably improvements that can 
 be made to the memory usage. If anybody wants to dive deep in the code and 
-try to do that, it will be appreciated!
+try to do that, it will be appreciated! I have pointed out some ideas along 
+these lines `here <https://github.com/fancompute/legume/issues/29)>`_.
+
+Can I speed things up if I need only a few eigenmodes?
+------------------------------------------------------
+
+The options that can be supplied in :meth:`legume.GuidedModeExp.run` include 
+``numeig`` and ``eig_sigma``, which define that ``numeig`` eigenmodes 
+closest to ``eig_sigma`` are to be computed. However, note that the default solver 
+defined by the ``eig_solver`` option is ``numpy.linalg.eigh``, which always computes 
+*all* modes. Thus, ``numeig`` in this case only defines the number of 
+modes which will be *stored*, but it does not affect performance. If you're 
+looking for a small number of eigenvalues, you can try setting ``eig_solver = eigsh``, 
+which will use the ``scipy.sparse.linalg.eigsh`` method. In *some* cases this
+will be faster, so it's worth a try -- but it might also not be, since the matrix for 
+diagonalization is dense, and this is why it is not the default option. Have a 
+look at `this example`_ for usage.
+
+What if I only need the Q of some of the modes?
+-----------------------------------------------
+
+In some simulations, the computation of the radiative losses could be the time 
+bottleneck. In some cases, e.g. when `optimizing a cavity`_, you only need to 
+compute the quality factor of a single mode. If you run the GME by default, 
+the Q-s of all modes will be computed instead, but you can set the option 
+``compute_im = False`` to avoid this. Running the GME with this option will 
+compute all modes, but not the imaginary part of their frequencies (which is 
+done perturbatively after the first stage of the computation). Then, you can 
+use the :meth:`legume.GuidedModeExp.compute_rad` method to only compute the loss rates 
+of selected modes.
+
+.. _optimizing a cavity: examples/06_Guided_mode_expansion_with_autograd.html#Quality-factor-optimization
 
 What should I know about the guided-mode basis?
 -----------------------------------------------
@@ -148,21 +178,6 @@ diagonalization path is included. Here are some rules of thumb on what to use:
 
 .. _optimizing hole positions: examples/06_Guided_mode_expansion_with_autograd.html#Autograd-backend
 
-What if I only need the Q of some of the modes?
------------------------------------------------
-
-In some simulations, the computation of the radiative losses could be the time 
-bottleneck. In some cases, e.g. when `optimizing a cavity`_, you only need to 
-compute the quality factor of a single mode. If you run the GME by default, 
-the Q-s of all modes will be computed instead, but you can set the option 
-``compute_im = False`` to avoid this. Running the GME with this option will 
-compute all modes, but not the imaginary part of their frequencies (which is 
-done perturbatively after the first stage of the computation). Then, you can 
-use the :meth:`legume.GuidedModeExp.compute_rad` method to only compute the loss rates 
-of selected modes.
-
-.. _optimizing a cavity: examples/06_Guided_mode_expansion_with_autograd.html#Quality-factor-optimization
-
 What's the gauge?
 -----------------
 
@@ -179,33 +194,6 @@ example if you compute `radiative couplings`_ to S and P polarization, the
 relative phase between the two should be physical. 
 
 .. _radiative couplings: examples/03_Guided_mode_expansion_multi_layer_grating.html#Asymmetric-coupling
-
-Can I speed things up if I need only a few eigenmodes?
-------------------------------------------------------
-
-The run options that can be supplied in :meth:`legume.GuidedModeExp.run` include 
-``numeig`` and ``eig_sigma``, which define that ``numeig`` eigenmodes 
-closest to ``eig_sigma`` are to be computed. However, note that the default solver 
-defined by the ``eig_solver`` option is ``numpy.linalg.eigh``, which always computes 
-*all* eigenvalues. Thus, ``numeig`` in this case only defines the number of 
-modes which will be *stored*, but it does not affect performance. If you're 
-looking for a small number of eigenvalues, you can try setting ``eig_solver = eigsh``, 
-which will use the ``scipy.sparse.linalg.eigsh`` method. In many cases this will
-*not* be (much) faster, but it's worth a try. 
-
-**Note**: using the ``eigsh`` solver when computing gradients comes with some 
-extra pros and cons. The added advantage is that the required memory should be lower, 
-because ``autograd`` does not need to store all the eigenvectors for the backward 
-pass (however, the matrices themselves are still stored, which could already 
-amount to a lot of memory). On the flip side, *all* the eigenvectors are needed 
-to compute *exact* gradients of any quantity that depends even on a single 
-eigenvector, so e.g. on loss rates or field profiles of the PhC eigenmodes. Thus, 
-the gradient of these quantities will be only approximate if computing only 
-a restricted number of eigenvectors (this does *not* apply to the ``eigh`` solver). 
-The gradients 
-could still be good enough for an optimization though, and, if the objective 
-function depends only on the *frequencies* of the PhC modes, then the gradients 
-should be exact. 
 
 How can I learn more about the method?
 --------------------------------------
