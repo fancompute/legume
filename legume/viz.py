@@ -806,7 +806,7 @@ def field(
                     title_str += " $Q = %.2E$\n" % (struct.freqs[kind, mind]/2/
                                             struct.freqs_im[kind, mind])
                 else:
-                    title_str += " $Q = Inf\n"
+                    title_str += " $Q = $Inf\n"
 
         ax.set_title(title_str)
 
