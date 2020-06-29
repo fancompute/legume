@@ -630,6 +630,10 @@ class GuidedModeExp(object):
         # Bloch momenta over which band structure is simulated 
         self._kpoints = kpoints
 
+        self.modes_numg = []
+        self.N_basis = []
+        self.gmode_include = []
+
         # Array of effective permittivity of every layer (including claddings)
         if self.eps_eff=='average':
             layer_eps = 'eps_avg'
