@@ -56,7 +56,7 @@ class Shape(object):
         (x, y) point is inside the shape, and 0 if (x, y) outside.
         """
         raise NotImplementedError("is_inside() needs to be implemented by"
-            "Shape subclasses")
+                                  "Shape subclasses")
 
 class Circle(Shape):
     """Circle shape
@@ -90,14 +90,14 @@ class Circle(Shape):
         gabs = np.sqrt(np.abs(np.square(gx)) + np.abs(np.square(gy)))
         gabs += 1e-10 # To avoid numerical instability at zero
 
-        ft = bd.exp(-1j*gx*self.x_cent - 1j*gy*self.y_cent)*self.r* \
-                            2*np.pi/gabs*bd.bessel1(gabs*self.r)
+        ft = bd.exp(-1j * gx * self.x_cent - 1j * gy * self.y_cent) * self.r * \
+             2 * np.pi / gabs * bd.bessel1(gabs * self.r)
 
         return ft
 
     def is_inside(self, x, y):
         return (np.square(x - self.x_cent) + np.square(y - self.y_cent)
-                            <= np.square(self.r))
+                <= np.square(self.r))
 
 class Poly(Shape):
     """Polygon shape
@@ -217,11 +217,11 @@ class Poly(Shape):
         rotmat = bd.array([[bd.cos(angle), -bd.sin(angle)], \
                             [bd.sin(angle), bd.cos(angle)]])
         (xj, yj) = (bd.array(self.x_edges), bd.array(self.y_edges))
-        com_x = bd.sum((xj + bd.roll(xj, -1)) * (xj * bd.roll(yj, -1) - \
-                    bd.roll(xj, -1) * yj))/6/self.area
-        com_y = bd.sum((yj + bd.roll(yj, -1)) * (xj * bd.roll(yj, -1) - \
-                    bd.roll(xj, -1) * yj))/6/self.area
-        new_coords = bd.dot(rotmat, bd.vstack((xj-com_x, yj-com_y)))
+        com_x = bd.sum((xj + bd.roll(xj, -1)) * (xj * bd.roll(yj, -1) -
+                                                 bd.roll(xj, -1) * yj)) / 6 / self.area
+        com_y = bd.sum((yj + bd.roll(yj, -1)) * (xj * bd.roll(yj, -1) -
+                                                 bd.roll(xj, -1) * yj)) / 6 / self.area
+        new_coords = bd.dot(rotmat, bd.vstack((xj - com_x, yj - com_y)))
 
         self.x_edges = new_coords[0, :] + com_x
         self.y_edges = new_coords[1, :] + com_y

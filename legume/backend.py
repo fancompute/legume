@@ -72,6 +72,7 @@ class NumpyBackend(Backend):
     square = staticmethod(np.square)
     sin = staticmethod(np.sin)
     cos = staticmethod(np.cos)
+    tan = staticmethod(np.tan)
     tanh = staticmethod(np.tanh)
     norm = staticmethod(np.linalg.norm)
     dot = staticmethod(np.dot)
@@ -85,6 +86,8 @@ class NumpyBackend(Backend):
     conj = staticmethod(np.conj)
     var = staticmethod(np.var)
     power = staticmethod(np.power)
+    floor = staticmethod(np.round)
+    matmul = staticmethod(np.matmul)
 
     def is_array(self, arr):
         """ check if an object is an array """
@@ -99,6 +102,7 @@ class NumpyBackend(Backend):
     linspace = staticmethod(np.linspace)
     arange = staticmethod(np.arange)
     newaxis = staticmethod(np.newaxis)
+    fft2 = staticmethod(np.fft.fft2)
 
 if AG_AVAILABLE: 
     class AutogradBackend(Backend):
@@ -120,10 +124,10 @@ if AG_AVAILABLE:
         min = staticmethod(npa.min)
         sort = staticmethod(npa.sort)
         argsort = staticmethod(npa.argsort)
+        floor = staticmethod(npa.round)
         interp = staticmethod(interp_ag)
         fsolve_D22 = staticmethod(fsolve_ag)
         extend = staticmethod(extend_ag)
-
         # math functions
         exp = staticmethod(npa.exp)
         bessel1 = staticmethod(spa.special.j1)
@@ -146,6 +150,10 @@ if AG_AVAILABLE:
         conj = staticmethod(npa.conj)
         var = staticmethod(npa.var)
         power = staticmethod(npa.power)
+        radians = staticmethod(npa.radians)
+        tan = staticmethod(npa.tan)
+        matmul = staticmethod(npa.matmul)
+        average = staticmethod(npa.average)
 
         # constructors
         diag = staticmethod(npa.diag)
@@ -157,6 +165,8 @@ if AG_AVAILABLE:
         arange = staticmethod(npa.arange)
         newaxis = staticmethod(npa.newaxis)
 
+        # Fourier transform
+        fft2 = staticmethod(npa.fft.fft2)
 backend = NumpyBackend()
 
 def set_backend(name):

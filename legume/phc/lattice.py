@@ -29,8 +29,8 @@ class Lattice(object):
         a3 = bd.array([0, 0, 1])
 
         # Reciprocal lattice basis vectors
-        b1 = 2*np.pi*bd.cross(a2, a3)/bd.dot(a1, bd.cross(a2, a3)) 
-        b2 = 2*np.pi*bd.cross(a3, a1)/bd.dot(a2, bd.cross(a3, a1))
+        b1 = 2 * np.pi * bd.cross(a2, a3) / bd.dot(a1, bd.cross(a2, a3))
+        b2 = 2 * np.pi * bd.cross(a3, a1) / bd.dot(a2, bd.cross(a3, a1))
 
         bz_area = bd.norm(bd.cross(b1, b2))
 
@@ -52,11 +52,11 @@ class Lattice(object):
                 a2 = bd.array([0, 1, 0])
             elif args[0] == 'hexagonal':
                 self.type = 'hexagonal'
-                a1 = bd.array([0.5, bd.sqrt(3)/2, 0])
-                a2 = bd.array([0.5, -bd.sqrt(3)/2, 0])
+                a1 = bd.array([0.5, bd.sqrt(3) / 2, 0])
+                a2 = bd.array([0.5, -bd.sqrt(3) / 2, 0])
             else:
                 raise ValueError("Lattice can be 'square' or 'hexagonal, "
-                    "or defined through two primitive vectors.")
+                                 "or defined through two primitive vectors.")
 
         elif len(args) == 2:
             a1 = bd.hstack((bd.array(args[0]), 0))
@@ -145,16 +145,16 @@ class Lattice(object):
         for ip in range(npts - 1):
             p1 = self._parse_point(pts[ip])
             p2 = self._parse_point(pts[ip + 1])
-            kpoints[:, count:count+ns[ip]] = p1[:, np.newaxis] + np.outer(\
-                        (p2 - p1), np.linspace(0, 1, ns[ip], endpoint=False))
-            count = count+ns[ip]
+            kpoints[:, count:count + ns[ip]] = p1[:, np.newaxis] + np.outer( \
+                (p2 - p1), np.linspace(0, 1, ns[ip], endpoint=False))
+            count = count + ns[ip]
             inds.append(count)
         kpoints[:, -1] = p2
 
         path = {
-        'kpoints': kpoints, 
-        'labels': [str(pt) for pt in pts],
-        'indexes': inds
+            'kpoints': kpoints,
+            'labels': [str(pt) for pt in pts],
+            'indexes': inds
         }
 
         return path
@@ -176,22 +176,22 @@ class Lattice(object):
                     return np.array([np.pi, 0])
                 else:
                     raise ValueError("'X'-point is only defined for lattice "
-                        "initialized as 'square'.")
+                                     "initialized as 'square'.")
 
             if pt.lower() == 'm':
                 if self.type == 'square':
                     return np.array([np.pi, np.pi])
                 elif self.type == 'hexagonal':
-                    return np.array([np.pi, np.pi/np.sqrt(3)])
+                    return np.array([np.pi, np.pi / np.sqrt(3)])
                 else:
                     raise ValueError("'М'-point is only defined for lattice "
-                        "initialized as 'square' or 'hexagonal'.")
+                                     "initialized as 'square' or 'hexagonal'.")
 
             if pt.lower() == 'k':
                 if self.type == 'hexagonal':
-                    return np.array([4/3*np.pi, 0])
+                    return np.array([4 / 3 * np.pi, 0])
                 else:
                     raise ValueError("'K'-point is only defined for lattice "
-                        "initialized as 'hexagonal'.")
-                    
+                                     "initialized as 'hexagonal'.")
+
         raise ValueError("Something was wrong with BZ point definition")
