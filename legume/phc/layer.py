@@ -1,13 +1,16 @@
 import numpy as np
-from legume.backend import backend as bd
+
 import legume.utils as utils
+from legume.backend import backend as bd
 from .shapes import Shape, Circle, Poly, Square
+
 
 class Layer(object):
     """
     Class for a single layer in the potentially multi-layer PhC.
     """
-    def __init__(self, lattice, z_min: float=0, z_max: float=0):
+
+    def __init__(self, lattice, z_min: float = 0, z_max: float = 0):
         """Initialize a Layer.
         
         Parameters
@@ -39,21 +42,20 @@ class Layer(object):
     def eps_eff(self):
         if self._eps_eff is None:
             raise ValueError("Layer effective epsilon not set, use "
-                                "`layer.eps_eff = ...` to set")
+                             "`layer.eps_eff = ...` to set")
         else:
             return self._eps_eff
 
     @eps_eff.setter
     def eps_eff(self, eps):
         self._eps_eff = eps
-    
 
     def compute_ft(self, gvec):
         """
         Compute the 2D Fourier transform of the layer permittivity.
         """
         raise NotImplementedError("compute_ft() needs to be implemented by"
-            "Layer subclasses")
+                                  "Layer subclasses")
 
     def get_eps(self, points):
         """
@@ -61,14 +63,16 @@ class Layer(object):
         a meshgrid in x, y defined by arrays of same shape.
         """
         raise NotImplementedError("get_eps() needs to be implemented by"
-            "Layer subclasses")
+                                  "Layer subclasses")
+
 
 class ShapesLayer(Layer):
     """
     Layer with permittivity defined by Shape objects
     """
-    def __init__(self, lattice, z_min: float=0, z_max: float=0,
-                    eps_b: float=1.):
+
+    def __init__(self, lattice, z_min: float = 0, z_max: float = 0,
+                 eps_b: float = 1.):
         """Initialize a ShapesLayer.
         
         Parameters
@@ -113,10 +117,10 @@ class ShapesLayer(Layer):
             if isinstance(shape, Shape):
                 self.shapes.append(shape)
                 self.eps_avg = self.eps_avg + (shape.eps - self.eps_b) * \
-                                shape.area/self.lattice.ec_area
+                               shape.area / self.lattice.ec_area
             else:
                 raise ValueError("Argument to add_shape must only contain "
-                "instances of legume.Shape (e.g legume.Circle or legume.Poly)")
+                                 "instances of legume.Shape (e.g legume.Circle or legume.Poly)")
 
     def compute_ft(self, gvec):
         """
@@ -126,14 +130,14 @@ class ShapesLayer(Layer):
         for shape in self.shapes:
             # Note: compute_ft() returns the FT of a function that is one 
             # inside the shape and zero outside
-            FT = FT + (shape.eps - self.eps_b)*shape.compute_ft(gvec)
+            FT = FT + (shape.eps - self.eps_b) * shape.compute_ft(gvec)
 
         # Apply some final coefficients
         # Note the hacky way to set the zero element so as to work with
         # 'autograd' backend
-        ind0 = bd.abs(gvec[0, :]) + bd.abs(gvec[1, :]) < 1e-10  
+        ind0 = bd.abs(gvec[0, :]) + bd.abs(gvec[1, :]) < 1e-10
         FT = FT / self.lattice.ec_area
-        FT = FT*(1-ind0) + self.eps_avg*ind0
+        FT = FT * (1 - ind0) + self.eps_avg * ind0
 
         return FT
 
@@ -145,7 +149,7 @@ class ShapesLayer(Layer):
         xmesh, ymesh = points
         if ymesh.shape != xmesh.shape:
             raise ValueError(
-                    "xmesh and ymesh must have the same shape")
+                "xmesh and ymesh must have the same shape")
 
         eps_r = self.eps_b * bd.ones(xmesh.shape)
 
@@ -153,25 +157,27 @@ class ShapesLayer(Layer):
         a1 = self.lattice.a1
         a2 = self.lattice.a2
 
-        a_p = min([np.linalg.norm(a1), 
+        a_p = min([np.linalg.norm(a1),
                    np.linalg.norm(a2)])
-        nmax = np.int_(np.sqrt(np.square(np.max(abs(xmesh))) + 
-                        np.square(np.max(abs(ymesh))))/a_p) + 1
+        nmax = np.int_(np.sqrt(np.square(np.max(abs(xmesh))) +
+                               np.square(np.max(abs(ymesh)))) / a_p) + 1
 
         for shape in self.shapes:
-            for n1 in range(-nmax, nmax+1):
-                for n2 in range(-nmax, nmax+1):
-                    in_shape = shape.is_inside(xmesh + 
-                        n1*a1[0] + n2*a2[0], ymesh + 
-                        n1*a1[1] + n2*a2[1])
+            for n1 in range(-nmax, nmax + 1):
+                for n2 in range(-nmax, nmax + 1):
+                    in_shape = shape.is_inside(xmesh +
+                                               n1 * a1[0] + n2 * a2[0], ymesh +
+                                               n1 * a1[1] + n2 * a2[1])
                     eps_r[in_shape] = utils.get_value(shape.eps)
 
         return eps_r
+
 
 class FreeformLayer(Layer):
     """
     Layer with permittivity defined by a freeform distribution on a grid
     """
+
     def __init__(self, lattice, z_min=0, z_max=0, eps_init=1, res=10):
         super().__init__(lattice, z_min, z_max, eps_b)
 
@@ -188,7 +194,7 @@ class FreeformLayer(Layer):
         lattice.a1 direction and res[1] pixels along the lattice.a2 direction
         """
         res = np.array(res)
-        if res.size == 1: 
+        if res.size == 1:
             res = res * np.ones((2,))
 
     def compute_ft(self, gvec):
@@ -196,7 +202,7 @@ class FreeformLayer(Layer):
         Compute fourier transform over gvec: [2 x Ng] numpy array
         """
         raise NotImplementedError("compute_ft() is not yet imlemented for"
-            "the Freeform layer")
+                                  "the Freeform layer")
 
     def get_eps(self, points):
         """
@@ -204,4 +210,4 @@ class FreeformLayer(Layer):
         a meshgrid in x, y defined by arrays of same shape
         """
         raise NotImplementedError("get_eps() is not yet imlemented for"
-            "the Freeform layer")
+                                  "the Freeform layer")
