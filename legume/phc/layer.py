@@ -63,7 +63,6 @@ class Layer(object):
         raise NotImplementedError("get_eps() needs to be implemented by"
                                   "Layer subclasses")
 
-
 class ShapesLayer(Layer):
     """
     Layer with permittivity defined by Shape objects
@@ -123,6 +122,15 @@ class ShapesLayer(Layer):
                     "Argument to add_shape must only contain "
                     "instances of legume.Shape (e.g legume.Circle or legume.Poly)"
                 )
+
+    def remove_shape(self, index):
+        """
+            remove a shape from the list of shapes.
+        """
+
+        shape = self.shapes.pop(index)
+        self.eps_avg = self.eps_avg - (shape.eps - self.eps_b) * \
+                       shape.area / self.lattice.ec_area
 
     def compute_ft(self, gvec):
         """
@@ -190,7 +198,7 @@ class FreeformLayer(Layer):
 
     def _init_grid(res):
         """
-        Initialize a grid with resolution res, with res[0] pixels along the 
+        Initialize a grid with resolution res, with res[0] pixels along the
         lattice.a1 direction and res[1] pixels along the lattice.a2 direction
         """
         res = np.array(res)

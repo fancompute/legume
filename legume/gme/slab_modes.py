@@ -2,8 +2,6 @@ import numpy as np
 from legume.backend import backend as bd
 from legume.utils import get_value
 """===========HELPER FUNCTIONS FOR Z-INTEGRATION============"""
-
-
 def I_alpha(a, d):  # integrate exp(iaz)dz from -d/2 to d/2
     a = a + 1e-20
     return 2 / a * bd.sin(a * d / 2)
@@ -12,7 +10,6 @@ def I_alpha(a, d):  # integrate exp(iaz)dz from -d/2 to d/2
 def J_alpha(a):  # integrate exp(iaz)dz from 0 to inf
     a = a + 1e-20
     return 1j / a
-
 
 """============GUIDED MODE COMPUTATION============"""
 
@@ -151,7 +148,6 @@ def guided_mode_given_g(g,
 
     return (omega_solutions, coeffs)
 
-
 def chi(omega, g, eps):
     """
     Function to compute chi_j, the z-direction wave-vector in each layer j
@@ -166,7 +162,6 @@ def chi(omega, g, eps):
     sqarg = bd.array(eps * omega**2 - g**2, dtype=bd.complex)
     return bd.where(bd.real(sqarg) >= 0, bd.sqrt(sqarg), 1j * bd.sqrt(-sqarg))
 
-
 def chis_3layer(omega, g, eps_array):
     """
     """
@@ -176,7 +171,6 @@ def chis_3layer(omega, g, eps_array):
     chis3 = 1j * bd.sqrt(g**2 - eps3 * omega**2)
 
     return (chis1, chis2, chis3)
-
 
 # def chis_nlayer(omega, g, eps_array):
 #     """
@@ -211,7 +205,6 @@ def S_T_matrices_TM(omega, g, eps_array, d_array):
                            [bd.zeros(T11.shape), T22]]).transpose([2, 0, 1])
     return S_matrices, T_matrices
 
-
 def S_T_matrices_TE(omega, g, eps_array, d_array):
     """
     Function to get a list of S and T matrices for D22 calculation
@@ -231,7 +224,6 @@ def S_T_matrices_TE(omega, g, eps_array, d_array):
     T_matrices = bd.array([[T11, bd.zeros(T11.shape)],
                            [bd.zeros(T11.shape), T22]]).transpose([2, 0, 1])
     return S_matrices, T_matrices
-
 
 def D22(omega, g, eps_array, d_array, pol='TM'):
     """
@@ -272,7 +264,6 @@ def D22(omega, g, eps_array, d_array, pol='TM'):
             T = T_mat[i]
             D = bd.dot(S, bd.dot(T, bd.dot(T, D)))
         return D[1, 1]
-
 
 def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
     """
@@ -379,7 +370,6 @@ def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
         D22s = mats[1::2, 1]
 
     return D22s
-
 
 def AB_matrices(omega, g, eps_array, d_array, chi_array=None, pol='TE'):
     """
