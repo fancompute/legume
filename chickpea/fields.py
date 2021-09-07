@@ -227,7 +227,9 @@ class XYField:
 
 
         if eps:
-            viz.eps_shapes(layer=self.layer, ax=ax, extent=extent, alpha=0.3)
+            viz.shapes(layer=self.layer, ax=ax)
+            ax.set_xlim(extent[0], extent[1])
+            ax.set_ylim(extent[2], extent[3])
 
 
         if profile:
@@ -284,7 +286,9 @@ class XYField:
         ax.imshow(np.real(chirality), extent=extent, vmax=vmax, vmin=vmin,
                   cmap='RdBu', origin='lower')
         if eps:
-            viz.eps_shapes(layer=self.layer, ax=ax, extent=extent, alpha=0.15)
+            viz.shapes(layer=self.layer, ax=ax)
+            ax.set_xlim(extent[0], extent[1])
+            ax.set_ylim(extent[2], extent[3])
         return fig
 
     def generate_mp4(self, time_range, frames, val='re', eps=True, poynting_vector=True, pv_coarseness=1, **kwargs):
@@ -336,12 +340,15 @@ class XYField:
         unit_s_1 = S_1 / magnitude
 
         if eps:
-            viz.eps_shapes(self.phc.layers[-1], alpha=0.5, ax=ax, extent=extent)
+            viz.shapes(layer=self.layer, ax=ax)
+            ax.set_xlim(extent[0], extent[1])
+            ax.set_ylim(extent[2], extent[3])
 
         quiv = ax.quiver(np.ravel(xgrid), np.ravel(ygrid), np.ravel(unit_s_0), np.ravel(unit_s_1),
                          color=(colormap(norm(np.ravel(magnitude)))), pivot='mid',
                          angles='xy', scale_units='xy', scale=1, width=0.0015 *pv_coarseness, alpha=0.8)
         ax.set_facecolor(np.array([0, 0, 0, 1]))
+
         return fig
 
     def return_mode_volume(self)    :
