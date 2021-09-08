@@ -184,43 +184,12 @@ class GuidedModeExp(object):
         inds2 = np.tile(np.arange(-n2max, n2max + 1), 2 * n1max + 1)
 
         gvec = self.phc.lattice.b1[:, np.newaxis].dot(inds1[np.newaxis, :]) + \
-               self.phc.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
-        gnorm = np.sqrt(gvec[0, :] ** 2 + gvec[1, :] ** 2)
-
-        inds = inds[:, gnorm <= 2 * np.pi * self.gmax]
-        gvec = gvec[:, gnorm <= 2 * np.pi * self.gmax]
-
-        # Save the reciprocal lattice vectors
-        self._inds = inds
-        self._gvec = gvec
-
-    def _init_gvec_grid(self):
-        """
-        Initialize reciprocal lattice vectors with a parallelogram truncation
-        such that the eps matrix is toeplitz-block-toeplitz
-        """
-        self.res = np.array(self.res, dtype=np.int32)
-        if self.res.size == 1:
-            self.res = self.res * np.ones((2,), dtype=np.int32)
-
-        n1max = np.int_(self.res[0] / 4)
-        n2max = np.int_(self.res[1] / 4)
-
-        inds1 = np.tile(np.arange(-n1max, n1max + 1), (2 * n2max + 1, 1)) \
-            .reshape((2 * n2max + 1) * (2 * n1max + 1), order='F')
-        inds2 = np.tile(np.arange(-n2max, n2max + 1), 2 * n1max + 1)
-
-        gvec = self.phc.lattice.b1[:, np.newaxis].dot(inds1[np.newaxis, :]) + \
-               self.phc.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
+                self.phc.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
+        gnorm = np.sqrt(gvec[0, :]**2 + gvec[1, :]**2)
+        gvec = gvec[:, gnorm <= 2*np.pi*self.gmax]
 
         # Save the reciprocal lattice vectors
         self._gvec = gvec
-        self._inds = np.row_stack((inds1, inds2))
-
-        # Save the number of vectors along the b1 and the b2 directions
-        # Note: gvec.shape[1] = n1g*n2g
-        self.n1g = 2 * n1max + 1
-        self.n2g = 2 * n2max + 1
 
     def _get_guided(self, gk, kind, mode):
         """
@@ -354,8 +323,6 @@ class GuidedModeExp(object):
         G1 = - self.gvec + self.gvec[:, [0]]
         G2 = np.zeros((2, n1max * n2max))
 
-        I1 = - self._inds + self._inds[:, [0]]
-        I2 = np.zeros((2, n1max*n2max), dtype=np.int_)
         # Initialize the FT coefficient lists; in the end the length of these
         # will be equal to the total number of layers in the PhC
         self.T1 = []
@@ -365,37 +332,20 @@ class GuidedModeExp(object):
             G2[:, ind1 * n2max:(ind1 + 1) * n2max] = - self.gvec[:, [ind1 * n2max]] + \
                                                      self.gvec[:, range(n2max)]
 
-            I2[:, ind1 * n2max:(ind1 + 1) * n2max] = - self._inds[:, [ind1 * n2max]] + \
-                                                     self._inds[:, range(n2max)]
-
         for layer in [self.phc.claddings[0]] + self.phc.layers + \
-                     [self.phc.claddings[1]]:
-            if layer.layer_type == 'shapes':
-                T1 = layer.compute_ft(G1)
-                T2 = layer.compute_ft(G2)
+                            [self.phc.claddings[1]]:
+            T1 = layer.compute_ft(G1)
+            T2 = layer.compute_ft(G2)
 
-                # Store T1 and T2
-                if bd.amax(bd.abs(bd.imag(T1))) < 1e-10 * bd.amax(bd.abs(bd.real(T1))):
-                    self.T1.append(bd.real(T1))
-                else:
-                    self.T1.append(T1)
-                if bd.amax(bd.abs(bd.imag(T2))) < 1e-10 * bd.amax(bd.abs(bd.real(T2))):
-                    self.T2.append(bd.real(T2))
-                else:
-                    self.T2.append(T2)
-            elif layer.layer_type == 'freeform':
-                T1 = layer.compute_ft(I1)
-                T2 = layer.compute_ft(I2)
-
-                # Store T1 and T2
-                if bd.amax(bd.abs(bd.imag(T1))) < 1e-10 * bd.amax(bd.abs(bd.real(T1))):
-                    self.T1.append(bd.real(T1))
-                else:
-                    self.T1.append(T1)
-                if bd.amax(bd.abs(bd.imag(T2))) < 1e-10 * bd.amax(bd.abs(bd.real(T2))):
-                    self.T2.append(bd.real(T2))
-                else:
-                    self.T2.append(T2)
+            # Store T1 and T2
+            if bd.amax(bd.abs(bd.imag(T1))) < 1e-10*bd.amax(bd.abs(bd.real(T1))):
+                self.T1.append(bd.real(T1))
+            else:
+                self.T1.append(T1)
+            if bd.amax(bd.abs(bd.imag(T2))) < 1e-10*bd.amax(bd.abs(bd.real(T2))):
+                self.T2.append(bd.real(T2))
+            else:
+                self.T2.append(T2)
 
         # Store the g-vectors to which T1 and T2 correspond
         self.G1 = G1
