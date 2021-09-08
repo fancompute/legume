@@ -16,11 +16,17 @@ def lowpass_downsample(bitmap, factor):
     :param factor: Will downsample array by this factor.
     :return: Downsampeld bitmap array.
     """
+    if np.array(factor).shape.__len__() == 0:
+        factor = factor * np.ones(2)
+    else:
+        factor = np.array(factor)
     double_factor = factor * 2
 
+
+
     fft_eps = np.fft.fft2(bitmap) / (bitmap.shape[0] * bitmap.shape[1])
-    X = int(fft_eps.shape[0] / double_factor)
-    Y = int(fft_eps.shape[1] / double_factor)
+    X = int(fft_eps.shape[0] / double_factor[0])
+    Y = int(fft_eps.shape[1] / double_factor[1])
     fft_trunc = fft_eps[0:X, 0:X]
 
     top = np.vstack([fft_eps[0:X, 0:Y], fft_eps[-X:, 0:Y]])
