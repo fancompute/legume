@@ -22,10 +22,11 @@ try:
     import autograd.numpy as npa
     import autograd.scipy as spa
     from .primitives import (toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag,
-                        eigsh_ag, inv_ag, sqrt_ag, extend_ag)
+                             eigsh_ag, inv_ag, sqrt_ag, extend_ag)
     AG_AVAILABLE = True
 except ImportError:
     AG_AVAILABLE = False
+
 
 class Backend(object):
     """
@@ -38,6 +39,7 @@ class Backend(object):
 
     def __repr__(self):
         return self.__class__.__name__
+
 
 class NumpyBackend(Backend):
     """ Numpy Backend """
@@ -100,7 +102,9 @@ class NumpyBackend(Backend):
     arange = staticmethod(np.arange)
     newaxis = staticmethod(np.newaxis)
 
-if AG_AVAILABLE: 
+
+if AG_AVAILABLE:
+
     class AutogradBackend(Backend):
         """ Autograd Backend """
         # methods
@@ -157,7 +161,9 @@ if AG_AVAILABLE:
         arange = staticmethod(npa.arange)
         newaxis = staticmethod(npa.newaxis)
 
+
 backend = NumpyBackend()
+
 
 def set_backend(name):
     """

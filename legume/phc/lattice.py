@@ -2,6 +2,7 @@ import numpy as np
 from legume.backend import backend as bd
 import legume.utils as utils
 
+
 class Lattice(object):
     """
     Class for constructing a Bravais lattice
@@ -29,8 +30,8 @@ class Lattice(object):
         a3 = bd.array([0, 0, 1])
 
         # Reciprocal lattice basis vectors
-        b1 = 2*np.pi*bd.cross(a2, a3)/bd.dot(a1, bd.cross(a2, a3)) 
-        b2 = 2*np.pi*bd.cross(a3, a1)/bd.dot(a2, bd.cross(a3, a1))
+        b1 = 2 * np.pi * bd.cross(a2, a3) / bd.dot(a1, bd.cross(a2, a3))
+        b2 = 2 * np.pi * bd.cross(a3, a1) / bd.dot(a2, bd.cross(a3, a1))
 
         bz_area = bd.norm(bd.cross(b1, b2))
 
@@ -52,11 +53,11 @@ class Lattice(object):
                 a2 = bd.array([0, 1, 0])
             elif args[0] == 'hexagonal':
                 self.type = 'hexagonal'
-                a1 = bd.array([0.5, bd.sqrt(3)/2, 0])
-                a2 = bd.array([0.5, -bd.sqrt(3)/2, 0])
+                a1 = bd.array([0.5, bd.sqrt(3) / 2, 0])
+                a2 = bd.array([0.5, -bd.sqrt(3) / 2, 0])
             else:
                 raise ValueError("Lattice can be 'square' or 'hexagonal, "
-                    "or defined through two primitive vectors.")
+                                 "or defined through two primitive vectors.")
 
         elif len(args) == 2:
             a1 = bd.hstack((bd.array(args[0]), 0))
@@ -94,12 +95,12 @@ class Lattice(object):
             else:
                 periods = [2, 2]
         elif np.array(periods).shape == 1:
-            periods = periods[0]*np.ones((2, ))
+            periods = periods[0] * np.ones((2, ))
 
-        ymax = np.abs(max([self.a1[1], self.a2[1]]))*periods[1]/2
+        ymax = np.abs(max([self.a1[1], self.a2[1]])) * periods[1] / 2
         ymin = -ymax
 
-        xmax = np.abs(max([self.a1[0], self.a2[0]]))*periods[0]/2
+        xmax = np.abs(max([self.a1[0], self.a2[0]])) * periods[0] / 2
         xmin = -xmax
 
         return (np.linspace(xmin, xmax, Nx), np.linspace(ymin, ymax, Ny))
@@ -132,7 +133,7 @@ class Lattice(object):
             raise ValueError("At least two points must be given")
 
         if len(ns) == 1:
-            ns = ns[0]*np.ones(npts-1, dtype=np.int_)
+            ns = ns[0] * np.ones(npts - 1, dtype=np.int_)
         elif len(ns) == npts - 1:
             ns = np.array(ns)
         else:
@@ -147,14 +148,14 @@ class Lattice(object):
             p2 = self._parse_point(pts[ip + 1])
             kpoints[:, count:count+ns[ip]] = p1[:, np.newaxis] + np.outer(\
                         (p2 - p1), np.linspace(0, 1, ns[ip], endpoint=False))
-            count = count+ns[ip]
+            count = count + ns[ip]
             inds.append(count)
         kpoints[:, -1] = p2
 
         path = {
-        'kpoints': kpoints, 
-        'labels': [str(pt) for pt in pts],
-        'indexes': inds
+            'kpoints': kpoints,
+            'labels': [str(pt) for pt in pts],
+            'indexes': inds
         }
 
         return path
@@ -176,22 +177,22 @@ class Lattice(object):
                     return np.array([np.pi, 0])
                 else:
                     raise ValueError("'X'-point is only defined for lattice "
-                        "initialized as 'square'.")
+                                     "initialized as 'square'.")
 
             if pt.lower() == 'm':
                 if self.type == 'square':
                     return np.array([np.pi, np.pi])
                 elif self.type == 'hexagonal':
-                    return np.array([np.pi, np.pi/np.sqrt(3)])
+                    return np.array([np.pi, np.pi / np.sqrt(3)])
                 else:
                     raise ValueError("'М'-point is only defined for lattice "
-                        "initialized as 'square' or 'hexagonal'.")
+                                     "initialized as 'square' or 'hexagonal'.")
 
             if pt.lower() == 'k':
                 if self.type == 'hexagonal':
-                    return np.array([4/3*np.pi, 0])
+                    return np.array([4 / 3 * np.pi, 0])
                 else:
                     raise ValueError("'K'-point is only defined for lattice "
-                        "initialized as 'hexagonal'.")
-                    
+                                     "initialized as 'hexagonal'.")
+
         raise ValueError("Something was wrong with BZ point definition")

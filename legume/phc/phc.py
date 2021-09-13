@@ -4,11 +4,12 @@ from legume.backend import backend as bd
 import legume.utils as utils
 from . import ShapesLayer, FreeformLayer, Lattice
 
+
 class PhotCryst(object):
     """
     Class for a photonic crystal which can contain a number of layers.
     """
-    def __init__(self, lattice, eps_l: float=1, eps_u: float=1):
+    def __init__(self, lattice, eps_l: float = 1, eps_u: float = 1):
         """Initialize a photonic crystal.
         
         Parameters
@@ -25,7 +26,7 @@ class PhotCryst(object):
         self.claddings = []
         self.claddings.append(ShapesLayer(lattice, eps_b=eps_l, z_min=-1e10))
         self.claddings.append(ShapesLayer(lattice, eps_b=eps_u, z_max=1e10))
-        
+
         # Initialize underlying lattice
         self.lattice = lattice
 
@@ -47,10 +48,13 @@ class PhotCryst(object):
         """
         zmin = self.layers[0].z_min - dist
         zmax = self.layers[-1].z_max + dist
-    
+
         return np.linspace(zmin, zmax, Nz)
 
-    def add_layer(self, d: float, eps_b: float=1, layer_type: str='shapes'):
+    def add_layer(self,
+                  d: float,
+                  eps_b: float = 1,
+                  layer_type: str = 'shapes'):
         """
         Add a layer to the photonic crystal, on top of all currently existing
         layers.
@@ -94,9 +98,9 @@ class PhotCryst(object):
             If ``cladding == 1 or 'u'``, add the shapes to the lower cladding.
         """
         if cladding is not None:
-            if cladding==0 or cladding=='l':
+            if cladding == 0 or cladding == 'l':
                 lay = self.claddings[0]
-            elif cladding==1 or cladding=='u':
+            elif cladding == 1 or cladding == 'u':
                 lay = self.claddings[1]
             else:
                 raise ValueError("'cladding' must be 0 or 'l' for lower" \
@@ -129,8 +133,7 @@ class PhotCryst(object):
         (xmesh, ymesh, zmesh) = points
         a_shape = xmesh.shape
         if (ymesh.shape != a_shape) or (zmesh.shape != a_shape):
-            raise ValueError(
-                    "xmesh, ymesh and zmesh must have the same shape")
+            raise ValueError("xmesh, ymesh and zmesh must have the same shape")
 
         eps_r = np.zeros(a_shape)
 
@@ -147,7 +150,7 @@ class PhotCryst(object):
     def get_eps_bounds(self):
         """Returns the minimum and maximum permittivity of the structure.
         """
-         
+
         eps_min = self.claddings[0].eps_b
         eps_max = self.claddings[0].eps_b
 

@@ -4,10 +4,10 @@ from autograd import value_and_grad
 from scipy.optimize import minimize
 import time
 
+
 class Minimize(object):
     """Wrapping up custom and SciPy optimizers in a common class
     """
-
     def __init__(self, objective):
 
         self.objective = objective
@@ -37,19 +37,20 @@ class Minimize(object):
             if bounds == None:
                 return None
             elif not isinstance(bounds[0], tuple):
-                if len(bounds)==2:
+                if len(bounds) == 2:
                     return [tuple(bounds) for i in range(self.params.size)]
                 else:
                     raise ValueError
             elif len(bounds) == self.params.size:
-                if all([len(b)==2 for b in bounds]):
+                if all([len(b) == 2 for b in bounds]):
                     return bounds
                 else:
                     raise ValueError
             else:
                 raise ValueError
         except:
-            raise ValueError("'bounds' should be a list of two elements "
+            raise ValueError(
+                "'bounds' should be a list of two elements "
                 "[lb, ub], or a list of the same length as the number of "
                 "parameters where each element is a tuple (lb, ub)")
 
@@ -57,15 +58,23 @@ class Minimize(object):
         """Display information at every iteration
         """
         disp_str = "Epoch: %4d/%4d | Duration: %6.2f secs" % \
-                        (self.iteration, self.Nepochs, t_elapsed)           
+                        (self.iteration, self.Nepochs, t_elapsed)
         disp_str += " | Objective: %4e" % self.of_list[-1]
         if self.disp_p:
             disp_str += " | Parameters: %s" % self.params
         print(disp_str)
 
-    def adam(self, pstart, Nepochs=50, bounds=None, disp_p=False, 
-                step_size=1e-2, beta1=0.9, beta2=0.999, args=(),
-                pass_self=False, callback=None):
+    def adam(self,
+             pstart,
+             Nepochs=50,
+             bounds=None,
+             disp_p=False,
+             step_size=1e-2,
+             beta1=0.9,
+             beta2=0.999,
+             args=(),
+             pass_self=False,
+             callback=None):
         """Performs 'Nepoch' steps of ADAM minimization with parameters 
         'step_size', 'beta1', 'beta2'
 
@@ -87,7 +96,7 @@ class Minimize(object):
         self.bounds = self._parse_bounds(bounds)
         self.Nepochs = Nepochs
         self.disp_p = disp_p
-        
+
         # Restart the counters
         self.iteration = 0
         self.t_store = time.time()
@@ -105,18 +114,18 @@ class Minimize(object):
             of, grad = value_and_grad(self.objective)(self.params, *args)
             t_elapsed = time.time() - self.t_store
 
-            self.of_list.append(self._get_value(of)) 
+            self.of_list.append(self._get_value(of))
             self._disp(t_elapsed)
 
             if iteration == 0:
                 mopt = np.zeros(grad.shape)
                 vopt = np.zeros(grad.shape)
 
-            (grad_adam, mopt, vopt) = self._step_adam(grad, mopt, vopt, 
-                                            iteration, beta1, beta2)
+            (grad_adam, mopt, vopt) = self._step_adam(grad, mopt, vopt,
+                                                      iteration, beta1, beta2)
             # Change parameters towards minimizing the objective
-            if iteration < Nepochs-1:
-                self.params = self.params - step_size*grad_adam
+            if iteration < Nepochs - 1:
+                self.params = self.params - step_size * grad_adam
 
             if bounds:
                 lbs = np.array([b[0] for b in self.bounds])
@@ -130,8 +139,13 @@ class Minimize(object):
         return (self.params, self.of_list)
 
     @staticmethod
-    def _step_adam(gradient, mopt_old, vopt_old, iteration, beta1, beta2, 
-                    epsilon=1e-8):
+    def _step_adam(gradient,
+                   mopt_old,
+                   vopt_old,
+                   iteration,
+                   beta1,
+                   beta2,
+                   epsilon=1e-8):
         """Performs one step of Adam optimization
         """
 
@@ -143,9 +157,16 @@ class Minimize(object):
 
         return (grad_adam, mopt, vopt)
 
-    def lbfgs(self, pstart, Nepochs=50, bounds=None, disp_p=False,
-                maxfun=15000, args=(), pass_self=False, res=False,
-                callback=None):
+    def lbfgs(self,
+              pstart,
+              Nepochs=50,
+              bounds=None,
+              disp_p=False,
+              maxfun=15000,
+              args=(),
+              pass_self=False,
+              res=False,
+              callback=None):
         """Wraps the SciPy LBFGS minimizer in a way that displays intermediate
         information and stores intermediate values of the parameters and the
         objective function.
@@ -170,7 +191,7 @@ class Minimize(object):
         self.params = pstart
         self.bounds = self._parse_bounds(bounds)
         self.Nepochs = Nepochs
-        self.disp_p = disp_p 
+        self.disp_p = disp_p
 
         # Restart the counters
         self.iteration = 0
@@ -179,7 +200,7 @@ class Minimize(object):
 
         # Get initial of value
         of = self.objective(self.params, *args)
-        self.of_list.append(self._get_value(of)) 
+        self.of_list.append(self._get_value(of))
 
         def of(params, *args, **kwargs):
             """Modify the objective function slightly to allow storing
@@ -201,7 +222,7 @@ class Minimize(object):
             t_current = time.time()
             t_elapsed = t_current - self.t_store
             self.t_store = t_current
-            
+
             self.of_list.append(self.of_last)
             self.params = xk
             self._disp(t_elapsed)
@@ -210,17 +231,25 @@ class Minimize(object):
             if callback is not None:
                 callback(self)
 
-        res_opt = minimize(of, self.params, args=args, method='L-BFGS-B',
-            jac=True, bounds=self.bounds, tol=None, callback=cb,
-            options={'disp': False,
-                 'maxcor': 10,
-                 'ftol': 1e-8,
-                 'gtol': 1e-5,
-                 'eps': 1e-08,
-                 'maxfun': maxfun,
-                 'maxiter': Nepochs,
-                 'iprint': -1,
-                 'maxls': 20})
+        res_opt = minimize(of,
+                           self.params,
+                           args=args,
+                           method='L-BFGS-B',
+                           jac=True,
+                           bounds=self.bounds,
+                           tol=None,
+                           callback=cb,
+                           options={
+                               'disp': False,
+                               'maxcor': 10,
+                               'ftol': 1e-8,
+                               'gtol': 1e-5,
+                               'eps': 1e-08,
+                               'maxfun': maxfun,
+                               'maxiter': Nepochs,
+                               'iprint': -1,
+                               'maxls': 20
+                           })
 
         if res == False:
             return (res_opt.x, self.of_list)

@@ -14,16 +14,9 @@ from .gme import GuidedModeExp
 from .gme.slab_modes import guided_modes, rad_modes
 from .backend import backend, set_backend
 
-__all__ = ['GuidedModeExp',
-           'PlaneWaveExp',
-           'PhotCryst', 
-           'ShapesLayer', 
-           'FreeformLayer', 
-           'Lattice',
-           'Shape',
-           'Circle',
-           'Poly',
-           'Square', 
-           'Hexagon']
+__all__ = [
+    'GuidedModeExp', 'PlaneWaveExp', 'PhotCryst', 'ShapesLayer',
+    'FreeformLayer', 'Lattice', 'Shape', 'Circle', 'Poly', 'Square', 'Hexagon'
+]
 
 __version__ = '0.1.6'

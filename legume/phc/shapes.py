@@ -3,6 +3,7 @@ import matplotlib.path as mpltPath
 
 from legume.backend import backend as bd
 
+
 class Shape(object):
     """Geometric shape base class
     """
@@ -19,17 +20,17 @@ class Shape(object):
         if type(gvec) == list:
             gvec = np.array(gvec)
         elif type(gvec) != np.ndarray:
-            raise(TypeError, "Input gvec must be either of type list or \
+            raise (TypeError, "Input gvec must be either of type list or \
                                     np.ndarray")
 
         if len(gvec.shape) != 2:
-            raise(ValueError, "Input gvec must be a 2D array")
+            raise (ValueError, "Input gvec must be a 2D array")
 
         elif gvec.shape[0] != 2:
             if gvec.shape[1] == 2:
                 gvec = gvec.T
             else:
-                raise(ValueError, "Input gvec must have length 2 \
+                raise (ValueError, "Input gvec must have length 2 \
                                 along one axis")
 
         return (gvec[0, :], gvec[1, :])
@@ -46,7 +47,7 @@ class Shape(object):
             g-vectors at which the Fourier transform is evaluated
         """
         raise NotImplementedError("compute_ft() needs to be implemented by"
-            "Shape subclasses")
+                                  "Shape subclasses")
 
     def is_inside(self, x, y):
         """Elementwise indicator function for the shape
@@ -56,7 +57,8 @@ class Shape(object):
         (x, y) point is inside the shape, and 0 if (x, y) outside.
         """
         raise NotImplementedError("is_inside() needs to be implemented by"
-            "Shape subclasses")
+                                  "Shape subclasses")
+
 
 class Circle(Shape):
     """Circle shape
@@ -88,7 +90,7 @@ class Circle(Shape):
         (gx, gy) = self._parse_ft_gvec(gvec)
 
         gabs = np.sqrt(np.abs(np.square(gx)) + np.abs(np.square(gy)))
-        gabs += 1e-10 # To avoid numerical instability at zero
+        gabs += 1e-10  # To avoid numerical instability at zero
 
         ft = bd.exp(-1j*gx*self.x_cent - 1j*gy*self.y_cent)*self.r* \
                             2*np.pi/gabs*bd.bessel1(gabs*self.r)
@@ -96,8 +98,9 @@ class Circle(Shape):
         return ft
 
     def is_inside(self, x, y):
-        return (np.square(x - self.x_cent) + np.square(y - self.y_cent)
-                            <= np.square(self.r))
+        return (np.square(x - self.x_cent) + np.square(y - self.y_cent) <=
+                np.square(self.r))
+
 
 class Poly(Shape):
     """Polygon shape
@@ -119,7 +122,7 @@ class Poly(Shape):
         The polygon vertices must be supplied in counter-clockwise order.
         """
 
-        # Make extra sure that the last point of the polygon is the same as the 
+        # Make extra sure that the last point of the polygon is the same as the
         # first point
         self.x_edges = bd.hstack((bd.array(x_edges), x_edges[0]))
         self.y_edges = bd.hstack((bd.array(y_edges), y_edges[0]))
@@ -127,7 +130,7 @@ class Poly(Shape):
 
         if self.compute_ft([[0.], [0.]]) < 0:
             raise ValueError("The edges defined by x_edges and y_edges must be"
-            " specified in counter-clockwise order")
+                             " specified in counter-clockwise order")
 
     def __repr__(self):
         return "Poly(eps = %.2f, x_edges = %s, y_edges = %s)" % \
@@ -151,14 +154,14 @@ class Poly(Shape):
         (xj, yj) = self.x_edges, self.y_edges
         npts = xj.shape[0]
         ng = gx.shape[0]
-        # Note: the paper uses +1j*g*x convention for FT while we use 
+        # Note: the paper uses +1j*g*x convention for FT while we use
         # -1j*g*x everywhere in legume
         gx = -gx[:, bd.newaxis]
         gy = -gy[:, bd.newaxis]
         xj = xj[bd.newaxis, :]
         yj = yj[bd.newaxis, :]
 
-        ft = bd.zeros((ng), dtype=bd.complex);
+        ft = bd.zeros((ng), dtype=bd.complex)
 
         aj = (bd.roll(xj, -1, axis=1) - xj + 1e-10) / \
                 (bd.roll(yj, -1, axis=1) - yj + 1e-20)
@@ -170,7 +173,7 @@ class Poly(Shape):
         if np.sum(ind_gx0) > 0:
             # And first the Gy = 0 case
             ind_gy0 = np.abs(gy[:, 0]) < 1e-10
-            if np.sum(ind_gy0*ind_gx0) > 0:
+            if np.sum(ind_gy0 * ind_gx0) > 0:
                 ft = ind_gx0*ind_gy0*bd.sum(xj * bd.roll(yj, -1, axis=1)-\
                                 yj * bd.roll(xj, -1, axis=1))/2
                 # Remove the Gx = 0, Gy = 0 component
@@ -221,12 +224,13 @@ class Poly(Shape):
                     bd.roll(xj, -1) * yj))/6/self.area
         com_y = bd.sum((yj + bd.roll(yj, -1)) * (xj * bd.roll(yj, -1) - \
                     bd.roll(xj, -1) * yj))/6/self.area
-        new_coords = bd.dot(rotmat, bd.vstack((xj-com_x, yj-com_y)))
+        new_coords = bd.dot(rotmat, bd.vstack((xj - com_x, yj - com_y)))
 
         self.x_edges = new_coords[0, :] + com_x
         self.y_edges = new_coords[1, :] + com_y
 
         return self
+
 
 class Square(Poly):
     """Square shape
@@ -248,13 +252,14 @@ class Square(Poly):
         self.x_cent = x_cent
         self.y_cent = y_cent
         self.a = a
-        x_edges = x_cent + bd.array([-a/2, a/2, a/2, -a/2])
-        y_edges = y_cent + bd.array([-a/2, -a/2, a/2, a/2])
+        x_edges = x_cent + bd.array([-a / 2, a / 2, a / 2, -a / 2])
+        y_edges = y_cent + bd.array([-a / 2, -a / 2, a / 2, a / 2])
         super().__init__(eps, x_edges, y_edges)
 
     def __repr__(self):
         return "Square(eps = %.2f, x_cent = %.4f, y_cent = %.4f, a = %.4f)" % \
                (self.eps, self.x_cent, self.y_cent, self.a)
+
 
 class Hexagon(Poly):
     """Hexagon shape
@@ -276,20 +281,26 @@ class Hexagon(Poly):
         self.x_cent = x_cent
         self.y_cent = y_cent
         self.a = a
-        x_edges = x_cent + bd.array([a, a/2, -a/2, -a, -a/2, a/2, a])
+        x_edges = x_cent + bd.array([a, a / 2, -a / 2, -a, -a / 2, a / 2, a])
         y_edges = y_cent + bd.array([0, np.sqrt(3)/2*a, np.sqrt(3)/2*a, 0, \
                     -np.sqrt(3)/2*a, -np.sqrt(3)/2*a, 0])
-        super().__init__(eps, x_edges, y_edges) 
+        super().__init__(eps, x_edges, y_edges)
 
     def __repr__(self):
         return "Hexagon(eps = %.2f, x_cent = %.4f, y_cent = %.4f, a = %.4f)" % \
                (self.eps, self.x_cent, self.y_cent, self.a)
 
+
 class FourierShape(Poly):
     """Fourier coefficinets of the polar coordinates
     """
-    def __init__(self, eps=1, x_cent=0, y_cent=0, f_as=np.array([0.]), 
-                    f_bs=np.array([]), npts=100):
+    def __init__(self,
+                 eps=1,
+                 x_cent=0,
+                 y_cent=0,
+                 f_as=np.array([0.]),
+                 f_bs=np.array([]),
+                 npts=100):
         """Create a shape defined by its Fourier coefficients in polar 
         coordinates.
 
@@ -327,23 +338,23 @@ class FourierShape(Poly):
         self.y_cent = y_cent
         self.npts = npts
 
-        phis = bd.linspace(0, 2*np.pi, npts+1)
+        phis = bd.linspace(0, 2 * np.pi, npts + 1)
 
-        R_phi = f_as[0]/2*bd.ones(phis.shape)
+        R_phi = f_as[0] / 2 * bd.ones(phis.shape)
         for (n, an) in enumerate(f_as[1:]):
-            R_phi = R_phi + an*bd.cos((n+1)*phis)
+            R_phi = R_phi + an * bd.cos((n + 1) * phis)
 
         for (n, bn) in enumerate(f_bs):
-            R_phi = R_phi + bn*bd.sin((n+1)*phis)
+            R_phi = R_phi + bn * bd.sin((n + 1) * phis)
 
         if np.any(R_phi < 0):
             raise ValueError("Coefficients of FourierShape should be such "
-                "that R(phi) is non-negative for all phi.")
+                             "that R(phi) is non-negative for all phi.")
 
-        x_edges = R_phi*bd.cos(phis)
-        y_edges = R_phi*bd.sin(phis)
+        x_edges = R_phi * bd.cos(phis)
+        y_edges = R_phi * bd.sin(phis)
 
-        super().__init__(eps, x_edges, y_edges) 
+        super().__init__(eps, x_edges, y_edges)
 
     def __repr__(self):
         return "FourierShape(eps = %.2f, x_cent = %.4f, y_cent = %.4f"\
