@@ -39,11 +39,15 @@ One exciting feature of `legume` is the `autograd` backend that can be used to a
 If you find legume useful for your research, we would apprecite you citing our [paper](https://arxiv.org/abs/2003.00379). For your convenience, you can use the following BibTex entry:
 
 ```
-@article{Minkov2020,
-  title = {Inverse design of photonic crystals through automatic differentiation},
-  author = {Minkov, Momchil and Williamson, Ian A. D. and Gerace, Dario and Andreani, Lucio C. and Lou, Beicheng and Song, Alex Y. and Hughes, Tyler W. and Fan, Shanhui},
-  year = {2020},
-  journal = {arXiv:2003.00379},
+@article{minkov2020inverse,
+  title={Inverse design of photonic crystals through automatic differentiation},
+  author={Minkov, Momchil and Williamson, Ian AD and Andreani, Lucio C and Gerace, Dario and Lou, Beicheng and Song, Alex Y and Hughes, Tyler W and Fan, Shanhui},
+  journal={ACS Photonics},
+  volume={7},
+  number={7},
+  pages={1729--1741},
+  year={2020},
+  publisher={American Chemical Society}
 }
 ```
 
