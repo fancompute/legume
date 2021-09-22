@@ -190,7 +190,7 @@ class FreeformLayer(Layer):
 
     def _init_grid(res):
         """
-        Initialize a grid with resolution res, with res[0] pixels along the
+        Initialize a grid with resolution res, with res[0] pixels along the 
         lattice.a1 direction and res[1] pixels along the lattice.a2 direction
         """
         res = np.array(res)
