@@ -3,7 +3,6 @@ Various utilities used in the main code.
 NOTE: there should be no autograd functions here, only plain numpy/scipy
 """
 
-import numpy as np
 from scipy.linalg import toeplitz
 from scipy.optimize import brentq
 import numpy as np
