@@ -8,9 +8,12 @@ from legume import viz
 
 
 class XYField:
-
-    def __init__(self, res, z_dimension, modulation=np.array([0, 0]),
-                 renormalize=False, **kwargs):
+    def __init__(self,
+                 res,
+                 z_dimension,
+                 modulation=np.array([0, 0]),
+                 renormalize=False,
+                 **kwargs):
         """
 
         General Parameters
@@ -82,30 +85,40 @@ class XYField:
 
             self.phc = gme.phc
 
-            e_comp, h_comp = {'TE': ['xy', 'z'],
-                              'TM': ['z', 'xy'],
-                              'None': ['xyz', 'xyz']}[self.polarization]
+            e_comp, h_comp = {
+                'TE': ['xy', 'z'],
+                'TM': ['z', 'xy'],
+                'None': ['xyz', 'xyz']
+            }[self.polarization]
 
-            fe, xgrid, ygrid = gme.get_field_xy(field='e', component=e_comp,
-                                                z=z_dimension, kind=self.kind,
+            fe, xgrid, ygrid = gme.get_field_xy(field='e',
+                                                component=e_comp,
+                                                z=z_dimension,
+                                                kind=self.kind,
                                                 mind=self.mind,
-                                                Nx=self.res[0], Ny=self.res[1])
+                                                Nx=self.res[0],
+                                                Ny=self.res[1])
 
-            fh, _, _ = gme.get_field_xy(field='h', component=h_comp,
+            fh, _, _ = gme.get_field_xy(field='h',
+                                        component=h_comp,
                                         z=z_dimension,
-                                        kind=self.kind, mind=self.mind,
-                                        Nx=self.res[0], Ny=self.res[1])
+                                        kind=self.kind,
+                                        mind=self.mind,
+                                        Nx=self.res[0],
+                                        Ny=self.res[1])
 
             if self.polarization == 'TE':
                 E = np.array([fe['x'], fe['y'], np.zeros(self.res[::-1])])
-                H = np.array(
-                    [np.zeros(self.res[::-1]), np.zeros(self.res[::-1]),
-                     fh['z']])
+                H = np.array([
+                    np.zeros(self.res[::-1]),
+                    np.zeros(self.res[::-1]), fh['z']
+                ])
 
             elif self.polarization == 'TM':
-                E = np.array(
-                    [np.zeros(self.res[::-1]), np.zeros(self.res[::-1]),
-                     fe['z']])
+                E = np.array([
+                    np.zeros(self.res[::-1]),
+                    np.zeros(self.res[::-1]), fe['z']
+                ])
                 H = np.array([fh['x'], fh['y'], np.zeros(self.res[::-1])])
 
             elif self.polarization == 'None':
@@ -116,14 +129,15 @@ class XYField:
             self.meshgrid = np.meshgrid(xgrid, ygrid)
 
             # Apply modulation
-            E = E * np.exp(1j * (self.meshgrid[0] * modulation[0]
-                                 + self.meshgrid[1] * modulation[1]))
-            H = H * np.exp(1j * (self.meshgrid[0] * modulation[0]
-                                 + self.meshgrid[1] * modulation[1]))
+            E = E * np.exp(1j * (self.meshgrid[0] * modulation[0] +
+                                 self.meshgrid[1] * modulation[1]))
+            H = H * np.exp(1j * (self.meshgrid[0] * modulation[0] +
+                                 self.meshgrid[1] * modulation[1]))
 
             if renormalize:
-                field_0 = np.array([np.linalg.norm(E, axis=0),
-                                    np.linalg.norm(H, axis=0)])
+                field_0 = np.array(
+                    [np.linalg.norm(E, axis=0),
+                     np.linalg.norm(H, axis=0)])
 
                 argmax = np.unravel_index(np.argmax(np.abs(field_0)),
                                           field_0.shape)
@@ -133,8 +147,8 @@ class XYField:
             freq = gme.freqs[self.kind][self.mind]
             self._freq = freq
             self._kvec = modulation
-            self._field = lambda t: np.array([E * np.exp(1j * freq * t),
-                                              H * np.exp(1j * freq * t)])
+            self._field = lambda t: np.array(
+                [E * np.exp(1j * freq * t), H * np.exp(1j * freq * t)])
 
         else:
             raise ValueError("Missing initializing argument \"gme\" "
@@ -147,8 +161,8 @@ class XYField:
                                      self.lattice.a2[1]])) / res[1]
 
         for layer in self.phc.layers + self.phc.claddings:
-            zlayer = (self.z_dimension >= layer.z_min) * (
-                        self.z_dimension < layer.z_max)
+            zlayer = (self.z_dimension >= layer.z_min) * (self.z_dimension <
+                                                          layer.z_max)
             if np.sum(zlayer) > 0:
                 self.layer = layer
                 break
@@ -188,7 +202,8 @@ class XYField:
         Poynting vector field. np.array shape (3,self.res[0], self.res[1])
         """
         return np.cross(np.real(self._field(time)[0]),
-                        np.real(self._field(time)[1]), axis=0)
+                        np.real(self._field(time)[1]),
+                        axis=0)
 
     def coarse_Poynting_vector(self, time=0, pv_coarseness=1):
         """
@@ -267,8 +282,15 @@ class XYField:
                  self.z_dimension * np.ones(self.meshgrid[0].shape)))
         return self._eps_dist
 
-    def visualize_field(self, field, component, time=0, eps=True, val='re',
-                        normalize=False, fig=None, figsize=None):
+    def visualize_field(self,
+                        field,
+                        component,
+                        time=0,
+                        eps=True,
+                        val='re',
+                        normalize=False,
+                        fig=None,
+                        figsize=None):
         """
         Visualize the electric or magnetic field.
 
@@ -299,14 +321,18 @@ class XYField:
             norm_field = np.zeros(self.res[::-1])
             for comp in component:
                 field_comp = self.field(time)[field_ind][comp_map[comp]]
-                norm_field = norm_field + np.abs(field_comp) ** 2
-            norm_field = norm_field ** (1 / 2)
+                norm_field = norm_field + np.abs(field_comp)**2
+            norm_field = norm_field**(1 / 2)
             vmax = norm_field.max()
             vmin = 0
             ax = fig.add_subplot()
             cmap = 'magma'
-            self._field_ax_builder(ax=ax, field=norm_field, cmap=cmap,
-                                   vmax=vmax, vmin=vmin, eps=eps)
+            self._field_ax_builder(ax=ax,
+                                   field=norm_field,
+                                   cmap=cmap,
+                                   vmax=vmax,
+                                   vmin=vmin,
+                                   eps=eps)
 
         else:
             i = 1
@@ -333,18 +359,26 @@ class XYField:
                     cmap = 'magma'
                 else:
                     raise ValueError("Val should be re, im or abs")
-                self._field_ax_builder(ax=ax, field=field_comp, vmax=vmax,
-                                       vmin=vmin, cmap=cmap, eps=eps)
+                self._field_ax_builder(ax=ax,
+                                       field=field_comp,
+                                       vmax=vmax,
+                                       vmin=vmin,
+                                       cmap=cmap,
+                                       eps=eps)
                 i += 1
         return fig
 
     def _field_ax_builder(self, ax, field, vmax, vmin, cmap, eps):
 
-        extent = self.meshgrid[0].min(), self.meshgrid[0].max(), self.meshgrid[
-            1].min(), self.meshgrid[1].max()
+        extent = self.meshgrid[0].min(), self.meshgrid[0].max(
+        ), self.meshgrid[1].min(), self.meshgrid[1].max()
 
-        im = ax.imshow(field, extent=extent, vmax=vmax, vmin=vmin,
-                       cmap=cmap, origin='lower')
+        im = ax.imshow(field,
+                       extent=extent,
+                       vmax=vmax,
+                       vmin=vmin,
+                       cmap=cmap,
+                       origin='lower')
 
         if eps:
             viz.shapes(layer=self.layer, ax=ax)
@@ -353,8 +387,13 @@ class XYField:
         ax.set_ylim(extent[2], extent[3])
         return ax
 
-    def vizualize_chirality(self, field, component='z', time=0, fig=None,
-                            figsize=None, eps=True):
+    def vizualize_chirality(self,
+                            field,
+                            component='z',
+                            time=0,
+                            fig=None,
+                            figsize=None,
+                            eps=True):
         """
         Visualize the chirality of the electric or magnetic field.
 
@@ -372,8 +411,8 @@ class XYField:
         -------
         fig, a matplotlib figure object structuring the visualization.
         """
-        extent = self.meshgrid[0].min(), self.meshgrid[0].max(), self.meshgrid[
-            1].min(), self.meshgrid[1].max()
+        extent = self.meshgrid[0].min(), self.meshgrid[0].max(
+        ), self.meshgrid[1].min(), self.meshgrid[1].max()
         comp_map = {'x': 0, 'y': 1, 'z': 2}
         chirality = self.chirality(field, time)[comp_map[component]]
         vmax = np.abs(chirality).max()
@@ -383,16 +422,26 @@ class XYField:
 
         ax = fig.add_subplot()
 
-        ax.imshow(np.real(chirality), extent=extent, vmax=vmax, vmin=vmin,
-                  cmap='RdBu', origin='lower')
+        ax.imshow(np.real(chirality),
+                  extent=extent,
+                  vmax=vmax,
+                  vmin=vmin,
+                  cmap='RdBu',
+                  origin='lower')
         if eps:
             viz.shapes(layer=self.layer, ax=ax)
             ax.set_xlim(extent[0], extent[1])
             ax.set_ylim(extent[2], extent[3])
         return fig
 
-    def generate_mp4(self, time_range, frames, val='re', eps=True,
-                     Poynting_vector=True, pv_coarseness=1, **kwargs):
+    def generate_mp4(self,
+                     time_range,
+                     frames,
+                     val='re',
+                     eps=True,
+                     Poynting_vector=True,
+                     pv_coarseness=1,
+                     **kwargs):
         """
         Generate an animation of a visualization over a time_range
         time_range :
@@ -408,8 +457,12 @@ class XYField:
 
         raise NotImplementedError("Not implemented yet")
 
-    def visualize_Poynting_vector(self, fig=None, eps=True, time=0,
-                                  pv_coarseness=1, figsize=None):
+    def visualize_Poynting_vector(self,
+                                  fig=None,
+                                  eps=True,
+                                  time=0,
+                                  pv_coarseness=1,
+                                  figsize=None):
         """
         Visualize the Poynting_vector of the field. Magnitude is color coded,
         arrows lengths are normalized.
@@ -430,7 +483,9 @@ class XYField:
         """
         pv = self.Poynting_vector(time)
 
-        fig = self._plot_xy_vector_field(vector_field=pv, fig=fig, eps=eps,
+        fig = self._plot_xy_vector_field(vector_field=pv,
+                                         fig=fig,
+                                         eps=eps,
                                          pv_coarseness=pv_coarseness,
                                          figsize=figsize)
 
@@ -460,8 +515,13 @@ class XYField:
 
         return S_avg
 
-    def visualize_time_avg_pv(self, period, N_samples, fig=None, eps=True,
-                              pv_coarseness=1, figsize=None):
+    def visualize_time_avg_pv(self,
+                              period,
+                              N_samples,
+                              fig=None,
+                              eps=True,
+                              pv_coarseness=1,
+                              figsize=None):
         """
         Visualize the time averaged Poynting vector field.
 
@@ -484,19 +544,25 @@ class XYField:
         """
         S_avg = self.time_avg_pv(period, N_samples)
 
-        fig = self._plot_xy_vector_field(vector_field=S_avg, fig=fig, eps=eps,
+        fig = self._plot_xy_vector_field(vector_field=S_avg,
+                                         fig=fig,
+                                         eps=eps,
                                          pv_coarseness=pv_coarseness,
                                          figsize=figsize)
         return fig
 
-    def _plot_xy_vector_field(self, vector_field, fig=None, eps=True,
-                              pv_coarseness=1, figsize=None):
+    def _plot_xy_vector_field(self,
+                              vector_field,
+                              fig=None,
+                              eps=True,
+                              pv_coarseness=1,
+                              figsize=None):
         if fig is None:
             fig = plt.figure(constrained_layout=True, figsize=figsize)
 
         ax = fig.add_subplot()
-        extent = self.meshgrid[0].min(), self.meshgrid[0].max(), self.meshgrid[
-            1].min(), self.meshgrid[1].max()
+        extent = self.meshgrid[0].min(), self.meshgrid[0].max(
+        ), self.meshgrid[1].min(), self.meshgrid[1].max()
 
         S_0 = vector_field[0]
         S_1 = vector_field[1]
@@ -507,7 +573,7 @@ class XYField:
             np.linspace(extent[0], extent[1], S_0.shape[1]),
             np.linspace(extent[2], extent[3], S_0.shape[0]))
         xgrid, ygrid = vector_meshgrid
-        magnitude = ((S_0 ** 2) + (S_1 ** 2)) ** (1 / 2)
+        magnitude = ((S_0**2) + (S_1**2))**(1 / 2)
 
         colormap = matplotlib.cm.afmhot
         norm = Normalize()
@@ -522,11 +588,14 @@ class XYField:
             ax.set_xlim(extent[0], extent[1])
             ax.set_ylim(extent[2], extent[3])
 
-        quiv = ax.quiver(np.ravel(xgrid), np.ravel(ygrid), np.ravel(unit_s_0),
+        quiv = ax.quiver(np.ravel(xgrid),
+                         np.ravel(ygrid),
+                         np.ravel(unit_s_0),
                          np.ravel(unit_s_1),
                          color=(colormap(norm(np.ravel(magnitude)))),
                          pivot='mid',
-                         angles='xy', scale_units='xy',
+                         angles='xy',
+                         scale_units='xy',
                          scale=1 / min(self.cell_size) / pv_coarseness,
                          width=0.01 * pv_coarseness,
                          alpha=0.8)
@@ -558,16 +627,20 @@ class XYField:
             return self._field(t) + o._field(t)
 
         if np.abs(self._freq - o._freq) < 1e-6:
-            return XYField(res=self.res, phc=self.phc,
+            return XYField(res=self.res,
+                           phc=self.phc,
                            z_dimension=self.z_dimension,
                            polarization=self.polarization,
-                           meshgrid=self.meshgrid, field=field,
+                           meshgrid=self.meshgrid,
+                           field=field,
                            freq=self._freq)
         else:
-            return XYField(res=self.res, phc=self.phc,
+            return XYField(res=self.res,
+                           phc=self.phc,
                            z_dimension=self.z_dimension,
                            polarization=self.polarization,
-                           meshgrid=self.meshgrid, field=field)
+                           meshgrid=self.meshgrid,
+                           field=field)
 
     def __sub__(self, o):
         """
@@ -594,16 +667,20 @@ class XYField:
             return self._field(t) - o._field(t)
 
         if np.abs(self._freq - o._freq) < 1e-6:
-            return XYField(res=self.res, phc=self.phc,
+            return XYField(res=self.res,
+                           phc=self.phc,
                            z_dimension=self.z_dimension,
                            polarization=self.polarization,
-                           meshgrid=self.meshgrid, field=field,
+                           meshgrid=self.meshgrid,
+                           field=field,
                            freq=self._freq)
         else:
-            return XYField(res=self.res, phc=self.phc,
+            return XYField(res=self.res,
+                           phc=self.phc,
                            z_dimension=self.z_dimension,
                            polarization=self.polarization,
-                           meshgrid=self.meshgrid, field=field)
+                           meshgrid=self.meshgrid,
+                           field=field)
 
     def __mul__(self, o):
         """
@@ -622,13 +699,17 @@ class XYField:
             return o * self._field(t)
 
         if self._freq is not None:
-            return XYField(res=self.res, phc=self.phc,
+            return XYField(res=self.res,
+                           phc=self.phc,
                            z_dimension=self.z_dimension,
                            polarization=self.polarization,
-                           meshgrid=self.meshgrid, field=field,
+                           meshgrid=self.meshgrid,
+                           field=field,
                            freq=self._freq)
         else:
-            return XYField(res=self.res, phc=self.phc,
+            return XYField(res=self.res,
+                           phc=self.phc,
                            z_dimension=self.z_dimension,
                            polarization=self.polarization,
-                           meshgrid=self.meshgrid, field=field)
+                           meshgrid=self.meshgrid,
+                           field=field)

@@ -86,7 +86,7 @@ def grad_num(fn, arg, step_size=1e-7):
 
     N = arg.size
     shape = arg.shape
-    gradient = np.zeros((N,))
+    gradient = np.zeros((N, ))
     f_old = fn(arg)
 
     if type(step_size) == float:
@@ -106,7 +106,6 @@ def grad_num(fn, arg, step_size=1e-7):
 def vjp_maker_num(fn, arg_inds, steps):
     """ Makes a vjp_maker for the numerical derivative of a function `fn`
     w.r.t. argument at position `arg_ind` using step sizes `steps` """
-
     def vjp_single_arg(ia):
         arg_ind = arg_inds[ia]
         step = steps[ia]
@@ -300,8 +299,13 @@ def import_eps_image(img_path, eps_map, tol=5):
     return eps_array
 
 
-def find_band_gaps(gme, order, sample_rate=10, band_tol=0.1, trim_lc=False,
-                   lc_trim=0, numeig=20):
+def find_band_gaps(gme,
+                   order,
+                   sample_rate=10,
+                   band_tol=0.1,
+                   trim_lc=False,
+                   lc_trim=0,
+                   numeig=20):
     """
     Find band gaps from a guided mode expansion.
 
@@ -336,11 +340,12 @@ def find_band_gaps(gme, order, sample_rate=10, band_tol=0.1, trim_lc=False,
             gradients='approx',
             verbose=False)
 
-    k_abs = np.tile((gme.kpoints[0] ** 2 + gme.kpoints[1] ** 2) ** (1 / 2),
+    k_abs = np.tile((gme.kpoints[0]**2 + gme.kpoints[1]**2)**(1 / 2),
                     (numeig, 1)).T
     if trim_lc:
-        in_lc_freqs = gme.freqs[
-            gme.freqs / (np.abs(k_abs - lc_trim) + 1e-10) <= 1 / (2 * np.pi)]
+        in_lc_freqs = gme.freqs[gme.freqs /
+                                (np.abs(k_abs - lc_trim) + 1e-10) <= 1 /
+                                (2 * np.pi)]
 
         freqs_flat = np.sort(in_lc_freqs)
     else:
@@ -350,20 +355,22 @@ def find_band_gaps(gme, order, sample_rate=10, band_tol=0.1, trim_lc=False,
     band_gaps = []
     for i in range(gaps.size):
         if gaps[i] >= band_tol:
-            band_gaps.append([freqs_flat[i], freqs_flat[i + 1],
-                              (freqs_flat[i] + freqs_flat[i + 1]) / 2])
+            band_gaps.append([
+                freqs_flat[i], freqs_flat[i + 1],
+                (freqs_flat[i] + freqs_flat[i + 1]) / 2
+            ])
 
     band_gaps = np.array(band_gaps)
 
     if band_gaps.size == 0:
         return [], [], []
 
-    k_air_arg = np.array(
-        [np.argwhere(gme.freqs == band_gap[1])[0][0] for band_gap in
-         band_gaps])
-    k_di_arg = np.array(
-        [np.argwhere(gme.freqs == band_gap[0])[0][0] for band_gap in
-         band_gaps])
+    k_air_arg = np.array([
+        np.argwhere(gme.freqs == band_gap[1])[0][0] for band_gap in band_gaps
+    ])
+    k_di_arg = np.array([
+        np.argwhere(gme.freqs == band_gap[0])[0][0] for band_gap in band_gaps
+    ])
 
     k_air = (gme.kpoints[0][k_air_arg], gme.kpoints[1][k_air_arg])
     k_di = (gme.kpoints[0][k_di_arg], gme.kpoints[1][k_di_arg])
@@ -389,7 +396,7 @@ def fold_K(k, supercell_size):
     a = np.pi / supercell_size
     fold = np.floor(k / a)
     s = np.mod(fold, 2)
-    new_k = (-1) ** s * np.mod(k, a) + s * a
+    new_k = (-1)**s * np.mod(k, a) + s * a
     return new_k
 
 
@@ -417,9 +424,9 @@ def unfold_bands(super_gme, super_cell_size, branch_start=-np.pi):
     # Collect g-vectors of primitive and super_cell_size expansions.
 
     gvecs = super_gme.gvec.reshape(2, super_gme.n1g, super_gme.n2g)
-    prim_gvecs = super_gme.gvec.reshape(2, super_gme.n1g,
-                                        super_gme.n2g) * np.array(
-        super_cell_size).reshape(2, 1, 1)
+    prim_gvecs = super_gme.gvec.reshape(
+        2, super_gme.n1g, super_gme.n2g) * np.array(super_cell_size).reshape(
+            2, 1, 1)
 
     mask = np.logical_and(np.isin(gvecs[0], prim_gvecs[0]),
                           np.isin(gvecs[1], prim_gvecs[1]))
@@ -439,7 +446,8 @@ def unfold_bands(super_gme, super_cell_size, branch_start=-np.pi):
     pad_mask = np.pad(mask, ((N1 - 1, 0), (N2 - 1, 0)))
 
     unfolded_kpoints = np.array(
-        [np.empty(super_gme.freqs.shape), np.empty(super_gme.freqs.shape)])
+        [np.empty(super_gme.freqs.shape),
+         np.empty(super_gme.freqs.shape)])
 
     probabilities = np.empty(
         (super_gme.freqs.shape[0], super_gme.freqs.shape[1], N1, N2))
@@ -452,8 +460,10 @@ def unfold_bands(super_gme, super_cell_size, branch_start=-np.pi):
             # Roll padded mask and truncate to shape of eigen vector.
             probability = np.empty((N1, N2))
             for i, j in itertools.product(range(N1), range(N2)):
-                probability[i, j] = np.sum(np.square(np.abs(eig[np.roll(
-                    pad_mask, (i, j), axis=(0, 1))[N1 - 1:, N2 - 1:]])))
+                probability[i, j] = np.sum(
+                    np.square(
+                        np.abs(eig[np.roll(pad_mask, (i, j),
+                                           axis=(0, 1))[N1 - 1:, N2 - 1:]])))
 
             # Normalize probability
             probability = probability / np.sum(probability)
@@ -473,7 +483,11 @@ def unfold_bands(super_gme, super_cell_size, branch_start=-np.pi):
     return unfolded_kpoints, probabilities
 
 
-def fixed_point_cluster(mean, diff, N, kernel='gaussian', u=None,
+def fixed_point_cluster(mean,
+                        diff,
+                        N,
+                        kernel='gaussian',
+                        u=None,
                         reflect=False):
     """
     Generates a 1d cluster of points.
@@ -503,8 +517,9 @@ def fixed_point_cluster(mean, diff, N, kernel='gaussian', u=None,
     """
 
     kern_dict = {
-        "binomial": lambda x: np.abs(x + (u - 1) / (3 * diff ** 2) * x ** 3),
-        "id": lambda x: np.abs(x)}
+        "binomial": lambda x: np.abs(x + (u - 1) / (3 * diff**2) * x**3),
+        "id": lambda x: np.abs(x)
+    }
 
     if isinstance(kernel, str):
         kernel = kern_dict[kernel]
@@ -569,13 +584,13 @@ def isolate_bands(kpoints, freqs):
         error_neg = 0
 
         for bind, band in enumerate(bands[:]):
-            error_cont += (k_freqs[bind] - band[1][-1]) ** 2
+            error_cont += (k_freqs[bind] - band[1][-1])**2
 
         for bind, band in enumerate(bands[1:]):
-            error_plus += (k_freqs[:-1][bind] - band[1][-1]) ** 2
+            error_plus += (k_freqs[:-1][bind] - band[1][-1])**2
 
         for bind, band in enumerate(bands[:-1]):
-            error_neg += (k_freqs[1:][bind] - band[1][-1]) ** 2
+            error_neg += (k_freqs[1:][bind] - band[1][-1])**2
 
         if error_plus == min([error_cont, error_plus, error_neg]):
             low_bands.insert(0, bands[0])
