@@ -82,8 +82,7 @@ def bands(gme,
                        c=Q,
                        cmap=Q_cmap,
                        s=markersize**2,
-                       vmax=Q_max,
-                       norm=mpl.colors.LogNorm(),
+                       norm=mpl.colors.LogNorm(vmax=Q_max),
                        edgecolors=markeredgecolor,
                        linewidth=markeredgewidth)
         plt.colorbar(p, ax=ax, label="Radiative quality factor", extend="max")

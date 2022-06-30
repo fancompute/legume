@@ -19,4 +19,4 @@ __all__ = [
     'FreeformLayer', 'Lattice', 'Shape', 'Circle', 'Poly', 'Square', 'Hexagon'
 ]
 
-__version__ = '0.1.7'
+__version__ = '0.1.8'
