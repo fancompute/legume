@@ -11,7 +11,7 @@ legume (le GUided Mode Expansion) is a python implementation of the GME method f
 Easiest way:
 
 ```
-poetry install 
+python setup.py install
 ```
 
 Alternatively, just `git clone` this repository, and make sure you have all the requirements installed.
