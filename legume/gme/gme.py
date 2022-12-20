@@ -666,8 +666,6 @@ class GuidedModeExp(object):
             raise ValueError("'eps_eff' can be 'average', 'background' or "
                              "'custom'")
 
-        # Store an array of the effective permittivity for every layer
-        #(including claddings)
         eps_array = bd.array(list(
             getattr(layer, layer_eps) for layer in [self.phc.claddings[0]] +
             self.phc.layers + [self.phc.claddings[1]]),
