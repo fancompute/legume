@@ -11,7 +11,7 @@ class Shape(object):
         """Create a shape
         """
         self.eps = eps
-        self.area = bd.real(self.compute_ft(bd.array([[0.], [0.]])))
+        self.area = bd.real(self.compute_ft(bd.array([[0.], [0.]])))[0]
 
     def __repr__(self):
         return "Shape"
