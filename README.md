@@ -4,17 +4,18 @@
 
 <img src="https://github.com/fancompute/legume/blob/master/docs/_static/legume-logo.png" align="middle" title="logo" alt="logo">
 
-legume (le GUided Mode Expansion) is a python implementation of the GME method for photonic crystal slabs, including multi-layer structures. Plane-wave expansion for purely 2D structures is also included. Also, we have an `autograd` backend that allows gradients of all output values with respect to all input parameters to be computed efficiently!
+legume (le Guided-Mode Expansion) is a python implementation of the GME method for photonic crystal slabs, 
+including multi-layer structures. Plane-wave expansion for purely 2D structures is also included.
+Also, we have an `autograd` backend that allows gradients of all output values with respect to all input parameters
+to be computed efficiently!
 
 ## Install
 
-Easiest way:
+This is an experimental package, the recommended way of installing it would be `git clone` followed by
 
 ```
-python setup.py install
+poetry install
 ```
-
-Alternatively, just `git clone` this repository, and make sure you have all the requirements installed.
 
 ## Documentation and examples
 
