@@ -324,11 +324,11 @@ def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
         T11 = np.exp(1j * chis1 * d)
         T22 = np.exp(-1j * chis1 * d)
 
-        T_dot_mats = np.zeros(mats.shape, dtype=np.complex)
+        T_dot_mats = np.zeros(mats.shape, dtype=bd.complex)
         T_dot_mats[0::2, :] = mats[0::2, :] * T11[:, np.newaxis]
         T_dot_mats[1::2, :] = mats[1::2, :] * T22[:, np.newaxis]
 
-        S_dot_T = np.zeros(mats.shape, dtype=np.complex)
+        S_dot_T = np.zeros(mats.shape, dtype=bd.complex)
         S_dot_T[0::2,
                 0] = S11 * T_dot_mats[0::2, 0] + S12 * T_dot_mats[1::2, 0]
         S_dot_T[0::2,
@@ -366,7 +366,7 @@ def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
         elif pol.lower() == 'tm':
             (S11, S12, S21, S22) = S_TM(eps1, eps2, chis1, chis2)
 
-        mats = np.zeros((2 * N_oms, 2), dtype=np.complex)
+        mats = np.zeros((2 * N_oms, 2), dtype=bd.complex)
         mats[0::2, 0] = S11
         mats[1::2, 0] = S21
         mats[0::2, 1] = S12

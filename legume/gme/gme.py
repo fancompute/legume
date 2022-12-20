@@ -678,7 +678,7 @@ class GuidedModeExp(object):
             get_value(getattr(layer, layer_eps))
             for layer in [self.phc.claddings[0]] + self.phc.layers +
             [self.phc.claddings[1]]),
-                                 dtype=np.float).ravel()
+                                 dtype=bd.float).ravel()
 
         # Store an array of thickness of every layer (not including claddings)
         d_array = bd.array(list(layer.d for layer in \
@@ -686,7 +686,7 @@ class GuidedModeExp(object):
         # A separate array where the values are converted from ArrayBox to numpy
         # array, if using the 'autograd' backend.
         d_array_val = np.array(list(get_value(layer.d) for layer in \
-            self.phc.layers), dtype=np.float).ravel()
+            self.phc.layers), dtype=bd.float).ravel()
 
         (self.eps_array_val, self.eps_array, self.d_array_val, self.d_array) = \
                                 (eps_array_val, eps_array, d_array_val, d_array)
