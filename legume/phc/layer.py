@@ -1,3 +1,4 @@
+from typing import List, Union
 import numpy as np
 from legume.backend import backend as bd
 import legume.utils as utils
@@ -106,10 +107,8 @@ class ShapesLayer(Layer):
         rep += '\n)' if len(self.shapes) > 0 else ')'
         return rep
 
-    def add_shape(self, shapes):
-        """
-        Add a shape or a list of shapes to the layer.
-        """
+    def add_shape(self, shapes: List[Union[Shape]]) -> None:
+        """ Add a shape or a list of shapes to the layer."""
         if isinstance(shapes, Shape):
             shapes = [shapes]
 
