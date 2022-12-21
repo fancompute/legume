@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "legume-gme-tocha"
-version = "0.1.0"
+version = "0.2.0"
 description = "Guided-mode expansion for 2.5D photonic crystals."
 authors = ["Peter Koval <koval.peter@gmail.com>"]
 license = "MIT"
