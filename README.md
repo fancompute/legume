@@ -4,6 +4,10 @@
 
 <img src="https://github.com/fancompute/legume/blob/master/docs/_static/legume-logo.png" align="middle" title="logo" alt="logo">
 
+
+Current version: 0.2.0
+
+
 legume (le Guided-Mode Expansion) is a python implementation of the GME method for photonic crystal slabs, 
 including multi-layer structures. Plane-wave expansion for purely 2D structures is also included.
 Also, we have an `autograd` backend that allows gradients of all output values with respect to all input parameters
@@ -16,6 +20,7 @@ This is an experimental package, the recommended way of installing it would be `
 ```
 poetry install
 ```
+We are using the Poetry Lock File Format 2.0, which requires Poetry >= 1.2.2. We recommend Poetry 1.3 or above.
 
 ## Documentation and examples
 
