@@ -703,9 +703,9 @@ def eps_ft(struct,
                                        width_ratios=[1 - cbwidth, cbwidth])
     elif gridspec is not None and fig is not None:
         if cbar == False:
-            gs = mpl.gridspec.GridSpecFromSubplotSpec(len(ars), 1, gridspec)
+            gs = mpl.gridspec.GridSpecFromSubplotSpec(len(all_layers), 1, gridspec)
         else:
-            gs = mpl.gridspec.GridSpecFromSubplotSpec(len(ars), 2, gridspec)
+            gs = mpl.gridspec.GridSpecFromSubplotSpec(len(all_layers), 2, gridspec)
     else:
         raise ValueError(
             "Parameters gridspec and fig should be both specified "
@@ -849,8 +849,8 @@ def field(struct,
 
         pl, o, v = 'xy', 'z', zval
         if periodic == False:
-            kenv = np.exp(1j * grid1 * struct.kpoints[0, kind] +
-                          1j * grid2 * struct.kpoints[1, kind])
+            kenv = np.exp(1j * grid1[None, :] * struct.kpoints[0, kind] +
+                          1j * grid2[:, None] * struct.kpoints[1, kind])
 
     elif x is not None and z is None and y is None:
         if str_type == 'pwe':
