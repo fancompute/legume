@@ -2,7 +2,7 @@ import numpy as np
 
 from legume.backend import backend as bd
 import legume.utils as utils
-from . import ShapesLayer, FreeformLayer, Lattice
+from . import ShapesLayer, FreeformLayer, Lattice, QuantumWellLayer
 
 
 class PhotCryst(object):
@@ -32,6 +32,8 @@ class PhotCryst(object):
 
         # Initialize an empty list of layers
         self.layers = []
+        # Initialize an empty list of quantum wells
+        self.qws = []
 
     def __repr__(self):
         rep = 'PhotonicCrystal('
@@ -82,6 +84,32 @@ class PhotCryst(object):
 
         self.claddings[1].z_min = z_min + d
         self.layers.append(layer)
+
+    def add_qw(self, z, Vmax, a, M, E0, loss, osc_str):
+        """
+        Add a quantum wells block in the phc structure.
+
+        Parameters
+        ----------
+        z: list or np.ndarray.
+            Positions of the QWs.
+        Vmax : list or np.ndarray., [eV]
+            Potential barrier of the QWs with respect to the sorrounding.
+            It's positive if the QW is in the layer, and negative if it's in the holes.
+        a : list or np.ndarray., [m]
+            dimensional lattice constant.
+        M : list or np.ndarray., [kg]
+            Exciton mass.
+        E0 : list or np.ndarray., [eV]
+            Free exciton energy
+        loss : list or np.ndarray. [eV]
+            Exciton non-radiative losses.
+        osc_str: list or np.ndarray of a list with three values, 
+            [[1,1,1]], or [[1,1,1],[1,1,1]] for example. [m^-2]
+            exciton oscillator strength.
+        """
+        qw = QuantumWellLayer(z, Vmax, a, M, E0, loss, osc_str)
+        self.qws.append(qw)
 
     def add_shape(self, shapes, layer=-1, cladding=None):
         """
