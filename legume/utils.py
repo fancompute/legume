@@ -173,6 +173,17 @@ def fsolve(f, lb, ub, *args):
     Solve for scalar f(x, *args) = 0 w.r.t. scalar x within lb < x < ub
     """
     args_value = tuple([get_value(arg) for arg in args])
+    """"
+    # to have finer convergence we multiply the function by a number
+    #, we finde the root, and divide back, but this is not the problem ...
+    N = 1e100
+    def f_opt(x,*args):
+        return f(x,*args)*N
+    root,r = brentq(f_opt, lb, ub,args=args_value,full_output = True)
+    if r.converged == False:
+        raise ValueError(" Not converged")
+    """
+
     return brentq(f, lb, ub, args=args_value)
 
 

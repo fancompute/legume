@@ -35,6 +35,7 @@ class Backend(object):
     # types
     int = np.int64
     float = np.float64
+    complex256 = np.complex256
     complex = np.complex128
 
     def __repr__(self):
@@ -64,6 +65,10 @@ class NumpyBackend(Backend):
     interp = staticmethod(np.interp)
     fsolve_D22 = staticmethod(fsolve)
     extend = staticmethod(extend)
+    round = staticmethod(np.round)
+    shape = staticmethod(np.shape)
+    concatenate = staticmethod(np.concatenate)
+    size = staticmethod(np.size)
 
     # math functions
     exp = staticmethod(np.exp)
@@ -81,12 +86,15 @@ class NumpyBackend(Backend):
     real = staticmethod(np.real)
     imag = staticmethod(np.imag)
     inv = staticmethod(np.linalg.inv)
+    eig = staticmethod(np.linalg.eig)
     eigh = staticmethod(np.linalg.eigh)
     eigsh = staticmethod(sp.sparse.linalg.eigsh)
     outer = staticmethod(np.outer)
     conj = staticmethod(np.conj)
     var = staticmethod(np.var)
     power = staticmethod(np.power)
+    matmul = staticmethod(np.matmul)
+    tan = staticmethod(np.tan)
 
     def is_array(self, arr):
         """ check if an object is an array """
@@ -127,6 +135,10 @@ if AG_AVAILABLE:
         interp = staticmethod(interp_ag)
         fsolve_D22 = staticmethod(fsolve_ag)
         extend = staticmethod(extend_ag)
+        round = staticmethod(npa.round)
+        shape = staticmethod(npa.shape)
+        concatenate = staticmethod(npa.concatenate)
+        size = staticmethod(npa.size)
 
         # math functions
         exp = staticmethod(npa.exp)
@@ -150,6 +162,8 @@ if AG_AVAILABLE:
         conj = staticmethod(npa.conj)
         var = staticmethod(npa.var)
         power = staticmethod(npa.power)
+        matmul = staticmethod(npa.matmul)
+        tan = staticmethod(npa.tan)
 
         # constructors
         diag = staticmethod(npa.diag)

@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.linalg import block_diag
 
 import time, sys
 from itertools import zip_longest
@@ -28,6 +29,8 @@ class GuidedModeExp(object):
         """
 
         self.phc = phc
+        # An integer gmax can cause trouble with symmetry separation wrt vertical plane
+
         self.gmax = gmax
         self.truncate_g = truncate_g
 
@@ -37,6 +40,8 @@ class GuidedModeExp(object):
         # Parameters below are defined when self.run() is called
         # Number of G points included for every mode, will be defined after run
         self.modes_numg = []
+        #Index of G points included for every mode
+        self.ind_modes = []
         # Total number of basis vectors (equal to np.sum(self.modes_numg))
         self.N_basis = []
         # Indexes of guided modes which are actually included in the computation
@@ -44,13 +49,32 @@ class GuidedModeExp(object):
         self.gmode_include = []
 
         # Initialize all the attributes defined as properties below
+        self._symm = []
         self._freqs = []
+        self._freqs_odd = []
+        self._freqs_even = []
         self._freqs_im = []
+        self._freqs_im_odd = []
+        self._freqs_im_even = []
+        self._unbalance_im = []
+        self._unbalance_im_odd = []
+        self._unbalance_im_even = []
         self._eigvecs = []
+        self._eigvecs_odd = []
+        self._eigvecs_even = []
         self._rad_coup = {}
         self._rad_gvec = {}
+        self._rad_coup_odd = {}
+        self._rad_gvec_odd = {}
+        self._rad_coup_even = {}
+        self._rad_gvec_even = {}
         self._kpoints = []
         self._gvec = []
+
+        # Define direction angles in degrees of high symmetry lines for each lattice
+        self._square_an = np.arange(-360, 405, 45)
+        self._hex_an = np.arange(-360, 390, 30)
+        self._rec_an = np.arange(-360, 450, 90)
 
         # Initialize the reciprocal lattice vectors and compute the FT of all
         # the layers of the PhC
@@ -82,11 +106,37 @@ class GuidedModeExp(object):
         return rep
 
     @property
+    def symm(self):
+        """Symmetry of the eigenmodes computed by the 
+        guided-mode expansion  w.r.t. the vertical plane.
+        Calculated if symmetry = 'both'.
+        """
+        return self._symm
+
+    @property
     def freqs(self):
         """Real part of the frequencies of the eigenmodes computed by the 
         guided-mode expansion.
         """
         return self._freqs
+
+    @property
+    def freqs_odd(self):
+        """Real part of the frequencies of the eigenmodes which are
+        odd the symmetry is w.r.t. the vertical plane of symmetry
+        computed by the 
+        guided-mode expansion.
+        """
+        return self._freqs_odd
+
+    @property
+    def freqs_even(self):
+        """Real part of the frequencies of the eigenmodes which are
+        even the symmetry is w.r.t. the vertical plane of symmetry
+        computed by the  
+        guided-mode expansion.
+        """
+        return self._freqs_even
 
     @property
     def freqs_im(self):
@@ -96,10 +146,86 @@ class GuidedModeExp(object):
         return self._freqs_im
 
     @property
+    def freqs_im_odd(self):
+        """Imaginary part of the frequencies of the eigenmodes that are
+        odd w.r.t. the vertical plane of symmetry
+        computed by the guided-mode expansion.
+        """
+        return self._freqs_im_odd
+
+    @property
+    def freqs_im_even(self):
+        """Imaginary part of the frequencies of eigenmodes that are
+        even w.r.t. the vertical plane of symmetry
+        computed by the guided-mode expansion.
+        """
+        return self._freqs_im_even
+
+    @property
+    def unbalance_im(self):
+        """Unbalance between the two addends in the summation
+            of the imaginary part of the energy. The two addends
+            corresponds to s (te) coupling component, and 
+            p (tm) component. 
+            If unbalance_im ==
+            1 -> all coupling comes from s (te) wave
+            0 -> all coupling comes from p (tm) wave
+            0.5 -> half coupling from s and p waves
+            If freqs_im=0 we set unbalance_im = 0.5.
+        """
+        return self._unbalance_im
+
+    @property
+    def unbalance_im_odd(self):
+        """Unbalance between the two addends in the summation
+            of the imaginary part of the energy for modes that are
+            odd w.r.t. the vertical plane of symmetry. The two addends
+            corresponds to s (te) coupling component, and 
+            p (tm) component. 
+            If unbalance_im ==
+            1 -> all coupling comes from s (te) wave
+            0 -> all coupling comes from p (tm) wave
+            0.5 -> half coupling from s and p waves
+            If freqs_im=0 we set unbalance_im = 0.5.
+        """
+        return self._unbalance_im_odd
+
+    @property
+    def unbalance_im_even(self):
+        """Unbalance between the two addends in the summation
+            of the imaginary part of the energy modes that are
+            even w.r.t. the vertical plane of symmetry. The two addends
+            corresponds to s (te) coupling component, and 
+            p (tm) component. 
+            If unbalance_im ==
+            1 -> all coupling comes from s (te) wave
+            0 -> all coupling comes from p (tm) wave
+            0.5 -> half coupling from s and p waves
+            If freqs_im=0 we set unbalance_im = 0.5.
+        """
+        return self._unbalance_im_even
+
+    @property
     def eigvecs(self):
         """Eigenvectors of the eigenmodes computed by the guided-mode expansion.
         """
         return self._eigvecs
+
+    @property
+    def eigvecs_odd(self):
+        """Eigenvectors of the eigenmodes that are
+        odd w.r.t. the vertical plane of symmetry
+        computed by the guided-mode expansion.
+        """
+        return self._eigvecs_odd
+
+    @property
+    def eigvecs_even(self):
+        """Eigenvectors of the eigenmodes that are
+        even w.r.t. the vertical plane of symmetry
+        computed by the guided-mode expansion.
+        """
+        return self._eigvecs_even
 
     @property
     def rad_coup(self):
@@ -115,12 +241,58 @@ class GuidedModeExp(object):
         return self._rad_coup
 
     @property
+    def rad_coup_odd(self):
+        """Coupling to TE and TM radiative modes in the claddings calculated
+        for modes that are odd w.r.t. the vertical plane of symmetry.
+        The dictionary has four keys: ``'l_te'``, ``'l_tm'``, ``'u_te'``, 
+        ``'u_tm'``, denoting cladding (l/u) and polarization (te/tm, or S/P). 
+        Each of these is a list of lists in which the first dimension 
+        corresponds to the k-point index and the second dimension corresponds 
+        to the mode index. Finally, the elements are numpy arrays with length 
+        equal to all the allowed diffraction orders. The corresponding 
+        reciprocal lattice vectors are stored in :attr:`GuidedModeExp.rad_gvec`.
+        """
+        return self._rad_coup_odd
+
+    @property
+    def rad_coup_even(self):
+        """Coupling to TE and TM radiative modes in the claddings calculated 
+        for modes that are even w.r.t. the vertical plane of symmetry.
+        The dictionary has four keys: ``'l_te'``, ``'l_tm'``, ``'u_te'``, 
+        ``'u_tm'``, denoting cladding (l/u) and polarization (te/tm, or S/P). 
+        Each of these is a list of lists in which the first dimension 
+        corresponds to the k-point index and the second dimension corresponds 
+        to the mode index. Finally, the elements are numpy arrays with length 
+        equal to all the allowed diffraction orders. The corresponding 
+        reciprocal lattice vectors are stored in :attr:`GuidedModeExp.rad_gvec`.
+        """
+        return self._rad_coup_even
+
+    @property
     def rad_gvec(self):
-        """Reciprocal lattice vectos corresponding to the radiation emission 
+        """Reciprocal lattice vectors corresponding to the radiation emission 
         direction of the coupling constants stored in 
         :attr:`GuidedModeExp.rad_coup`.
         """
         return self._rad_gvec
+
+    @property
+    def rad_gvec_odd(self):
+        """Reciprocal lattice vectors corresponding to the radiation emission 
+        direction of the coupling constants for modes that are odd w.r.t. 
+        the vertical plane of symmetry stored in 
+        :attr:`GuidedModeExp.rad_coup`.
+        """
+        return self._rad_gvec_odd
+
+    @property
+    def rad_gvec_even(self):
+        """Reciprocal lattice vectors corresponding to the radiation emission 
+        direction of the coupling constants for modes that are even w.r.t.
+        the vertical plane of symmetry stored in 
+        :attr:`GuidedModeExp.rad_coup`.
+        """
+        return self._rad_gvec_even
 
     @property
     def kpoints(self):
@@ -149,7 +321,7 @@ class GuidedModeExp(object):
     def _init_reciprocal_tbt(self):
         """
         Initialize reciprocal lattice vectors with a parallelogram truncation
-        such that the eps matrix is toeplitz-block-toeplitz
+        such that the eps matrix is toeplitz-block-toeplitz 
         """
         n1max = np.int_(
             (2 * np.pi * self.gmax) / np.linalg.norm(self.phc.lattice.b1))
@@ -187,14 +359,51 @@ class GuidedModeExp(object):
         inds1 = np.tile(np.arange(-n1max, n1max + 1), (2*n2max + 1, 1))  \
                          .reshape((2*n2max + 1)*(2*n1max + 1), order='F')
         inds2 = np.tile(np.arange(-n2max, n2max + 1), 2 * n1max + 1)
-
         gvec = self.phc.lattice.b1[:, np.newaxis].dot(inds1[np.newaxis, :]) + \
                 self.phc.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
         gnorm = np.sqrt(gvec[0, :]**2 + gvec[1, :]**2)
-        gvec = gvec[:, gnorm <= 2 * np.pi * self.gmax]
+        if self.gmax * 2 * np.pi in gnorm:
+            gvec = gvec[:, gnorm <= 2 * np.pi * (self.gmax + 0.0001)]
+            print(
+                f"Warning: gmax={self.gmax} exactly equal to one of the g-vectors modulus"
+                f", reciprocal lattice truncated with gmax={self.gmax+0.0001}"
+                f" to avoid problems."
+                f"\nPlane waves used in the expansion = {np.shape(gvec)[1]}.")
+        else:
+            gvec = gvec[:, gnorm <= 2 * np.pi * self.gmax]
 
         # Save the reciprocal lattice vectors
         self._gvec = gvec
+
+        # TO be tested
+        self.n1g = round(-gvec[0, 0] / 2 / np.pi) * 2 + 1
+        self.n2g = self.n1g
+
+    def _ind_g(self, gvecs, g_x, g_y, thr=1e-7):
+        """
+        Find the index of the vector with components (g_x,g_y) in gvecs
+        within a certain thershold given by 'thr' 
+        """
+        ind = bd.where((bd.abs((gvecs[0]) - g_x) < thr)
+                       & (bd.abs((gvecs[1]) - g_y) < thr))
+        if len(ind[0]) == 0:
+            raise ValueError(f"The vector ({g_x},{g_y}) reflected by the "
+                             "symmetry wrt the vertical plane"
+                             " does not match any g-vector.")
+
+        return ind
+
+    def _construct_sym_mat(self, theta):
+        """
+        Construct the matrix which reflects a g-vector w.r.t. a vertical
+        plane at angle theta (in degrees)
+        """
+        mat = bd.array([[
+            bd.cos(2 * theta * np.pi / 180),
+            bd.sin(2 * theta * np.pi / 180)
+        ], [bd.sin(2 * theta * np.pi / 180),
+            -bd.cos(2 * theta * np.pi / 180)]])
+        return mat
 
     def _get_guided(self, gk, kind, mode):
         """
@@ -291,8 +500,8 @@ class GuidedModeExp(object):
         # Expand boundaries a bit to make sure we get all the modes
         # Note that the 'exact' computation still uses interpolation,
         # but the grid is defined by the actual gk values
-        g_array -= 1e-6
-        g_array[-1] += 2e-6
+        g_array -= 1e-15
+        g_array[-1] += 2e-15
         self.g_array.append(g_array)
         self.gmode_te = self.gmode_inds[np.remainder(self.gmode_inds, 2) == 0]
         self.gmode_tm = self.gmode_inds[np.remainder(self.gmode_inds, 2) != 0]
@@ -373,6 +582,40 @@ class GuidedModeExp(object):
         Compute the unique FT coefficients of the permittivity, eps(g-g') for
         every layer in the PhC, assuming abs-initialized reciprocal lattice
         """
+        #(n1max, n2max) = (self.n1g, self.n2g)
+        #G1 = - self.gvec + self.gvec[:, [0]]
+        #G2 = np.zeros((2, n1max*n2max))
+
+        # Initialize the FT coefficient lists; in the end the length of these
+        # will be equal to the total number of layers in the PhC
+        self.T1 = []
+        self.T2 = []
+
+        #for ind1 in range(n1max):
+        #    G2[:, ind1*n2max:(ind1+1)*n2max] = - self.gvec[:, [ind1*n2max]] + \
+        #                    self.gvec[:, range(n2max)]
+
+        for layer in [self.phc.claddings[0]] + self.phc.layers + \
+                            [self.phc.claddings[1]]:
+            T1 = layer.compute_ft(self.gvec)
+            T2 = layer.compute_ft(self.gvec)
+
+            # Store T1 and T2
+            if bd.amax(bd.abs(
+                    bd.imag(T1))) < 1e-10 * bd.amax(bd.abs(bd.real(T1))):
+                self.T1.append(bd.real(T1))
+            else:
+                self.T1.append(T1)
+            if bd.amax(bd.abs(
+                    bd.imag(T2))) < 1e-10 * bd.amax(bd.abs(bd.real(T2))):
+                self.T2.append(bd.real(T2))
+            else:
+                self.T2.append(T2)
+
+        # Store the g-vectors to which T1 and T2 correspond
+        self.G1 = self.gvec
+        self.G2 = self.gvec
+
         ggridx = (self.gvec[0, :][np.newaxis, :] -
                   self.gvec[0, :][:, np.newaxis]).ravel()
         ggridy = (self.gvec[1, :][np.newaxis, :] -
@@ -390,9 +633,8 @@ class GuidedModeExp(object):
         """
         Construct the Hermitian matrix for diagonalization for a given k
         """
-
         # G + k vectors
-        gkx = self.gvec[0, :] + self.kpoints[0, kind] + 1e-10
+        gkx = self.gvec[0, :] + self.kpoints[0, kind] + self.delta_g
         gky = self.gvec[1, :] + self.kpoints[1, kind]
         gk = np.sqrt(np.square(gkx) + np.square(gky))
 
@@ -418,6 +660,7 @@ class GuidedModeExp(object):
 
         # Loop over modes and build the matrix block-by-block
         modes_numg = []
+        ind_modes = []
 
         # Find the gmode_inds that actually enter the computation (due to the
         # gmax cutoff, only a finite number of mode indexes can enter)
@@ -430,12 +673,12 @@ class GuidedModeExp(object):
                 gmode_include.append(mode)
         if gmode_include == []:
             raise RuntimeError(
-                "No guided modes were found for k-index %d. "
+                f"No guided modes were found for k-index {kind}. "
                 "One possibility is "
                 "that the effective permittivity of all layers is smaller than "
                 "that of at least one cladding. Reconsider your structure, or "
                 "try changing 'eps_eff' from 'average' to 'background' in "
-                "the options to GuidedModeExp.run()." % kind)
+                "the options to GuidedModeExp.run().")
         else:
             self.gmode_include.append(np.array(gmode_include))
 
@@ -452,7 +695,7 @@ class GuidedModeExp(object):
             (indmode1, oms1, As1, Bs1, chis1) = \
                         self._get_guided(gk, kind, mode1)
             modes_numg.append(indmode1.size)
-
+            ind_modes.append(indmode1)
             if len(modes_numg) > 1:
                 mat_blocks[im1].append(
                     bd.zeros((modes_numg[-1], bd.sum(modes_numg[:-1]))))
@@ -485,6 +728,8 @@ class GuidedModeExp(object):
         self.N_basis.append(np.sum(modes_numg))
         # Store a list of how many g-points were used for each mode index
         self.modes_numg.append(modes_numg)
+        #Store a list of g-points indexes used for wach mode index
+        self.ind_modes.append(ind_modes)
 
         # Stack all the blocks together
         mat = bd.vstack([bd.hstack(mb) for mb in mat_blocks])
@@ -501,6 +746,8 @@ class GuidedModeExp(object):
         Make the matrix Hermitian (note that only upper part of the blocks, i.e.
         (im2 >= im1) was computed
         """
+        #print(np.round(bd.triu(mat, 1) + bd.transpose(bd.conj(bd.triu(mat, 1))) + bd.real(bd.diag(bd.diag(mat))),3))
+        #print(f'Dimension = {np.shape(np.round(bd.triu(mat, 1) + bd.transpose(bd.conj(bd.triu(mat, 1))) + bd.real(bd.diag(bd.diag(mat))),3))}')
         return bd.triu(mat, 1) + bd.transpose(bd.conj(bd.triu(mat, 1))) + \
                 bd.real(bd.diag(bd.diag(mat)))
 
@@ -543,7 +790,10 @@ class GuidedModeExp(object):
                         eig_solver='eigh',
                         eig_sigma: float = 0.,
                         eps_eff='average',
-                        verbose: bool = True):
+                        verbose: bool = True,
+                        symmetry: str = 'None',
+                        symm_thr: float = 1e-8,
+                        delta_g: float = 1e-15):
         """Set multiple options for the guided-mode expansion.
             
             Parameters
@@ -585,6 +835,16 @@ class GuidedModeExp(object):
                 pre-set ``eps_eff``.
             verbose : bool, optional
                 Print information at intermmediate steps. Default is True.
+            symmetry : string, optional
+                Symmetry with respect to the vertical plane of incidence,
+                it can be 'odd', 'even' or 'None'. Default is 'None'
+            symm_thr : float, optional
+                Thershold for out-of-diagonal terms in odd/even separated
+                Hamiltonian.
+                Default is 1e-8
+            delta_g: float, optional,
+                little component added to the x-component of vectors
+                g = k + G to avoid problems at g = 0 
             """
 
         # Make a dictionary that stores all the options
@@ -600,7 +860,10 @@ class GuidedModeExp(object):
             'eig_solver': eig_solver,
             'eig_sigma': eig_sigma,
             'eps_eff': eps_eff,
-            'verbose': verbose
+            'verbose': verbose,
+            'symmetry': symmetry,
+            'symm_thr': symm_thr,
+            'delta_g': delta_g
         }
 
         # Also store the options as separate attributes
@@ -611,7 +874,10 @@ class GuidedModeExp(object):
             # Set all the options as class attributes
             setattr(self, option, value)
 
-    def run(self, kpoints: np.ndarray = np.array([[0], [0]]), **kwargs):
+    def run(self,
+            kpoints: np.ndarray = np.array([[0], [0]]),
+            angles: np.ndarray = np.array([]),
+            **kwargs):
         """
         Compute the eigenmodes of the photonic crystal structure.
         
@@ -631,12 +897,20 @@ class GuidedModeExp(object):
                 stored in :attr:`GuidedModeExp.eigvecs`.
 
             If compute_im=True (as is default), run :meth:`GuidedModeExp.run_im`.
+            If symmetry = 'odd', 'even' or 'both' calculates symmetries for each k,
+            and imaginary part of frequencies of both polarizations
+            if symmetry = odd' or 'even' calculates imaginary part of 
+            'odd' or 'even' modes.
         
         Parameters
         ----------
         kpoints : np.ndarray, optional
             numpy array of shape (2, :) with the [kx, ky] coordinates of the 
             k-vectors over which the simulation is run.
+        angles : np.ndarray, optional
+            This is needed only in cas symmetry != 'None'.
+            Numpy array with direction angle in kx-ky plane of kpoints.
+
         **kwargs
             All the keyword arguments that can be passed here, as well as their 
             default values, are defined in 
@@ -655,6 +929,87 @@ class GuidedModeExp(object):
         self.N_basis = []
         self.gmode_include = []
 
+        #Check if angles are provided in case symmetry!='None'
+        if self.symmetry.lower() == 'none':
+            pass
+        elif self.symmetry.lower() == 'odd':
+            if bd.shape(angles)[0] == 0:
+                raise ValueError(
+                    "path['angles'] must be passed to GuidedModeExp.run()"
+                    " if symmetry = 'odd'")
+        elif self.symmetry.lower() == 'even':
+            if bd.shape(angles)[0] == 0:
+                raise ValueError(
+                    "path['angles'] must be passed to GuidedModeExp.run()"
+                    " if 'symmetry' = 'even'")
+        elif self.symmetry.lower() == 'both':
+            if bd.shape(angles)[0] == 0:
+                raise ValueError(
+                    "path['angles'] must be passed to GuidedModeExp.run()"
+                    " if 'symmetry' = 'both'")
+        else:
+            raise ValueError(
+                "'symmetry' can be 'None', 'odd', 'even' or 'both' ")
+
+        #Check that kpoints are in high symmetry lines of the lattice
+        # we round the angle to avoid numerical errors, moreover with self.symmetry != 'none'
+        #'self.trunate_g' must be 'abs'
+
+        if self.symmetry.lower() != 'none':
+            if self.truncate_g == 'tbt':
+                raise ValueError(
+                    "'truncate_g' must be 'abs' to separate odd and even modes"
+                    " w.r.t. a vertical plane of symmetry.")
+            #Square lattice
+            if (all(self.phc.lattice.a1/bd.sqrt(self.phc.lattice.ec_area) == [1,0]) and \
+                 all(self.phc.lattice.a2/bd.sqrt(self.phc.lattice.ec_area) == [0,1])):
+                for ang in angles:
+                    if (bd.round(ang, 8) in self._square_an) == False:
+                        raise ValueError(
+                            "Some kpoints are not along a high-symmetry line"
+                            " of square lattice")
+                #Dictionary with all reflection matrices used
+                refl_mat = {}
+                # Loop over unique angles
+                for ang in set(angles):
+                    re_mat = self._construct_sym_mat(ang)
+                    refl_mat.update({str(ang): re_mat})
+            #Hexagonal lattice
+            elif (all(self.phc.lattice.a1 == [0.5, bd.sqrt(3) / 2])
+                  and all(self.phc.lattice.a2 == [0.5, -bd.sqrt(3) / 2])):
+
+                for ang in angles:
+                    if (bd.round(ang, 8) in self._hex_an) == False:
+                        raise ValueError(
+                            "Some kpoints are not along a high-symmetry line"
+                            " of hexagonal lattice")
+                #Dictionary with all reflection matrices used
+                refl_mat = {}
+                # Loop over unique angles
+                for ang in set(angles):
+                    re_mat = self._construct_sym_mat(ang)
+                    refl_mat.update({str(ang): re_mat})
+            #Rectangular lattice
+            elif (bd.dot(self.phc.lattice.a1,self.phc.lattice.a1) != \
+                  bd.dot(self.phc.lattice.a2,self.phc.lattice.a2))  and \
+                 (( self.phc.lattice.a1[0]==0 and self.phc.lattice.a2[1]==0) or \
+                  ( self.phc.lattice.a1[1]==0 and self.phc.lattice.a2[0]==0 )):
+                for ang in angles:
+                    if (bd.round(ang, 8) in self._rec_an) == False:
+                        raise ValueError(
+                            "Some kpoints are not along a high-symmetry line"
+                            " of hexagonal lattice")
+                #Dictionary with all reflection matrices used
+                refl_mat = {}
+                # Loop over unique angles
+                for ang in set(angles):
+                    re_mat = self._construct_sym_mat(ang)
+                    refl_mat.update({str(ang): re_mat})
+            else:
+                raise ValueError(
+                    "Symmetry separation w.r.t. vertical plane is implemented"
+                    " for 'square', 'hexagonal' and rectangular lattices only")
+
         # Array of effective permittivity of every layer (including claddings)
         if self.eps_eff == 'average':
             layer_eps = 'eps_avg'
@@ -668,22 +1023,28 @@ class GuidedModeExp(object):
 
         # Store an array of the effective permittivity for every layer
         #(including claddings)
-        eps_array = bd.array([
-            bd.array(getattr(layer, layer_eps), dtype=bd.float).ravel() for layer in
-            [self.phc.claddings[0]] + self.phc.layers + [self.phc.claddings[1]]]).ravel()
+        eps_array = bd.array(list(
+            getattr(layer, layer_eps) for layer in [self.phc.claddings[0]] +
+            self.phc.layers + [self.phc.claddings[1]]),
+                             dtype=object).ravel()
+        eps_array = bd.array(eps_array, dtype=float)
         # A separate array where the values are converted from ArrayBox to numpy
         # array, if using the 'autograd' backend.
-        eps_array_val = np.array([
-            np.float64(get_value(getattr(layer, layer_eps))) for layer in
-            [self.phc.claddings[0]] + self.phc.layers + [self.phc.claddings[1]]]).ravel()
-
+        eps_array_val = np.array(list(
+            get_value(getattr(layer, layer_eps))
+            for layer in [self.phc.claddings[0]] + self.phc.layers +
+            [self.phc.claddings[1]]),
+                                 dtype=object).ravel()
+        eps_array_val = bd.array(eps_array_val, dtype=bd.float)
         # Store an array of thickness of every layer (not including claddings)
         d_array = bd.array(list(layer.d for layer in \
-            self.phc.layers), dtype=bd.float).ravel()
+            self.phc.layers), dtype=object).ravel()
+        d_array = bd.array(d_array, dtype=float)
         # A separate array where the values are converted from ArrayBox to numpy
         # array, if using the 'autograd' backend.
         d_array_val = np.array(list(get_value(layer.d) for layer in \
-            self.phc.layers), dtype=np.float64).ravel()
+            self.phc.layers), dtype=object).ravel()
+        d_array_val = bd.array(d_array_val, dtype=bd.float)
 
         (self.eps_array_val, self.eps_array, self.d_array_val, self.d_array) = \
                                 (eps_array_val, eps_array, d_array_val, d_array)
@@ -718,7 +1079,8 @@ class GuidedModeExp(object):
         else:
             self.t_guided = 0
         self.t_eig = 0  # For timing of the diagonalization
-
+        self.t_symmetry = 0  # For timing of symmetry matrix construction
+        self.t_creat_mat = 0 
         # Compute inverse matrix of FT of permittivity
         t = time.time()
         self.compute_eps_inv()
@@ -727,15 +1089,29 @@ class GuidedModeExp(object):
         # Loop over all k-points, construct the matrix, diagonalize, and compute
         # radiative losses for the modes requested by kinds_rad and minds_rad
         t_rad = 0
+
         freqs = []
+        freqs_odd = []
+        freqs_even = []
         freqs_im = []
+        freqs_odd = []
+        freqs_even = []
+        self._symm = []
         self._eigvecs = []
+        self._eigvecs_odd = []
+        self._eigvecs_even = []
+        self.even_counts = []
+        self.odd_counts = []
         for ik, k in enumerate(kpoints.T):
 
-            self._print("Running k-point %d of %d" %
-                        (ik + 1, kpoints.shape[1]),
+            self._print(f"Running GME k-point {ik+1} of {kpoints.shape[1]}",
                         flush=True)
+            t_create = time.time()
             mat = self._construct_mat(kind=ik)
+            # The guided modes are calculate inside _construct_mat, later we have to subrtact the time
+
+            self.t_creat_mat += time.time()-t_create
+
             if self.numeig > mat.shape[0]:
                 raise ValueError(
                     "Requested number of eigenvalues 'numeig' "
@@ -745,16 +1121,216 @@ class GuidedModeExp(object):
             # NB: we shift the matrix by np.eye to avoid problems at the zero-
             # frequency mode at Gamma
             t_eig = time.time()
+
             if self.eig_solver == 'eigh':
-                (freq2, evecs) = bd.eigh(mat + bd.eye(mat.shape[0]))
-                freq1 = bd.sqrt(
-                    bd.abs(freq2 - bd.ones(mat.shape[0]))) / 2 / np.pi
-                i_near = find_nearest(get_value(freq1), self.eig_sigma,
-                                      self.numeig)
-                i_sort = bd.argsort(freq1[i_near])
-                freq = freq1[i_near[i_sort]]
-                evec = evecs[:, i_near[i_sort]]
+
+                # Separates odd and even blocks of Hamiltonian
+                if self.symmetry.lower() != 'none':
+                    t_sym = time.time()
+                    blocks = []  #
+                    blocks_w = []  #eigenvectors
+                    #Symmetry operator for given angle
+                    symm_mat = refl_mat[str(angles[ik])]
+
+                    for ind_alpha, alpha in enumerate(self.gmode_inds):
+                        dim = self.modes_numg[ik][ind_alpha]
+                        #Block of symmetry operator corresponding to (k,ind_alpha)
+                        #block = np.zeros((dim,dim))
+                        block = bd.zeros((dim, dim))
+                        block_w = bd.zeros(dim)
+                        #Array with indexes used for a given guided mode @ k
+                        ind = self.ind_modes[ik][ind_alpha]
+                        #Array with G vectors used for a given guided mode @ k
+                        gvec_used = bd.array(
+                            [self.gvec[0][ind], self.gvec[1][ind]])
+                        #Array that will store reflected g-vectors by symmetry operator
+                        gvec_used_ex = np.zeros(np.shape(gvec_used))
+                        #Loop over used g-vectors
+                        for j in range(bd.shape(gvec_used)[1]):
+
+                            #Calculate the symmetry-reflected g-vector
+                            #We could implement specific cases for speed-up code, e.g. theta=0
+                            t_mat_refl = time.time()
+                            g_ex = bd.matmul(
+                                symm_mat, [gvec_used[0][j], gvec_used[1][j]])
+
+                            #Find index of reflected G-vector
+                            index_exc = self._ind_g(gvec_used, g_ex[0],
+                                                    g_ex[1])
+
+                            if j == index_exc[0][0]:
+                                block[j, j] = 1
+                                block_w[j] = 1
+                            else:
+                                block[j, j] = -1 / np.sqrt(2)
+                                block[j, index_exc] = 1 / bd.sqrt(2)
+                                block[index_exc, j] = 1 / bd.sqrt(2)
+                                block[index_exc, index_exc] = 1 / bd.sqrt(2)
+                                block_w[j] = -1
+                                block_w[index_exc] = 1
+
+                        #N.B. TE guided modes are odd, TM guided modes are even w.r.t. vertical symmetry plane
+                        if np.remainder(alpha, 2) == 0:
+                            blocks.append(block)
+                            blocks_w.append(-block_w)
+                        elif np.remainder(alpha, 2) != 0:
+                            blocks.append(block)
+                            blocks_w.append(block_w)
+
+                    # Change of basis matrix
+                    v_sigma = block_diag(*blocks)
+                    sigma_diag = bd.hstack(blocks_w)
+
+                    indexes_sigma = []
+                    even_count = 0
+                    odd_count = 0
+
+                    # Indexing for ordering all even modes before odd modes
+                    for ind_s, s_eig in enumerate(sigma_diag):
+                        if s_eig == 1:
+                            even_count += 1
+                            indexes_sigma.insert(0, ind_s)
+                        if s_eig == -1:
+                            odd_count += 1
+                            indexes_sigma.append(ind_s)
+                    """
+                    This is the action of the permutation matrix
+                    that orders even and odd modes,
+                    comment this line to see the symmetrised matrix
+                    in the original ordering.
+                    """
+                    v_sigma_non_permuted = np.asarray(v_sigma)
+                    v_sigma = v_sigma[:, indexes_sigma]
+
+                    separ_mat = bd.matmul(v_sigma.T, bd.matmul(mat, v_sigma))
+                    mat_even = separ_mat[0:even_count, 0:even_count]
+                    mat_odd = separ_mat[even_count:, even_count:]
+
+                    out_diag_1 = separ_mat[even_count:, 0:even_count]
+                    out_diag_2 = separ_mat[0:even_count, even_count:]
+                    """
+                    Check that Hamiltonian is completely separated in odd and even blocks
+                    only if they are both not empty, otherwise it means
+                    that there are only completely odd or even blocks. In that
+                    case, there are not out-of-diagonal terms.
+                    """
+                    if bd.size(mat_odd) != 0 and bd.size(mat_even) != 0:
+                        max_out_1 = bd.max(np.abs(out_diag_1))
+                        max_out_2 = bd.max(np.abs(out_diag_2))
+                    else:
+                        max_out_1 = 0
+                        max_out_2 = 0
+                        raise ValueError(
+                            "Only purely odd or even modes,"
+                            " we need to implement this possibility, add"
+                            " a guided mode with different polarisation.")
+
+                    if bd.max((max_out_1, max_out_2)) > self.symm_thr:
+                        raise ValueError(
+                            "Something went wrong with (odd/even) separation"
+                            f" of the Hamiltonian. Max out of diagonal value = {bd.max((max_out_1,max_out_2))}"
+                            " One possibility is that the basis"
+                            " of the lattice breaks the symmetry w.r.t. the vertical plane."
+                            " Otherwise, try to increase 'symm_thr' (default value = 1e-8)."
+                        )
+
+                    self.odd_counts.append(odd_count)
+                    self.even_counts.append(even_count)
+                    self.t_symmetry += time.time() - t_sym
+
+                # Diagonalise matrix
+                if self.symmetry.lower() == 'none':
+                    (freq2, evecs) = bd.eigh(mat + bd.eye(mat.shape[0]))
+                    freq1 = bd.sqrt(
+                        bd.abs(freq2 - bd.ones(mat.shape[0]))) / 2 / np.pi
+
+                    i_near = find_nearest(get_value(freq1), self.eig_sigma,
+                                          self.numeig)
+                    i_sort = bd.argsort(freq1[i_near])
+                    freq = freq1[i_near[i_sort]]
+                    evec = evecs[:, i_near[i_sort]]
+
+                elif self.symmetry.lower() == 'both':
+                    (freq2_odd,
+                     evecs_odd) = bd.eigh(mat_odd + bd.eye(mat_odd.shape[0]))
+                    freq1_odd = bd.sqrt(
+                        bd.abs(freq2_odd -
+                               bd.ones(mat_odd.shape[0]))) / 2 / np.pi
+                    zeros_arr = bd.zeros((even_count, np.shape(evecs_odd)[1]))
+                    evecs_odd = bd.concatenate((zeros_arr, evecs_odd))
+
+                    (freq2_even,
+                     evecs_even) = bd.eigh(mat_even +
+                                           bd.eye(mat_even.shape[0]))
+                    freq1_even = bd.sqrt(
+                        bd.abs(freq2_even -
+                               bd.ones(mat_even.shape[0]))) / 2 / np.pi
+                    zeros_arr = bd.zeros((odd_count, np.shape(evecs_even)[1]))
+                    evecs_even = bd.concatenate((evecs_even, zeros_arr))
+
+                    symm1 = bd.concatenate(
+                        (np.full(even_count, 1,
+                                 dtype=int), np.full(even_count, -1,
+                                                     dtype=int)))
+                    freq1 = bd.concatenate((freq1_even, freq1_odd))
+                    evecs = bd.concatenate((evecs_even, evecs_odd), axis=1)
+                    i_near = find_nearest(get_value(freq1), self.eig_sigma,
+                                          self.numeig)
+                    i_sort = bd.argsort(freq1[i_near])
+                    freq = freq1[i_near[i_sort]]
+                    symm = symm1[i_near[i_sort]]
+                    evec = evecs[:, i_near[i_sort]]
+                    #Rewrite eigenvector in original basis
+                    evec = bd.matmul(v_sigma, evec)
+                elif self.symmetry.lower() == 'odd':
+                    if self.numeig > mat_odd.shape[0]:
+                        raise ValueError(
+                            "Requested number of odd eigenvalues 'numeig' "
+                            "larger than total size of basis set. Reduce 'numeig' or "
+                            "increase 'gmax'")
+                    (freq2,
+                     evecs) = bd.eigh(mat_odd + bd.eye(mat_odd.shape[0]))
+                    freq1 = bd.sqrt(
+                        bd.abs(freq2 - bd.ones(mat_odd.shape[0]))) / 2 / np.pi
+
+                    i_near_odd = find_nearest(get_value(freq1), self.eig_sigma,
+                                              self.numeig)
+                    i_sort_odd = bd.argsort(freq1[i_near_odd])
+
+                    freq_odd = freq1[i_near_odd[i_sort_odd]]
+                    evec_odd = evecs[:, i_near_odd[i_sort_odd]]
+                    #Rewrite eigenvector in original basis
+                    zeros_arr = bd.zeros((even_count, np.shape(evec_odd)[1]))
+                    evec_odd = bd.concatenate((zeros_arr, evec_odd))
+                    evec_odd = bd.matmul(v_sigma, evec_odd)
+
+                elif self.symmetry.lower() == 'even':
+                    if self.numeig > mat_even.shape[0]:
+                        raise ValueError(
+                            "Requested number of even eigenvalues 'numeig' "
+                            "larger than total size of basis set. Reduce 'numeig' or "
+                            "increase 'gmax'")
+                    (freq2,
+                     evecs) = bd.eigh(mat_even + bd.eye(mat_even.shape[0]))
+                    freq1 = bd.sqrt(
+                        bd.abs(freq2 - bd.ones(mat_even.shape[0]))) / 2 / np.pi
+
+                    i_near_even = find_nearest(get_value(freq1),
+                                               self.eig_sigma, self.numeig)
+                    i_sort_even = bd.argsort(freq1[i_near_even])
+
+                    freq_even = freq1[i_near_even[i_sort_even]]
+                    evec_even = evecs[:, i_near_even[i_sort_even]]
+                    #Rewrite eigenvector in original basis
+                    zeros_arr = bd.zeros((odd_count, np.shape(evec_even)[1]))
+                    evec_even = bd.concatenate((evec_even, zeros_arr))
+                    evec_even = bd.matmul(v_sigma, evec_even)
+
             elif self.eig_solver == 'eigsh':
+                if self.symmetry.lower() != "none":
+                    raise ValueError(
+                        "odd/even separation implemented with 'eigh' solver only."
+                    )
                 (freq2,
                  evecs) = bd.eigsh(mat + bd.eye(mat.shape[0]),
                                    k=self.numeig,
@@ -768,67 +1344,169 @@ class GuidedModeExp(object):
                 raise ValueError("'eig_solver' can be 'eigh' or 'eigsh'")
             self.t_eig += time.time() - t_eig
 
-            freqs.append(freq)
-            self._eigvecs.append(evec)
+            if self.symmetry.lower() == 'none':
+                freqs.append(freq)
+                self._eigvecs.append(evec)
+            if self.symmetry.lower() == 'both':
+                freqs.append(freq)
+                self._eigvecs.append(evec)
+                self._symm.append(symm)
+            elif self.symmetry.lower() == 'odd':
+                freqs_odd.append(freq_odd)
+                self._eigvecs_odd.append(evec_odd)
+            elif self.symmetry.lower() == 'even':
+                freqs_even.append(freq_even)
+                self._eigvecs_even.append(evec_even)
 
         # Store the eigenfrequencies taking the standard reduced frequency
         # convention for the units (2pi a/c)
         self._freqs = bd.array(freqs)
-
+        self._freqs_odd = bd.array(freqs_odd, dtype="object")
+        self._freqs_even = bd.array(freqs_even, dtype="object")
+        # Guided modes are calculated inside _construct_mat() 
+        self.t_creat_mat = self.t_creat_mat - self.t_guided
+        total_time = time.time()-t_start
         self._print("", flush=True)
         self._print(
-            "%1.4fs total time for real part of frequencies, of which" %
-            (time.time() - t_start))
-        self._print("  %1.4fs for guided modes computation using"
-                    " the gmode_compute='%s' method" %
-                    (self.t_guided, self.gmode_compute.lower()))
-        self._print("  %1.4fs for inverse matrix of Fourier-space "
-                    "permittivity" % t_eps_inv)
+            f"{total_time:.3f}s total time for real part of frequencies, of which"
+        )
         self._print(
-            "  %1.4fs for matrix diagionalization using the '%s' solver" %
-            (self.t_eig, self.eig_solver.lower()))
+            f"  {self.t_guided:.3f}s ({self.t_guided/total_time*100:.0f}%) for guided modes computation using"
+            f" the gmode_compute='{self.gmode_compute.lower()}' method")
+        self._print(f"  {t_eps_inv:.3f}s ({t_eps_inv/total_time*100:.0f}%) for inverse matrix of Fourier-space "
+                    f"permittivity")
+        self._print(
+            f"  {(self.t_eig-self.t_symmetry):.3f}s ({(self.t_eig-self.t_symmetry)/total_time*100:.0f}%) for matrix diagionalization using "
+            f"the '{self.eig_solver.lower()}' solver")
+        self._print(
+            f"  {self.t_creat_mat:.3f}s ({self.t_creat_mat/total_time*100:.0f}%) for creating GME matrix")
+ 
+        if self.symmetry.lower() != 'none':
+            self._print(
+                f"  {self.t_symmetry:.3f}s ({self.t_symmetry/total_time*100:.0f}%) for creating change of basis matrix and multiply it"
+            )
 
         if self.compute_im == True:
             t = time.time()
-            self.run_im()
-            self._print("%1.4fs for imaginary part computation" %
-                        (time.time() - t))
+            self.run_im(self.symmetry)
+            self._print(
+                f"{(time.time()-t):.3f}s for imaginary part computation")
         else:
             self._print(
                 "Skipping imaginary part computation, use run_im() to"
                 " run it, or compute_rad() to compute the radiative rates"
                 " of selected eigenmodes")
 
-    def run_im(self):
+    def run_im(self, symm='none'):
         """
         Compute the radiative rates associated to all the eigenmodes that were 
         computed during :meth:`GuidedModeExp.run`. Results are stored in 
         :attr:`GuidedModeExp.freqs_im`, :attr:`GuidedModeExp.rad_coup`, and 
         :attr:`GuidedModeExp.rad_gvec`.
+        symm: str optional
+            Symmetry of modes for which it calculates imaginary part of 
+            frequencies, it can be 'odd', 'even' or 'both'.
         """
-        if len(self.freqs) == 0:
-            raise RuntimeError("Run the GME computation first!")
 
         freqs_i = []  # Imaginary part of frequencies
+        freqs_i_odd = []
+        freqs_i_even = []
+        freqs_i_te = []  # Imaginary part of frequencies
+        freqs_i_odd_te = []
+        freqs_i_even_te = []
+        freqs_i_tm = []  # Imaginary part of frequencies
+        freqs_i_odd_tm = []
+        freqs_i_even_tm = []
 
         # Coupling constants to lower- and upper-cladding radiative modes
         rad_coup = {'l_te': [], 'l_tm': [], 'u_te': [], 'u_tm': []}
         rad_gvec = {'l': [], 'u': []}
 
-        for kind in range(len(self.freqs)):
-            minds = np.arange(0, self.numeig)
-            (freqs_im, rc, rv) = self.compute_rad(kind, minds)
-            freqs_i.append(freqs_im)
-            for clad in ['l', 'u']:
-                rad_coup[clad + '_te'].append(rc[clad + '_te'])
-                rad_coup[clad + '_tm'].append(rc[clad + '_tm'])
-                rad_gvec[clad].append(rv[clad])
+        rad_coup_odd = {'l_te': [], 'l_tm': [], 'u_te': [], 'u_tm': []}
+        rad_gvec_odd = {'l': [], 'u': []}
 
-        self._freqs_im = bd.array(freqs_i)
-        self._rad_coup = rad_coup
-        self._rad_gvec = rad_gvec
+        rad_coup_even = {'l_te': [], 'l_tm': [], 'u_te': [], 'u_tm': []}
+        rad_gvec_even = {'l': [], 'u': []}
 
-    def compute_rad(self, kind: int, minds: list = [0]):
+        minds = np.arange(0, self.numeig)
+        if symm.lower() == 'none' or symm.lower() == 'both':
+            if len(self.freqs) == 0:
+                raise RuntimeError("Run the GME computation first!")
+
+            for kind in range(len(self.freqs)):
+                (freqs_im, freqs_im_te, freqs_im_tm, rc,
+                 rv) = self.compute_rad(kind, minds)
+                freqs_i.append(freqs_im)
+                freqs_i_te.append(
+                    freqs_im_te
+                )  # We won't save these, but just the unbalance between te and tm
+                freqs_i_tm.append(freqs_im_tm)
+                for clad in ['l', 'u']:
+                    rad_coup[clad + '_te'].append(rc[clad + '_te'])
+                    rad_coup[clad + '_tm'].append(rc[clad + '_tm'])
+                    rad_gvec[clad].append(rv[clad])
+
+            #calculate unbalance between s and p coupling
+            unbalance_i = np.array(freqs_i_te) / (np.array(freqs_i_te) +
+                                                  np.array(freqs_i_tm) + 1e-15)
+            # unbalance 0.5 where there are no losses
+            unbalance_i[np.abs(np.array(freqs_i)) < 1e-15] = 0.5
+
+            self._unbalance_im = bd.array(unbalance_i)
+            self._freqs_im = bd.array(freqs_i)
+            self._rad_coup = rad_coup
+            self._rad_gvec = rad_gvec
+
+        elif symm.lower() == 'odd':
+            if len(self.freqs_odd) == 0:
+                raise RuntimeError("Run the GME computation first!")
+
+            for kind in range(len(self.freqs_odd)):
+                (freqs_im_odd, freqs_im_odd_te, freqs_im_odd_tm, rc_odd,
+                 rv_odd) = self.compute_rad(kind, minds, symm_im='odd')
+                freqs_i_odd.append(freqs_im_odd)
+                freqs_i_odd_te.append(freqs_im_odd_te)
+                freqs_i_odd_tm.append(freqs_im_odd_tm)
+                for clad in ['l', 'u']:
+                    rad_coup_odd[clad + '_te'].append(rc_odd[clad + '_te'])
+                    rad_coup_odd[clad + '_tm'].append(rc_odd[clad + '_tm'])
+                    rad_gvec_odd[clad].append(rv_odd[clad])
+
+            #calculate unbalance between s and p coupling
+            unbalance_i_odd = np.array(freqs_i_odd_tm) / (
+                np.array(freqs_i_odd_te) + np.array(freqs_i_odd_tm) + 1e-15)
+            # unbalance 0.5 where there are no losses
+            unbalance_i_odd[np.abs(np.array(freqs_i_odd)) < 1e-15] = 0.5
+            self._unbalance_im_odd = bd.array(unbalance_i_odd)
+            self._freqs_im_odd = bd.array(freqs_i_odd)
+            self._rad_coup_odd = rad_coup_odd
+            self._rad_gvec_odd = rad_gvec_odd
+
+        elif symm.lower() == 'even':
+            if len(self.freqs_even) == 0:
+                raise RuntimeError("Run the GME computation first!")
+            for kind in range(len(self.freqs_even)):
+                (freqs_im_even, freqs_im_even_te, freqs_im_even_tm, rc_even,
+                 rv_even) = self.compute_rad(kind, minds, symm_im='even')
+                freqs_i_even.append(freqs_im_even)
+                freqs_i_even_te.append(freqs_im_even_te)
+                freqs_i_even_tm.append(freqs_im_even_tm)
+                for clad in ['l', 'u']:
+                    rad_coup_even[clad + '_te'].append(rc_even[clad + '_te'])
+                    rad_coup_even[clad + '_tm'].append(rc_even[clad + '_tm'])
+                    rad_gvec_even[clad].append(rv_even[clad])
+
+            #calculate unbalance between s and p coupling
+            unbalance_i_even = np.array(freqs_i_even_te) / (
+                np.array(freqs_i_even_te) + np.array(freqs_i_even_tm) + 1e-15)
+            # unbalance 0.5 where there are no losses
+            unbalance_i_even[np.abs(np.array(freqs_i_even)) < 1e-15] = 0.5
+            self._unbalance_im_even = bd.array(unbalance_i_even)
+            self._freqs_im_even = bd.array(freqs_i_even)
+            self._rad_coup_even = rad_coup_even
+            self._rad_gvec_even = rad_gvec_even
+
+    def compute_rad(self, kind: int, minds: list = [0], symm_im: str = 'None'):
         """
         Compute the radiation losses of the eigenmodes after the dispersion
         has been computed.
@@ -840,6 +1518,9 @@ class GuidedModeExp(object):
         minds : list, optional
             Indexes of which modes to be computed. Max value must be smaller 
             than `GuidedModeExp.numeig` set in :meth:`GuidedModeExp.run`.
+        symm_im : str 
+                Symmetry wrt to the veritcal plane of symmetry for 
+                 which we perform the calculation
         
         Returns
         -------
@@ -851,15 +1532,31 @@ class GuidedModeExp(object):
         rad_gvec : dict
             Reciprocal lattice vectors in the lower/upper cladding 
             corresponding to ``rad_coup``.
+        unbalance : unbalance between s (te) and p (tm) coupling:
+            1 -> all coupling comes from s (te) wave
+            0 -> all coupling comes from p (tm) wave
+            0.5 -> half coupling from s and p waves
+            If freqs_im=0 we set unbalance_im = 0.5.
         """
-        if len(self.freqs) == 0:
+
+        if symm_im.lower() == 'none' or symm_im.lower() == 'both':
+            freqs = self.freqs
+            eigvecs = self.eigvecs
+        elif symm_im.lower() == 'odd':
+            freqs = self.freqs_odd
+            eigvecs = self.eigvecs_odd
+        elif symm_im.lower() == 'even':
+            freqs = self.freqs_even
+            eigvecs = self.eigvecs_even
+
+        if len(freqs) == 0:
             raise RuntimeError("Run the GME computation first!")
         if np.max(np.array(minds)) > self.numeig - 1:
             raise ValueError("Requested mode index out of range for the %d "
                              "stored eigenmodes" % self.numeig)
 
         # G + k vectors
-        gkx = self.gvec[0, :] + self.kpoints[0, kind] + 1e-10
+        gkx = self.gvec[0, :] + self.kpoints[0, kind] + self.delta_g
         gky = self.gvec[1, :] + self.kpoints[1, kind]
         gk = np.sqrt(np.square(gkx) + np.square(gky))
 
@@ -878,13 +1575,14 @@ class GuidedModeExp(object):
 
         # Variables to store the results
         rad_tot = []
+        rad_tot_te = []
+        rad_tot_tm = []
         rad_gvec = {'l': [], 'u': []}
         rad_coup = {'l_te': [], 'l_tm': [], 'u_te': [], 'u_tm': []}
         # Iterate over all the modes to be computed
         for im in minds:
-            omr = 2 * np.pi * self.freqs[kind, im]
-            evec = self.eigvecs[kind][:, im]
-
+            omr = 2 * np.pi * freqs[kind, im]
+            evec = eigvecs[kind][:, im]
             # Reciprocal vedctors within the radiative cone for the claddings
             indmoder = [bd.argwhere(gk**2 <= \
                     self.phc.claddings[0].eps_avg*omr**2).ravel(),
@@ -946,7 +1644,7 @@ class GuidedModeExp(object):
                             Bs1, chis1, indmoder[clad_ind], omr_arr,
                             Ys['te'][clad_ind], Xs['te'][clad_ind],
                             chis['te'][clad_ind], pq)
-                    # print(kind, im, indmode1.shape, self.modes_numg[kind][im1])
+                    #print(f"kind={kind}, {im}, {indmode1.shape},{np.shape(evec)}, {self.modes_numg[kind][im1]}")
                     rad = rad * bd.conj(
                         evec[count:count +
                              self.modes_numg[kind][im1]][:, np.newaxis])
@@ -997,20 +1695,29 @@ class GuidedModeExp(object):
                 # sum(square(abs(c_l))) + sum(square(abs(c_u)))
                 c_l[pol] = bd.sqrt(np.pi * rad_dos[0]) * rad_c[pol][0]
                 c_u[pol] = bd.sqrt(np.pi * rad_dos[1]) * rad_c[pol][1]
-                rad_t = rad_t + \
-                    bd.sum(bd.square(bd.abs(c_l[pol]))) + \
-                    bd.sum(bd.square(bd.abs(c_u[pol])))
 
                 # Store the coupling constants (they are effectively in units
                 # of angular frequency omega)
                 rad_coup['l_' + pol].append(c_l[pol])
                 rad_coup['u_' + pol].append(c_u[pol])
 
+            # radiative coupling to s (te) wave
+            rad_te = bd.sum(bd.square(bd.abs(c_l["te"]))) + \
+                    bd.sum(bd.square(bd.abs(c_u["te"])))
+            # radiative coupling to p (tm) wave
+            rad_tm = bd.sum(bd.square(bd.abs(c_l["tm"]))) + \
+                    bd.sum(bd.square(bd.abs(c_u["tm"])))
+            rad_t = rad_te + rad_tm
+
             rad_tot.append(bd.imag(bd.sqrt(omr**2 + 1j * rad_t)))
+            rad_tot_te.append(bd.imag(bd.sqrt(omr**2 + 1j * rad_te)))
+            rad_tot_tm.append(bd.imag(bd.sqrt(omr**2 + 1j * rad_tm)))
 
         # Compute radiation rate in units of frequency
         freqs_im = bd.array(rad_tot) / 2 / np.pi
-        return (freqs_im, rad_coup, rad_gvec)
+        freqs_im_te = bd.array(rad_tot_te) / 2 / np.pi
+        freqs_im_tm = bd.array(rad_tot_tm) / 2 / np.pi
+        return (freqs_im, freqs_im_te, freqs_im_tm, rad_coup, rad_gvec)
 
     def get_eps_xy(self, z: float, xgrid=None, ygrid=None, Nx=100, Ny=100):
         """
@@ -1094,12 +1801,20 @@ class GuidedModeExp(object):
             The Fourier transform of the z-component of the specified field. 
 
         """
-        evec = self.eigvecs[kind][:, mind]
-        omega = self.freqs[kind][mind] * 2 * np.pi
+        if self.symmetry.lower() == 'none' or self.symmetry.lower() == 'both':
+            evec = self.eigvecs[kind][:, mind]
+            omega = self.freqs[kind][mind] * 2 * np.pi
+        elif self.symmetry.lower() == 'odd':
+            evec = self.eigvecs_odd[kind][:, mind]
+            omega = self.freqs_odd[kind][mind] * 2 * np.pi
+        elif self.symmetry.lower() == 'even':
+            evec = self.eigvecs_even[kind][:, mind]
+            omega = self.freqs_even[kind][mind] * 2 * np.pi
+
         k = self.kpoints[:, kind]
 
         # G + k vectors
-        gkx = self.gvec[0, :] + k[0] + 1e-10
+        gkx = self.gvec[0, :] + k[0] + self.delta_g
         gky = self.gvec[1, :] + k[1]
         gnorm = bd.sqrt(bd.square(gkx) + bd.square(gky))
 
@@ -1328,7 +2043,7 @@ class GuidedModeExp(object):
             if ygrid is None:
                 ygrid = ygr
 
-        # Get the field fourier components
+        # Get the field Fourier components
         ft, fi = {}, {}
         (ft['x'], ft['y'], ft['z']) = self.ft_field_xy(field, kind, mind, z)
 
@@ -1390,7 +2105,6 @@ class GuidedModeExp(object):
         zgrid : np.ndarray
             The input or constructed grid in z.
         """
-
         if xgrid is None:
             xgrid = self.phc.lattice.xy_grid(Nx=Nx, Ny=2)[0]
         ygrid = np.array([y])

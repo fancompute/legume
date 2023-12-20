@@ -105,7 +105,7 @@ class Lattice(object):
 
         return (np.linspace(xmin, xmax, Nx), np.linspace(ymin, ymax, Ny))
 
-    def bz_path(self, pts, ns):
+    def bz_path(self, pts, ns, symm_g=[np.pi, 0]):
         """
         Make a path in the Brillouin zone.
         
@@ -119,14 +119,18 @@ class Lattice(object):
         ns : int or list
             A list of length either 1 or ``len(pts) - 1``, specifying 
             how many points are to be added between each two **pts**.
+        symm_g : list
+            It can be either a 2-element array , or one of {'G', 'K', 'M'}
+            for a 'hexagonal' Lattice type, or one of {'G', 'X', 'M'} 
+            for a 'square' Lattice type.
+            It defines the symmetry to be applied to the gamma point.
         
         Returns
         -------
         path: dict 
-            A dictionary with the 'kpoints', 'labels', and the 
-            'indexes' corresponding to the labels.      
+            A dictionary with the 'kpoints', 'labels',
+            'indexes', and the 'angles' corresponding to the labels.      
         """
-
         if not isinstance(ns, list): ns = list(ns)
         npts = len(pts)
         if npts < 2:
@@ -152,10 +156,22 @@ class Lattice(object):
             inds.append(count)
         kpoints[:, -1] = p2
 
+        angs = np.angle(kpoints[0] + 1j * kpoints[1], deg=True)
+        #If gamma point is present, force symmetry from 'symm_g'
+        index_g = np.where((kpoints[0] == 0) & (kpoints[1] == 0))
+        if len(index_g) != 0:
+            ang_g = np.angle(self._parse_point(symm_g)[0] +
+                             1j * self._parse_point(symm_g)[1],
+                             deg=True)
+            angs[index_g] = ang_g
+
+        angs = tuple(angs)
+
         path = {
             'kpoints': kpoints,
             'labels': [str(pt) for pt in pts],
-            'indexes': inds
+            'indexes': inds,
+            'angles': angs
         }
 
         return path
