@@ -954,6 +954,7 @@ class GuidedModeExp(object):
         #Check that kpoints are in high symmetry lines of the lattice
         # we round the angle to avoid numerical errors, moreover with self.symmetry != 'none'
         #'self.trunate_g' must be 'abs'
+
         if self.symmetry.lower() != 'none':
             if self.truncate_g == 'tbt':
                 raise ValueError(
@@ -1079,6 +1080,7 @@ class GuidedModeExp(object):
             self.t_guided = 0
         self.t_eig = 0  # For timing of the diagonalization
         self.t_symmetry = 0  # For timing of symmetry matrix construction
+        self.t_creat_mat = 0 
         # Compute inverse matrix of FT of permittivity
         t = time.time()
         self.compute_eps_inv()
@@ -1100,12 +1102,15 @@ class GuidedModeExp(object):
         self._eigvecs_even = []
         self.even_counts = []
         self.odd_counts = []
-
         for ik, k in enumerate(kpoints.T):
 
             self._print(f"Running GME k-point {ik+1} of {kpoints.shape[1]}",
                         flush=True)
+            t_create = time.time()
             mat = self._construct_mat(kind=ik)
+            # The guided modes are calculate inside _construct_mat, later we have to subrtact the time
+
+            self.t_creat_mat += time.time()-t_create
 
             if self.numeig > mat.shape[0]:
                 raise ValueError(
@@ -1119,10 +1124,9 @@ class GuidedModeExp(object):
 
             if self.eig_solver == 'eigh':
 
-                #Separates odd and even blocks of Hamiltonian
-                t_sym = time.time()
+                # Separates odd and even blocks of Hamiltonian
                 if self.symmetry.lower() != 'none':
-                    #blocks = []
+                    t_sym = time.time()
                     blocks = []  #
                     blocks_w = []  #eigenvectors
                     #Symmetry operator for given angle
@@ -1192,7 +1196,7 @@ class GuidedModeExp(object):
                     """
                     This is the action of the permutation matrix
                     that orders even and odd modes,
-                    comment this line to see the symmetrised natrix
+                    comment this line to see the symmetrised matrix
                     in the original ordering.
                     """
                     v_sigma_non_permuted = np.asarray(v_sigma)
@@ -1234,6 +1238,7 @@ class GuidedModeExp(object):
                     self.even_counts.append(even_count)
                     self.t_symmetry += time.time() - t_sym
 
+                # Diagonalise matrix
                 if self.symmetry.lower() == 'none':
                     (freq2, evecs) = bd.eigh(mat + bd.eye(mat.shape[0]))
                     freq1 = bd.sqrt(
@@ -1358,29 +1363,34 @@ class GuidedModeExp(object):
         self._freqs = bd.array(freqs)
         self._freqs_odd = bd.array(freqs_odd, dtype="object")
         self._freqs_even = bd.array(freqs_even, dtype="object")
-
+        # Guided modes are calculated inside _construct_mat() 
+        self.t_creat_mat = self.t_creat_mat - self.t_guided
+        total_time = time.time()-t_start
         self._print("", flush=True)
         self._print(
-            f"{(time.time()-t_start):.4f}s total time for real part of frequencies, of which"
+            f"{total_time:.3f}s total time for real part of frequencies, of which"
         )
         self._print(
-            f"  {self.t_guided:.4f}s for guided modes computation using"
+            f"  {self.t_guided:.3f}s ({self.t_guided/total_time*100:.0f}%) for guided modes computation using"
             f" the gmode_compute='{self.gmode_compute.lower()}' method")
-        self._print(f"  {t_eps_inv:.4f}s for inverse matrix of Fourier-space "
-                    "permittivity")
+        self._print(f"  {t_eps_inv:.3f}s ({t_eps_inv/total_time*100:.0f}%) for inverse matrix of Fourier-space "
+                    f"permittivity")
         self._print(
-            f"  {(self.t_eig-self.t_symmetry):.4f}s for matrix diagionalization using "
+            f"  {(self.t_eig-self.t_symmetry):.3f}s ({(self.t_eig-self.t_symmetry)/total_time*100:.0f}%) for matrix diagionalization using "
             f"the '{self.eig_solver.lower()}' solver")
+        self._print(
+            f"  {self.t_creat_mat:.3f}s ({self.t_creat_mat/total_time*100:.0f}%) for creating GME matrix")
+ 
         if self.symmetry.lower() != 'none':
             self._print(
-                f"  {self.t_symmetry:.4f}s for creating symmetry rotation matrix "
+                f"  {self.t_symmetry:.3f}s ({self.t_symmetry/total_time*100:.0f}%) for creating change of basis matrix and multiply it"
             )
 
         if self.compute_im == True:
             t = time.time()
             self.run_im(self.symmetry)
             self._print(
-                f"{(time.time()-t):.4f}s for imaginary part computation")
+                f"{(time.time()-t):.3f}s for imaginary part computation")
         else:
             self._print(
                 "Skipping imaginary part computation, use run_im() to"
@@ -1437,10 +1447,10 @@ class GuidedModeExp(object):
                     rad_gvec[clad].append(rv[clad])
 
             #calculate unbalance between s and p coupling
-            unbalance_i = bd.array(freqs_i_te) / (bd.array(freqs_i_te) +
-                                                  bd.array(freqs_i_tm) + 1e-15)
+            unbalance_i = np.array(freqs_i_te) / (np.array(freqs_i_te) +
+                                                  np.array(freqs_i_tm) + 1e-15)
             # unbalance 0.5 where there are no losses
-            unbalance_i[np.abs(bd.array(freqs_i)) < 1e-15] = 0.5
+            unbalance_i[np.abs(np.array(freqs_i)) < 1e-15] = 0.5
 
             self._unbalance_im = bd.array(unbalance_i)
             self._freqs_im = bd.array(freqs_i)
@@ -1463,10 +1473,10 @@ class GuidedModeExp(object):
                     rad_gvec_odd[clad].append(rv_odd[clad])
 
             #calculate unbalance between s and p coupling
-            unbalance_i_odd = bd.array(freqs_i_odd_tm) / (
-                bd.array(freqs_i_odd_te) + bd.array(freqs_i_odd_tm) + 1e-15)
+            unbalance_i_odd = np.array(freqs_i_odd_tm) / (
+                np.array(freqs_i_odd_te) + np.array(freqs_i_odd_tm) + 1e-15)
             # unbalance 0.5 where there are no losses
-            unbalance_i_odd[np.abs(bd.array(freqs_i_odd)) < 1e-15] = 0.5
+            unbalance_i_odd[np.abs(np.array(freqs_i_odd)) < 1e-15] = 0.5
             self._unbalance_im_odd = bd.array(unbalance_i_odd)
             self._freqs_im_odd = bd.array(freqs_i_odd)
             self._rad_coup_odd = rad_coup_odd
@@ -1487,10 +1497,10 @@ class GuidedModeExp(object):
                     rad_gvec_even[clad].append(rv_even[clad])
 
             #calculate unbalance between s and p coupling
-            unbalance_i_even = bd.array(freqs_i_even_te) / (
-                bd.array(freqs_i_even_te) + bd.array(freqs_i_even_tm) + 1e-15)
+            unbalance_i_even = np.array(freqs_i_even_te) / (
+                np.array(freqs_i_even_te) + np.array(freqs_i_even_tm) + 1e-15)
             # unbalance 0.5 where there are no losses
-            unbalance_i_even[np.abs(bd.array(freqs_i_even)) < 1e-15] = 0.5
+            unbalance_i_even[np.abs(np.array(freqs_i_even)) < 1e-15] = 0.5
             self._unbalance_im_even = bd.array(unbalance_i_even)
             self._freqs_im_even = bd.array(freqs_i_even)
             self._rad_coup_even = rad_coup_even
@@ -1508,6 +1518,9 @@ class GuidedModeExp(object):
         minds : list, optional
             Indexes of which modes to be computed. Max value must be smaller 
             than `GuidedModeExp.numeig` set in :meth:`GuidedModeExp.run`.
+        symm_im : str 
+                Symmetry wrt to the veritcal plane of symmetry for 
+                 which we perform the calculation
         
         Returns
         -------
@@ -1526,13 +1539,13 @@ class GuidedModeExp(object):
             If freqs_im=0 we set unbalance_im = 0.5.
         """
 
-        if symm_im == 'None':
+        if symm_im.lower() == 'none' or symm_im.lower() == 'both':
             freqs = self.freqs
             eigvecs = self.eigvecs
-        elif symm_im == 'odd':
+        elif symm_im.lower() == 'odd':
             freqs = self.freqs_odd
             eigvecs = self.eigvecs_odd
-        elif symm_im == 'even':
+        elif symm_im.lower() == 'even':
             freqs = self.freqs_even
             eigvecs = self.eigvecs_even
 
