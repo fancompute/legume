@@ -1429,7 +1429,7 @@ def field(struct,
         Figure object for the plot.
     """
     if isinstance(struct, GuidedModeExp):
-        vert_symm = gme.symmetry.lower()
+        vert_symm = struct.symmetry.lower()
         str_type = 'gme'
     elif isinstance(struct, PlaneWaveExp):
         vert_symm = 'none'
