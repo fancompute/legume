@@ -69,6 +69,7 @@ class NumpyBackend(Backend):
     shape = staticmethod(np.shape)
     concatenate = staticmethod(np.concatenate)
     size = staticmethod(np.size)
+    full = staticmethod(np.full)
 
     # math functions
     exp = staticmethod(np.exp)
@@ -139,6 +140,7 @@ if AG_AVAILABLE:
         shape = staticmethod(npa.shape)
         concatenate = staticmethod(npa.concatenate)
         size = staticmethod(npa.size)
+        full = staticmethod(npa.full)
 
         # math functions
         exp = staticmethod(npa.exp)

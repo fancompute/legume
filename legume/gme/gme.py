@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.linalg import block_diag
-
+from scipy.sparse import coo_array as coo
 import time, sys
 from itertools import zip_longest
 
@@ -1132,12 +1132,27 @@ class GuidedModeExp(object):
                     #Symmetry operator for given angle
                     symm_mat = refl_mat[str(angles[ik])]
 
+                    data_blocks = []
+                    row_blocks = []
+                    col_blocks = []
+
+                    # Dimension of final change of basis matrix
+                    dim_final = 0
                     for ind_alpha, alpha in enumerate(self.gmode_inds):
                         dim = self.modes_numg[ik][ind_alpha]
+                        
                         #Block of symmetry operator corresponding to (k,ind_alpha)
-                        #block = np.zeros((dim,dim))
+                        
                         block = bd.zeros((dim, dim))
                         block_w = bd.zeros(dim)
+                        
+                        # These are for creating sparse matrix
+                        # check_g to avoid double countings on reflected g
+                        check_g = bd.full((dim),False)
+                        data_block = []
+                        row_block = []
+                        col_block = []
+
                         #Array with indexes used for a given guided mode @ k
                         ind = self.ind_modes[ik][ind_alpha]
                         #Array with G vectors used for a given guided mode @ k
@@ -1159,16 +1174,37 @@ class GuidedModeExp(object):
                                                     g_ex[1])
 
                             if j == index_exc[0][0]:
+                                # G vector reflect on itself
                                 block[j, j] = 1
                                 block_w[j] = 1
+                                data_block.append(1)
+                                row_block.append(j+dim_final)
+                                col_block.append(j+dim_final) 
                             else:
-                                block[j, j] = -1 / np.sqrt(2)
-                                block[j, index_exc] = 1 / bd.sqrt(2)
-                                block[index_exc, j] = 1 / bd.sqrt(2)
-                                block[index_exc, index_exc] = 1 / bd.sqrt(2)
-                                block_w[j] = -1
-                                block_w[index_exc] = 1
+                                # G vector reflect on another G' vector
 
+                                # we avoid double counting
+ 
+                                if check_g[j] == False:
+                                    block[j, j] = -1 / np.sqrt(2)
+                                    block[j, index_exc] = 1 / bd.sqrt(2)
+                                    block[index_exc, j] = 1 / bd.sqrt(2)
+                                    block[index_exc, index_exc] = 1 / bd.sqrt(2)
+                                    block_w[j] = -1
+                                    block_w[index_exc] = 1
+                                    row = np.array([j,j,index_exc[0][0],index_exc[0][0]])+dim_final
+                                    col = np.array([j,index_exc[0][0],j,index_exc[0][0]])+dim_final
+                                    data_block.extend([-1 / bd.sqrt(2),1 / bd.sqrt(2),1 / bd.sqrt(2),1 / bd.sqrt(2)])
+                                    row_block.extend(row)
+                                    col_block.extend(col)
+                                    check_g[index_exc] = True
+                                    check_g[j] = True
+                        dim_final += dim
+                        
+                        
+                        data_blocks.append(bd.array(data_block))
+                        row_blocks.append(bd.array(row_block))
+                        col_blocks.append(bd.array(col_block))
                         #N.B. TE guided modes are odd, TM guided modes are even w.r.t. vertical symmetry plane
                         if np.remainder(alpha, 2) == 0:
                             blocks.append(block)
@@ -1178,9 +1214,17 @@ class GuidedModeExp(object):
                             blocks_w.append(block_w)
 
                     # Change of basis matrix
-                    v_sigma = block_diag(*blocks)
-                    sigma_diag = bd.hstack(blocks_w)
+                    data_blocks = bd.hstack(data_blocks)
+                    col_blocks = bd.hstack(col_blocks)
+                    row_blocks = bd.hstack(row_blocks)
+                    v_sigma_coo = coo((data_blocks,(row_blocks,col_blocks)),shape=(dim_final,dim_final))
+                    
+                    # This is without sparse matrix
+                    #v_sigma = block_diag(*blocks)
 
+                    sigma_diag = bd.hstack(blocks_w)
+                    #diff = np.allclose(v_sigma_coo.toarray(),v_sigma )
+                    #print(f"Sono uguali? {diff}")
                     indexes_sigma = []
                     even_count = 0
                     odd_count = 0
@@ -1199,10 +1243,43 @@ class GuidedModeExp(object):
                     comment this line to see the symmetrised matrix
                     in the original ordering.
                     """
-                    v_sigma_non_permuted = np.asarray(v_sigma)
-                    v_sigma = v_sigma[:, indexes_sigma]
+                    
+#                  sparse= False
+ #                   if sparse == True:
+                    #v_sigma_coo = coo(v_sigma)
+                    data_P = np.ones(len(indexes_sigma))
+                    col_P = np.arange(len(indexes_sigma))
+                    row_P = np.array(indexes_sigma)
+                    P = coo((data_P,(row_P,col_P)),shape=(len(indexes_sigma),len(indexes_sigma)))
+                    t0_sparse =time.time()
 
-                    separ_mat = bd.matmul(v_sigma.T, bd.matmul(mat, v_sigma))
+
+                    
+                    separ_mat_sparse = v_sigma_coo.transpose().dot(mat.T)
+                    separ_mat_sparse = P.transpose().dot(separ_mat_sparse)
+                    separ_mat_sparse =  v_sigma_coo.transpose().dot(separ_mat_sparse.T)
+                    separ_mat_sparse = P.transpose().dot(separ_mat_sparse)
+                    
+#                    else:
+                    #v_sigma_non_permuted = np.asarray(v_sigma)
+                    #v_sigma = v_sigma[:, indexes_sigma]
+
+                    # change of basis with permutation
+                    v_sigma_perm = v_sigma_coo.dot(P)
+
+                    #diff = np.allclose(separ_mat,bd.matmul(v_sigma.T, bd.matmul(mat, v_sigma)) )
+                    #t0_change =time.time()
+                    #separ_mat = bd.matmul(v_sigma.T, bd.matmul(mat, v_sigma))
+                    separ_mat = separ_mat_sparse
+                    #print(f"------------- Sono uguali?? Risposta: {diff} ---------")
+                    #print(f"Ci ho messo ------ {time.time()-t0_change:.1f} s")
+                    diff_mat = np.abs(separ_mat-separ_mat_sparse)
+                    import matplotlib.pyplot as plt
+                    if False:
+                        plt.matshow(np.log10(diff_mat+1e-16),vmin=-15,vmax=-10)
+                        plt.colorbar()
+                        plt.title(f"Maxdiff = {np.max(diff_mat):.2e}, sum = {np.sum(diff_mat):.2e}")
+                        plt.show()
                     mat_even = separ_mat[0:even_count, 0:even_count]
                     mat_odd = separ_mat[even_count:, even_count:]
 
@@ -1281,7 +1358,8 @@ class GuidedModeExp(object):
                     symm = symm1[i_near[i_sort]]
                     evec = evecs[:, i_near[i_sort]]
                     #Rewrite eigenvector in original basis
-                    evec = bd.matmul(v_sigma, evec)
+                    #evec = bd.matmul(v_sigma, evec)
+                    evec = v_sigma_perm.dot(evec)
                 elif self.symmetry.lower() == 'odd':
                     if self.numeig > mat_odd.shape[0]:
                         raise ValueError(
@@ -1302,8 +1380,8 @@ class GuidedModeExp(object):
                     #Rewrite eigenvector in original basis
                     zeros_arr = bd.zeros((even_count, np.shape(evec_odd)[1]))
                     evec_odd = bd.concatenate((zeros_arr, evec_odd))
-                    evec_odd = bd.matmul(v_sigma, evec_odd)
-
+                    #evec_odd = bd.matmul(v_sigma, evec_odd)
+                    evec_odd = v_sigma_perm.dot(evec_odd)
                 elif self.symmetry.lower() == 'even':
                     if self.numeig > mat_even.shape[0]:
                         raise ValueError(
@@ -1324,8 +1402,8 @@ class GuidedModeExp(object):
                     #Rewrite eigenvector in original basis
                     zeros_arr = bd.zeros((odd_count, np.shape(evec_even)[1]))
                     evec_even = bd.concatenate((evec_even, zeros_arr))
-                    evec_even = bd.matmul(v_sigma, evec_even)
-
+                    #evec_even = bd.matmul(v_sigma, evec_even)
+                    evec_even = v_sigma_perm.dot(evec_even)
             elif self.eig_solver == 'eigsh':
                 if self.symmetry.lower() != "none":
                     raise ValueError(
