@@ -13,7 +13,7 @@ it is used when needed only so as not to slow down everything
 # Numpy must be present
 import numpy as np
 import scipy as sp
-
+from scipy import sparse
 # Import some specially written functions
 from .utils import toeplitz_block, fsolve, extend
 
@@ -21,6 +21,7 @@ from .utils import toeplitz_block, fsolve, extend
 try:
     import autograd.numpy as npa
     import autograd.scipy as spa
+    #from autograd.scipy import spa_sparse
     from .primitives import (toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag,
                              eigsh_ag, inv_ag, sqrt_ag, extend_ag)
     AG_AVAILABLE = True
@@ -69,6 +70,7 @@ class NumpyBackend(Backend):
     shape = staticmethod(np.shape)
     concatenate = staticmethod(np.concatenate)
     size = staticmethod(np.size)
+    full = staticmethod(np.full)
 
     # math functions
     exp = staticmethod(np.exp)
@@ -95,6 +97,9 @@ class NumpyBackend(Backend):
     power = staticmethod(np.power)
     matmul = staticmethod(np.matmul)
     tan = staticmethod(np.tan)
+
+    # Sparse matrix class
+    #coo = staticmethod(sparse.coo_array)
 
     def is_array(self, arr):
         """ check if an object is an array """
@@ -139,6 +144,7 @@ if AG_AVAILABLE:
         shape = staticmethod(npa.shape)
         concatenate = staticmethod(npa.concatenate)
         size = staticmethod(npa.size)
+        full = staticmethod(npa.full)
 
         # math functions
         exp = staticmethod(npa.exp)
@@ -174,6 +180,9 @@ if AG_AVAILABLE:
         linspace = staticmethod(npa.linspace)
         arange = staticmethod(npa.arange)
         newaxis = staticmethod(npa.newaxis)
+        
+        # Sparse matrix class
+        #coo = staticmethod(spa_sparse.coo_array)
 
 
 backend = NumpyBackend()
