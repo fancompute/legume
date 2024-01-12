@@ -834,12 +834,12 @@ class GuidedModeExp(object):
                 photonic crystal layers, including the claddings, must have a 
                 pre-set ``eps_eff``.
             verbose : bool, optional
-                Print information at intermmediate steps. Default is True.
+                Print information at intermediate steps. Default is True.
             symmetry : string, optional
                 Symmetry with respect to the vertical plane of incidence,
                 it can be 'odd', 'even' or 'None'. Default is 'None'
             symm_thr : float, optional
-                Thershold for out-of-diagonal terms in odd/even separated
+                Threshold for out-of-diagonal terms in odd/even separated
                 Hamiltonian.
                 Default is 1e-8
             delta_g: float, optional,
@@ -1127,17 +1127,16 @@ class GuidedModeExp(object):
                 # Separates odd and even blocks of Hamiltonian
                 if self.symmetry.lower() != 'none':
                     t_sym = time.time()
+                    symm_mat = refl_mat[str(angles[ik])]
+                    """
+                    Symmetrised legume without sparse matrix
+                   
                     blocks = []  #
                     blocks_w = []  #eigenvectors
+
                     #Symmetry operator for given angle
                     symm_mat = refl_mat[str(angles[ik])]
 
-                    data_blocks = []
-                    row_blocks = []
-                    col_blocks = []
-
-                    # Dimension of final change of basis matrix
-                    dim_final = 0
                     for ind_alpha, alpha in enumerate(self.gmode_inds):
                         dim = self.modes_numg[ik][ind_alpha]
                         
@@ -1145,13 +1144,6 @@ class GuidedModeExp(object):
                         
                         block = bd.zeros((dim, dim))
                         block_w = bd.zeros(dim)
-                        
-                        # These are for creating sparse matrix
-                        # check_g to avoid double countings on reflected g
-                        check_g = bd.full((dim),False)
-                        data_block = []
-                        row_block = []
-                        col_block = []
 
                         #Array with indexes used for a given guided mode @ k
                         ind = self.ind_modes[ik][ind_alpha]
@@ -1162,7 +1154,6 @@ class GuidedModeExp(object):
                         gvec_used_ex = np.zeros(np.shape(gvec_used))
                         #Loop over used g-vectors
                         for j in range(bd.shape(gvec_used)[1]):
-
                             #Calculate the symmetry-reflected g-vector
                             #We could implement specific cases for speed-up code, e.g. theta=0
                             t_mat_refl = time.time()
@@ -1177,9 +1168,6 @@ class GuidedModeExp(object):
                                 # G vector reflect on itself
                                 block[j, j] = 1
                                 block_w[j] = 1
-                                data_block.append(1)
-                                row_block.append(j+dim_final)
-                                col_block.append(j+dim_final) 
                             else:
                                 # G vector reflect on another G' vector
 
@@ -1192,19 +1180,7 @@ class GuidedModeExp(object):
                                     block[index_exc, index_exc] = 1 / bd.sqrt(2)
                                     block_w[j] = -1
                                     block_w[index_exc] = 1
-                                    row = np.array([j,j,index_exc[0][0],index_exc[0][0]])+dim_final
-                                    col = np.array([j,index_exc[0][0],j,index_exc[0][0]])+dim_final
-                                    data_block.extend([-1 / bd.sqrt(2),1 / bd.sqrt(2),1 / bd.sqrt(2),1 / bd.sqrt(2)])
-                                    row_block.extend(row)
-                                    col_block.extend(col)
-                                    check_g[index_exc] = True
-                                    check_g[j] = True
-                        dim_final += dim
-                        
-                        
-                        data_blocks.append(bd.array(data_block))
-                        row_blocks.append(bd.array(row_block))
-                        col_blocks.append(bd.array(col_block))
+
                         #N.B. TE guided modes are odd, TM guided modes are even w.r.t. vertical symmetry plane
                         if np.remainder(alpha, 2) == 0:
                             blocks.append(block)
@@ -1213,15 +1189,8 @@ class GuidedModeExp(object):
                             blocks.append(block)
                             blocks_w.append(block_w)
 
-                    # Change of basis matrix
-                    data_blocks = bd.hstack(data_blocks)
-                    col_blocks = bd.hstack(col_blocks)
-                    row_blocks = bd.hstack(row_blocks)
-                    v_sigma_coo = coo((data_blocks,(row_blocks,col_blocks)),shape=(dim_final,dim_final))
-                    
-                    # This is without sparse matrix
-                    #v_sigma = block_diag(*blocks)
 
+                    # This is without sparse matrix
                     sigma_diag = bd.hstack(blocks_w)
                     #diff = np.allclose(v_sigma_coo.toarray(),v_sigma )
                     #print(f"Sono uguali? {diff}")
@@ -1237,60 +1206,30 @@ class GuidedModeExp(object):
                         if s_eig == -1:
                             odd_count += 1
                             indexes_sigma.append(ind_s)
-                    """
-                    This is the action of the permutation matrix
-                    that orders even and odd modes,
-                    comment this line to see the symmetrised matrix
-                    in the original ordering.
-                    """
-                    
-#                  sparse= False
- #                   if sparse == True:
-                    #v_sigma_coo = coo(v_sigma)
-                    data_P = np.ones(len(indexes_sigma))
-                    col_P = np.arange(len(indexes_sigma))
-                    row_P = np.array(indexes_sigma)
-                    P = coo((data_P,(row_P,col_P)),shape=(len(indexes_sigma),len(indexes_sigma)))
-                    t0_sparse =time.time()
 
-
-                    
-                    separ_mat_sparse = v_sigma_coo.transpose().dot(mat.T)
-                    separ_mat_sparse = P.transpose().dot(separ_mat_sparse)
-                    separ_mat_sparse =  v_sigma_coo.transpose().dot(separ_mat_sparse.T)
-                    separ_mat_sparse = P.transpose().dot(separ_mat_sparse)
-                    
-#                    else:
                     #v_sigma_non_permuted = np.asarray(v_sigma)
-                    #v_sigma = v_sigma[:, indexes_sigma]
+                    v_sigma = v_sigma[:, indexes_sigma]
 
                     # change of basis with permutation
                     v_sigma_perm = v_sigma_coo.dot(P)
 
                     #diff = np.allclose(separ_mat,bd.matmul(v_sigma.T, bd.matmul(mat, v_sigma)) )
                     #t0_change =time.time()
-                    #separ_mat = bd.matmul(v_sigma.T, bd.matmul(mat, v_sigma))
-                    separ_mat = separ_mat_sparse
-                    #print(f"------------- Sono uguali?? Risposta: {diff} ---------")
-                    #print(f"Ci ho messo ------ {time.time()-t0_change:.1f} s")
-                    diff_mat = np.abs(separ_mat-separ_mat_sparse)
-                    import matplotlib.pyplot as plt
-                    if False:
-                        plt.matshow(np.log10(diff_mat+1e-16),vmin=-15,vmax=-10)
-                        plt.colorbar()
-                        plt.title(f"Maxdiff = {np.max(diff_mat):.2e}, sum = {np.sum(diff_mat):.2e}")
-                        plt.show()
+                    separ_mat = bd.matmul(v_sigma.T, bd.matmul(mat, v_sigma))
+
                     mat_even = separ_mat[0:even_count, 0:even_count]
                     mat_odd = separ_mat[even_count:, even_count:]
 
                     out_diag_1 = separ_mat[even_count:, 0:even_count]
                     out_diag_2 = separ_mat[0:even_count, even_count:]
-                    """
+
+
+                    
+
                     Check that Hamiltonian is completely separated in odd and even blocks
                     only if they are both not empty, otherwise it means
                     that there are only completely odd or even blocks. In that
                     case, there are not out-of-diagonal terms.
-                    """
                     if bd.size(mat_odd) != 0 and bd.size(mat_even) != 0:
                         max_out_1 = bd.max(np.abs(out_diag_1))
                         max_out_2 = bd.max(np.abs(out_diag_2))
@@ -1313,6 +1252,13 @@ class GuidedModeExp(object):
 
                     self.odd_counts.append(odd_count)
                     self.even_counts.append(even_count)
+                    
+
+
+
+                     """
+                    mat_even, mat_odd, v_sigma_perm = self._separate_hamiltonian_sparse(mat,symm_mat,ik)
+
                     self.t_symmetry += time.time() - t_sym
 
                 # Diagonalise matrix
@@ -1333,7 +1279,7 @@ class GuidedModeExp(object):
                     freq1_odd = bd.sqrt(
                         bd.abs(freq2_odd -
                                bd.ones(mat_odd.shape[0]))) / 2 / np.pi
-                    zeros_arr = bd.zeros((even_count, np.shape(evecs_odd)[1]))
+                    zeros_arr = bd.zeros((self.even_counts[ik], np.shape(evecs_odd)[1]))
                     evecs_odd = bd.concatenate((zeros_arr, evecs_odd))
 
                     (freq2_even,
@@ -1342,12 +1288,12 @@ class GuidedModeExp(object):
                     freq1_even = bd.sqrt(
                         bd.abs(freq2_even -
                                bd.ones(mat_even.shape[0]))) / 2 / np.pi
-                    zeros_arr = bd.zeros((odd_count, np.shape(evecs_even)[1]))
+                    zeros_arr = bd.zeros((self.odd_counts[ik], np.shape(evecs_even)[1]))
                     evecs_even = bd.concatenate((evecs_even, zeros_arr))
 
                     symm1 = bd.concatenate(
-                        (np.full(even_count, 1,
-                                 dtype=int), np.full(even_count, -1,
+                        (np.full(self.even_counts[ik], 1,
+                                 dtype=int), np.full(self.even_counts[ik], -1,
                                                      dtype=int)))
                     freq1 = bd.concatenate((freq1_even, freq1_odd))
                     evecs = bd.concatenate((evecs_even, evecs_odd), axis=1)
@@ -1378,7 +1324,7 @@ class GuidedModeExp(object):
                     freq_odd = freq1[i_near_odd[i_sort_odd]]
                     evec_odd = evecs[:, i_near_odd[i_sort_odd]]
                     #Rewrite eigenvector in original basis
-                    zeros_arr = bd.zeros((even_count, np.shape(evec_odd)[1]))
+                    zeros_arr = bd.zeros((self.even_counts[ik], np.shape(evec_odd)[1]))
                     evec_odd = bd.concatenate((zeros_arr, evec_odd))
                     #evec_odd = bd.matmul(v_sigma, evec_odd)
                     evec_odd = v_sigma_perm.dot(evec_odd)
@@ -1400,7 +1346,7 @@ class GuidedModeExp(object):
                     freq_even = freq1[i_near_even[i_sort_even]]
                     evec_even = evecs[:, i_near_even[i_sort_even]]
                     #Rewrite eigenvector in original basis
-                    zeros_arr = bd.zeros((odd_count, np.shape(evec_even)[1]))
+                    zeros_arr = bd.zeros((self.odd_counts[ik], np.shape(evec_even)[1]))
                     evec_even = bd.concatenate((evec_even, zeros_arr))
                     #evec_even = bd.matmul(v_sigma, evec_even)
                     evec_even = v_sigma_perm.dot(evec_even)
@@ -1583,6 +1529,170 @@ class GuidedModeExp(object):
             self._freqs_im_even = bd.array(freqs_i_even)
             self._rad_coup_even = rad_coup_even
             self._rad_gvec_even = rad_gvec_even
+
+    def _separate_hamiltonian_sparse(self,mat,symm_mat,ik):
+        """
+        Separates the Hamiltonian matrix into 
+        even and odd block w.r.t. the vertical plane of 
+        symmetry chosen. This function uses sparse
+        matrices, since the change of basis matrix is
+        mostly filled with 0.
+        
+        Parameters
+        ----------
+        mat : np.array 
+            Hamiltonian to separate
+        symm_mat : np.array
+            2X2 reflection matrix
+        ik : int
+            Index of k-vector
+
+
+        Returns
+        -------
+        mat_even: np.array
+            Array corresponding to even block of Hamiltonian
+        mat_odd: np.array
+            Array corresponding to odd block of Hamiltonian
+        v_sigma_perm : np.array
+            Array which performs the change of basis and
+            a permutation that orders all even modes 
+            before odd modes
+        """
+
+        data_blocks = []
+        row_blocks = []
+        col_blocks = []
+
+        blocks_w = []
+
+        #dim_final = np.shape(mat)[0]
+        dim_final = 0 
+
+        for ind_alpha, alpha in enumerate(self.gmode_inds):
+            dim = self.modes_numg[ik][ind_alpha]
+            # These are for creating sparse matrix
+            # check_g to avoid double counting on reflected g
+            block_w = bd.zeros(dim)
+            check_g = bd.full((dim),False)
+            data_block = []
+            row_block = []
+            col_block = []
+            #Array with indexes used for a given guided mode @ k
+            ind = self.ind_modes[ik][ind_alpha]
+            #Array with G vectors used for a given guided mode @ k
+            gvec_used = bd.array(
+                [self.gvec[0][ind], self.gvec[1][ind]])
+            #Array that will store reflected g-vectors by symmetry operator
+            gvec_used_ex = np.zeros(np.shape(gvec_used))
+            #Loop over used g-vectors
+            for j in range(bd.shape(gvec_used)[1]):
+                #Calculate the symmetry-reflected g-vector
+                #We could implement specific cases for speed-up code, e.g. theta=0
+                t_mat_refl = time.time()
+                g_ex = bd.matmul(
+                                symm_mat, [gvec_used[0][j], gvec_used[1][j]])
+                #Find index of reflected G-vector
+                index_exc = self._ind_g(gvec_used, g_ex[0],
+                                                    g_ex[1])
+                if j == index_exc[0][0]:
+                    # G vector reflect on itself
+                    block_w[j] = 1
+                    data_block.append(1)
+                    row_block.append(j+dim_final)
+                    col_block.append(j+dim_final) 
+                else:
+                    # G vector reflect on another G' vector
+                    # we avoid double counting
+
+                    if check_g[j] == False:
+                        block_w[j] = -1
+                        block_w[index_exc] = 1
+                        row = np.array([j,j,index_exc[0][0],index_exc[0][0]])+dim_final
+                        col = np.array([j,index_exc[0][0],j,index_exc[0][0]])+dim_final
+                        data_block.extend([-1 / bd.sqrt(2),1 / bd.sqrt(2),1 / bd.sqrt(2),1 / bd.sqrt(2)])
+                        row_block.extend(row)
+                        col_block.extend(col)
+                        check_g[index_exc] = True
+                        check_g[j] = True
+            
+            dim_final += dim
+
+            data_blocks.append(bd.array(data_block))
+            row_blocks.append(bd.array(row_block))
+            col_blocks.append(bd.array(col_block))
+            
+            #N.B. TE guided modes are odd, TM guided modes are even w.r.t. vertical symmetry plane
+            if np.remainder(alpha, 2) == 0:
+                blocks_w.append(-block_w)
+            elif np.remainder(alpha, 2) != 0:
+                blocks_w.append(block_w)
+
+
+
+
+        # Change of basis matrix
+        data_blocks = bd.hstack(data_blocks)
+        col_blocks = bd.hstack(col_blocks)
+        row_blocks = bd.hstack(row_blocks)
+        v_sigma_coo = coo((data_blocks,(row_blocks,col_blocks)),shape=(dim_final,dim_final))
+        
+        sigma_diag = bd.hstack(blocks_w)
+
+        indexes_sigma = []
+        even_count = 0
+        odd_count = 0
+
+        # Indexing for ordering all even modes before odd modes
+        for ind_s, s_eig in enumerate(sigma_diag):
+            if s_eig == 1:
+                even_count += 1
+                indexes_sigma.insert(0, ind_s)
+            if s_eig == -1:
+                odd_count += 1
+                indexes_sigma.append(ind_s)
+
+        data_P = np.ones(len(indexes_sigma))
+        col_P = np.arange(len(indexes_sigma))
+        row_P = np.array(indexes_sigma)
+        P = coo((data_P,(row_P,col_P)),shape=(dim_final,dim_final))
+                    
+        separ_mat_sparse = v_sigma_coo.transpose().dot(mat.T)
+        separ_mat_sparse = P.transpose().dot(separ_mat_sparse)
+        separ_mat_sparse =  v_sigma_coo.transpose().dot(separ_mat_sparse.T)
+        separ_mat_sparse = P.transpose().dot(separ_mat_sparse)
+
+        v_sigma_perm = v_sigma_coo.dot(P)
+
+        mat_even = separ_mat_sparse[0:even_count, 0:even_count]
+        mat_odd = separ_mat_sparse[even_count:, even_count:]
+
+        out_diag_1 = separ_mat_sparse[even_count:, 0:even_count]
+        out_diag_2 = separ_mat_sparse[0:even_count, even_count:]
+        if bd.size(mat_odd) != 0 and bd.size(mat_even) != 0:
+            max_out_1 = bd.max(np.abs(out_diag_1))
+            max_out_2 = bd.max(np.abs(out_diag_2))
+        else:
+            max_out_1 = 0
+            max_out_2 = 0
+            raise ValueError(
+                "Only purely odd or even modes,"
+                " we need to implement this possibility, add"
+                " a guided mode with different polarisation.")
+
+        if bd.max((max_out_1, max_out_2)) > self.symm_thr:
+            raise ValueError(
+                "Something went wrong with (odd/even) separation"
+                f" of the Hamiltonian. Max out of diagonal value = {bd.max((max_out_1,max_out_2))}"
+                " One possibility is that the basis"
+                " of the lattice breaks the symmetry w.r.t. the vertical plane."
+                " Otherwise, try to increase 'symm_thr' (default value = 1e-8)."
+            )
+
+        self.odd_counts.append(odd_count)
+        self.even_counts.append(even_count)
+
+        return mat_even, mat_odd, v_sigma_perm
 
     def compute_rad(self, kind: int, minds: list = [0], symm_im: str = 'None'):
         """
