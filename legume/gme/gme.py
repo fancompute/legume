@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.linalg import block_diag
-from scipy.sparse import coo_array as coo
+#from scipy.sparse import coo_array as coo
 import time, sys
 from itertools import zip_longest
 
@@ -1635,7 +1635,7 @@ class GuidedModeExp(object):
         data_blocks = bd.hstack(data_blocks)
         col_blocks = bd.hstack(col_blocks)
         row_blocks = bd.hstack(row_blocks)
-        v_sigma_coo = coo((data_blocks,(row_blocks,col_blocks)),shape=(dim_final,dim_final))
+        v_sigma_coo = bd.coo((data_blocks,(row_blocks,col_blocks)),shape=(dim_final,dim_final))
         
         sigma_diag = bd.hstack(blocks_w)
 
@@ -1655,7 +1655,7 @@ class GuidedModeExp(object):
         data_P = np.ones(len(indexes_sigma))
         col_P = np.arange(len(indexes_sigma))
         row_P = np.array(indexes_sigma)
-        P = coo((data_P,(row_P,col_P)),shape=(dim_final,dim_final))
+        P = bd.coo((data_P,(row_P,col_P)),shape=(dim_final,dim_final))
                     
         separ_mat_sparse = v_sigma_coo.transpose().dot(mat.T)
         separ_mat_sparse = P.transpose().dot(separ_mat_sparse)
