@@ -1,6 +1,7 @@
 import numpy as np
 from scipy.linalg import block_diag
-from scipy.sparse import coo_array as coo
+from scipy.sparse import coo_matrix as coo # Older versions of Scipy have coo_matrix attribute only
+
 import time, sys
 from itertools import zip_longest
 
