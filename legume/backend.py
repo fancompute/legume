@@ -21,7 +21,7 @@ from .utils import toeplitz_block, fsolve, extend
 try:
     import autograd.numpy as npa
     import autograd.scipy as spa
-    from autograd.scipy import spa_sparse
+    #from autograd.scipy import spa_sparse
     from .primitives import (toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag,
                              eigsh_ag, inv_ag, sqrt_ag, extend_ag)
     AG_AVAILABLE = True
@@ -99,7 +99,7 @@ class NumpyBackend(Backend):
     tan = staticmethod(np.tan)
 
     # Sparse matrix class
-    coo = staticmethod(sparse.coo_array)
+    #coo = staticmethod(sparse.coo_array)
 
     def is_array(self, arr):
         """ check if an object is an array """
@@ -182,7 +182,7 @@ if AG_AVAILABLE:
         newaxis = staticmethod(npa.newaxis)
         
         # Sparse matrix class
-        coo = staticmethod(spa_sparse.coo_array)
+        #coo = staticmethod(spa_sparse.coo_array)
 
 
 backend = NumpyBackend()
