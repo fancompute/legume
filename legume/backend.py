@@ -180,7 +180,7 @@ if AG_AVAILABLE:
         linspace = staticmethod(npa.linspace)
         arange = staticmethod(npa.arange)
         newaxis = staticmethod(npa.newaxis)
-        
+
         # Sparse matrix class
         #coo = staticmethod(spa_sparse.coo_array)
 

@@ -1451,7 +1451,6 @@ def field(struct,
         if str_type == 'gme':
             freqs_im = struct.freqs_im_even
 
-
     field = field.lower()
     val = val.lower()
     component = component.lower()
