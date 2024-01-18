@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.linalg import block_diag
-from scipy.sparse import coo_matrix as coo # Older versions of Scipy have coo_matrix attribute only
+from scipy.sparse import coo_matrix as coo  # Older versions of Scipy have coo_matrix attribute only
 
 import time, sys
 from itertools import zip_longest
@@ -15,7 +15,7 @@ class GuidedModeExp(object):
     """
     Main simulation class of the guided-mode expansion.
     """
-    def __init__(self, phc, gmax=3., truncate_g='tbt'):
+    def __init__(self, phc, gmax=3., truncate_g='abs'):
         """Initialize the guided-mode expansion.
         
         Parameters
@@ -363,11 +363,17 @@ class GuidedModeExp(object):
         gvec = self.phc.lattice.b1[:, np.newaxis].dot(inds1[np.newaxis, :]) + \
                 self.phc.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
         gnorm = np.sqrt(gvec[0, :]**2 + gvec[1, :]**2)
+
+        # Avoid to cut with gmax equal to one of the |G|
         if self.gmax * 2 * np.pi in gnorm:
-            gvec = gvec[:, gnorm <= 2 * np.pi * (self.gmax + 0.0001)]
+            gmax = self.gmax
+            while gmax * 2 * np.pi in gnorm:
+                gmax += 1e-10
+
+            gvec = gvec[:, gnorm <= 2 * np.pi * (gmax)]
             print(
                 f"Warning: gmax={self.gmax} exactly equal to one of the g-vectors modulus"
-                f", reciprocal lattice truncated with gmax={self.gmax+0.0001}"
+                f", reciprocal lattice truncated with gmax={gmax}"
                 f" to avoid problems."
                 f"\nPlane waves used in the expansion = {np.shape(gvec)[1]}.")
         else:
@@ -792,10 +798,10 @@ class GuidedModeExp(object):
                         eig_sigma: float = 0.,
                         eps_eff='average',
                         verbose: bool = True,
-                        symmetry: str = 'None',
+                        symmetry: str = 'none',
                         symm_thr: float = 1e-8,
                         delta_g: float = 1e-15,
-                        use_sparse: bool= False):
+                        use_sparse: bool = False):
         """Set multiple options for the guided-mode expansion.
             
             Parameters
@@ -839,7 +845,7 @@ class GuidedModeExp(object):
                 Print information at intermediate steps. Default is True.
             symmetry : string, optional
                 Symmetry with respect to the vertical plane of incidence,
-                it can be 'odd', 'even' or 'None'. Default is 'None'
+                it can be 'both', 'odd', 'even' or 'none'. Default is 'None'
             symm_thr : float, optional
                 Threshold for out-of-diagonal terms in odd/even separated
                 Hamiltonian.
@@ -847,7 +853,7 @@ class GuidedModeExp(object):
             delta_g: float, optional,
                 little component added to the x-component of vectors
                 g = k + G to avoid problems at g = 0 
-            use_sparse: boolea, optional
+            use_sparse: boolean, optional
                 if True, use sparse matrices for separating
                 even and odd modes w.r.t. the vertical plane of symmetry
             """
@@ -1086,7 +1092,7 @@ class GuidedModeExp(object):
             self.t_guided = 0
         self.t_eig = 0  # For timing of the diagonalization
         self.t_symmetry = 0  # For timing of symmetry matrix construction
-        self.t_creat_mat = 0 
+        self.t_creat_mat = 0
         # Compute inverse matrix of FT of permittivity
         t = time.time()
         self.compute_eps_inv()
@@ -1116,7 +1122,7 @@ class GuidedModeExp(object):
             mat = self._construct_mat(kind=ik)
             # The guided modes are calculate inside _construct_mat, later we have to subrtact the time
 
-            self.t_creat_mat += time.time()-t_create
+            self.t_creat_mat += time.time() - t_create
 
             if self.numeig > mat.shape[0]:
                 raise ValueError(
@@ -1136,9 +1142,11 @@ class GuidedModeExp(object):
                     symm_mat = refl_mat[str(angles[ik])]
 
                     if self.use_sparse == True:
-                        mat_even, mat_odd, v_sigma_perm = self._separate_hamiltonian_sparse(mat,symm_mat,ik)
+                        mat_even, mat_odd, v_sigma_perm = self._separate_hamiltonian_sparse(
+                            mat, symm_mat, ik)
                     elif self.use_sparse == False:
-                        mat_even, mat_odd, v_sigma_perm = self._separate_hamiltonian_dense(mat,symm_mat,ik)
+                        mat_even, mat_odd, v_sigma_perm = self._separate_hamiltonian_dense(
+                            mat, symm_mat, ik)
 
                     self.t_symmetry += time.time() - t_sym
 
@@ -1160,7 +1168,8 @@ class GuidedModeExp(object):
                     freq1_odd = bd.sqrt(
                         bd.abs(freq2_odd -
                                bd.ones(mat_odd.shape[0]))) / 2 / np.pi
-                    zeros_arr = bd.zeros((self.even_counts[ik], np.shape(evecs_odd)[1]))
+                    zeros_arr = bd.zeros(
+                        (self.even_counts[ik], np.shape(evecs_odd)[1]))
                     evecs_odd = bd.concatenate((zeros_arr, evecs_odd))
 
                     (freq2_even,
@@ -1169,13 +1178,16 @@ class GuidedModeExp(object):
                     freq1_even = bd.sqrt(
                         bd.abs(freq2_even -
                                bd.ones(mat_even.shape[0]))) / 2 / np.pi
-                    zeros_arr = bd.zeros((self.odd_counts[ik], np.shape(evecs_even)[1]))
+                    zeros_arr = bd.zeros(
+                        (self.odd_counts[ik], np.shape(evecs_even)[1]))
                     evecs_even = bd.concatenate((evecs_even, zeros_arr))
 
-                    symm1 = bd.concatenate(
-                        (np.full(self.even_counts[ik], 1,
-                                 dtype=int), np.full(self.even_counts[ik], -1,
-                                                     dtype=int)))
+                    symm1 = bd.concatenate((np.full(self.even_counts[ik],
+                                                    1,
+                                                    dtype=int),
+                                            np.full(self.even_counts[ik],
+                                                    -1,
+                                                    dtype=int)))
                     freq1 = bd.concatenate((freq1_even, freq1_odd))
                     evecs = bd.concatenate((evecs_even, evecs_odd), axis=1)
                     i_near = find_nearest(get_value(freq1), self.eig_sigma,
@@ -1208,7 +1220,8 @@ class GuidedModeExp(object):
                     freq_odd = freq1[i_near_odd[i_sort_odd]]
                     evec_odd = evecs[:, i_near_odd[i_sort_odd]]
                     #Rewrite eigenvector in original basis
-                    zeros_arr = bd.zeros((self.even_counts[ik], np.shape(evec_odd)[1]))
+                    zeros_arr = bd.zeros(
+                        (self.even_counts[ik], np.shape(evec_odd)[1]))
                     evec_odd = bd.concatenate((zeros_arr, evec_odd))
                     if self.use_sparse == True:
                         evec_odd = v_sigma_perm.dot(evec_odd)
@@ -1232,7 +1245,8 @@ class GuidedModeExp(object):
                     freq_even = freq1[i_near_even[i_sort_even]]
                     evec_even = evecs[:, i_near_even[i_sort_even]]
                     #Rewrite eigenvector in original basis
-                    zeros_arr = bd.zeros((self.odd_counts[ik], np.shape(evec_even)[1]))
+                    zeros_arr = bd.zeros(
+                        (self.odd_counts[ik], np.shape(evec_even)[1]))
                     evec_even = bd.concatenate((evec_even, zeros_arr))
                     if self.use_sparse == True:
                         evec_even = v_sigma_perm.dot(evec_even)
@@ -1275,9 +1289,9 @@ class GuidedModeExp(object):
         self._freqs = bd.array(freqs)
         self._freqs_odd = bd.array(freqs_odd, dtype="object")
         self._freqs_even = bd.array(freqs_even, dtype="object")
-        # Guided modes are calculated inside _construct_mat() 
+        # Guided modes are calculated inside _construct_mat()
         self.t_creat_mat = self.t_creat_mat - self.t_guided
-        total_time = time.time()-t_start
+        total_time = time.time() - t_start
         self._print("", flush=True)
         self._print(
             f"{total_time:.3f}s total time for real part of frequencies, of which"
@@ -1285,23 +1299,24 @@ class GuidedModeExp(object):
         self._print(
             f"  {self.t_guided:.3f}s ({self.t_guided/total_time*100:.0f}%) for guided modes computation using"
             f" the gmode_compute='{self.gmode_compute.lower()}' method")
-        self._print(f"  {t_eps_inv:.3f}s ({t_eps_inv/total_time*100:.0f}%) for inverse matrix of Fourier-space "
-                    f"permittivity")
+        self._print(
+            f"  {t_eps_inv:.3f}s ({t_eps_inv/total_time*100:.0f}%) for inverse matrix of Fourier-space "
+            f"permittivity")
         self._print(
             f"  {(self.t_eig-self.t_symmetry):.3f}s ({(self.t_eig-self.t_symmetry)/total_time*100:.0f}%) for matrix diagionalization using "
             f"the '{self.eig_solver.lower()}' solver")
         self._print(
-            f"  {self.t_creat_mat:.3f}s ({self.t_creat_mat/total_time*100:.0f}%) for creating GME matrix")
- 
+            f"  {self.t_creat_mat:.3f}s ({self.t_creat_mat/total_time*100:.0f}%) for creating GME matrix"
+        )
+
         if self.symmetry.lower() != 'none':
-            if self.use_sparse== True:
+            if self.use_sparse == True:
                 str_mat_used = "sparse"
-            elif self.use_sparse== False:
+            elif self.use_sparse == False:
                 str_mat_used = "dense"
             self._print(
                 f"  {self.t_symmetry:.3f}s ({self.t_symmetry/total_time*100:.0f}%) for creating change of basis matrix and multiply it"
-                +f" using {str_mat_used} matrices"
-            )
+                + f" using {str_mat_used} matrices")
 
         if self.compute_im == True:
             t = time.time()
@@ -1423,7 +1438,7 @@ class GuidedModeExp(object):
             self._rad_coup_even = rad_coup_even
             self._rad_gvec_even = rad_gvec_even
 
-    def _separate_hamiltonian_dense(self,mat,symm_mat,ik):
+    def _separate_hamiltonian_dense(self, mat, symm_mat, ik):
         """
         Separates the Hamiltonian matrix into 
         even and odd block w.r.t. the vertical plane of 
@@ -1457,28 +1472,25 @@ class GuidedModeExp(object):
 
         for ind_alpha, alpha in enumerate(self.gmode_inds):
             dim = self.modes_numg[ik][ind_alpha]
-            
+
             #Block of symmetry operator corresponding to (k,ind_alpha)
-            
+
             block = bd.zeros((dim, dim))
             block_w = bd.zeros(dim)
 
             #Array with indexes used for a given guided mode @ k
             ind = self.ind_modes[ik][ind_alpha]
             #Array with G vectors used for a given guided mode @ k
-            gvec_used = bd.array(
-                [self.gvec[0][ind], self.gvec[1][ind]])
+            gvec_used = bd.array([self.gvec[0][ind], self.gvec[1][ind]])
             #Array that will store reflected g-vectors by symmetry operator
             gvec_used_ex = np.zeros(np.shape(gvec_used))
             #Loop over used g-vectors
             for j in range(bd.shape(gvec_used)[1]):
                 #Calculate the symmetry-reflected g-vector
-                g_ex = bd.matmul(
-                    symm_mat, [gvec_used[0][j], gvec_used[1][j]])
+                g_ex = bd.matmul(symm_mat, [gvec_used[0][j], gvec_used[1][j]])
 
                 #Find index of reflected G-vector
-                index_exc = self._ind_g(gvec_used, g_ex[0],
-                                        g_ex[1])
+                index_exc = self._ind_g(gvec_used, g_ex[0], g_ex[1])
 
                 if j == index_exc[0][0]:
                     # G vector reflected on itself
@@ -1500,7 +1512,6 @@ class GuidedModeExp(object):
             elif np.remainder(alpha, 2) != 0:
                 blocks.append(block)
                 blocks_w.append(block_w)
-
 
         # This is without sparse matrix
         v_sigma = block_diag(*blocks)
@@ -1528,9 +1539,6 @@ class GuidedModeExp(object):
 
         out_diag_1 = separ_mat[even_count:, 0:even_count]
         out_diag_2 = separ_mat[0:even_count, even_count:]
-
-
-        
         """
         Check that Hamiltonian is completely separated in odd and even blocks
         only if they are both not empty, otherwise it means
@@ -1543,10 +1551,9 @@ class GuidedModeExp(object):
         else:
             max_out_1 = 0
             max_out_2 = 0
-            raise ValueError(
-                "Only purely odd or even modes,"
-                " we need to implement this possibility, add"
-                " a guided mode with different polarisation.")
+            raise ValueError("Only purely odd or even modes,"
+                             " we need to implement this possibility, add"
+                             " a guided mode with different polarisation.")
 
         if bd.max((max_out_1, max_out_2)) > self.symm_thr:
             raise ValueError(
@@ -1562,7 +1569,7 @@ class GuidedModeExp(object):
 
         return mat_even, mat_odd, v_sigma_perm
 
-    def _separate_hamiltonian_sparse(self,mat,symm_mat,ik):
+    def _separate_hamiltonian_sparse(self, mat, symm_mat, ik):
         """
         Separates the Hamiltonian matrix into 
         even and odd block w.r.t. the vertical plane of 
@@ -1599,22 +1606,21 @@ class GuidedModeExp(object):
         blocks_w = []
 
         #dim_final = np.shape(mat)[0]
-        dim_final = 0 
+        dim_final = 0
 
         for ind_alpha, alpha in enumerate(self.gmode_inds):
             dim = self.modes_numg[ik][ind_alpha]
             # These are for creating sparse matrix
             # check_g to avoid double counting on reflected g
             block_w = bd.zeros(dim)
-            check_g = bd.full((dim),False)
+            check_g = bd.full((dim), False)
             data_block = []
             row_block = []
             col_block = []
             #Array with indexes used for a given guided mode @ k
             ind = self.ind_modes[ik][ind_alpha]
             #Array with G vectors used for a given guided mode @ k
-            gvec_used = bd.array(
-                [self.gvec[0][ind], self.gvec[1][ind]])
+            gvec_used = bd.array([self.gvec[0][ind], self.gvec[1][ind]])
             #Array that will store reflected g-vectors by symmetry operator
             gvec_used_ex = np.zeros(np.shape(gvec_used))
             #Loop over used g-vectors
@@ -1622,17 +1628,15 @@ class GuidedModeExp(object):
                 #Calculate the symmetry-reflected g-vector
                 #We could implement specific cases for speed-up code, e.g. theta=0
                 t_mat_refl = time.time()
-                g_ex = bd.matmul(
-                                symm_mat, [gvec_used[0][j], gvec_used[1][j]])
+                g_ex = bd.matmul(symm_mat, [gvec_used[0][j], gvec_used[1][j]])
                 #Find index of reflected G-vector
-                index_exc = self._ind_g(gvec_used, g_ex[0],
-                                                    g_ex[1])
+                index_exc = self._ind_g(gvec_used, g_ex[0], g_ex[1])
                 if j == index_exc[0][0]:
                     # G vector reflect on itself
                     block_w[j] = 1
                     data_block.append(1)
-                    row_block.append(j+dim_final)
-                    col_block.append(j+dim_final) 
+                    row_block.append(j + dim_final)
+                    col_block.append(j + dim_final)
                 else:
                     # G vector reflect on another G' vector
                     # we avoid double counting
@@ -1640,35 +1644,40 @@ class GuidedModeExp(object):
                     if check_g[j] == False:
                         block_w[j] = -1
                         block_w[index_exc] = 1
-                        row = np.array([j,j,index_exc[0][0],index_exc[0][0]])+dim_final
-                        col = np.array([j,index_exc[0][0],j,index_exc[0][0]])+dim_final
-                        data_block.extend([-1 / bd.sqrt(2),1 / bd.sqrt(2),1 / bd.sqrt(2),1 / bd.sqrt(2)])
+                        row = np.array([
+                            j, j, index_exc[0][0], index_exc[0][0]
+                        ]) + dim_final
+                        col = np.array([
+                            j, index_exc[0][0], j, index_exc[0][0]
+                        ]) + dim_final
+                        data_block.extend([
+                            -1 / bd.sqrt(2), 1 / bd.sqrt(2), 1 / bd.sqrt(2),
+                            1 / bd.sqrt(2)
+                        ])
                         row_block.extend(row)
                         col_block.extend(col)
                         check_g[index_exc] = True
                         check_g[j] = True
-            
+
             dim_final += dim
 
             data_blocks.append(bd.array(data_block))
             row_blocks.append(bd.array(row_block))
             col_blocks.append(bd.array(col_block))
-            
+
             #N.B. TE guided modes are odd, TM guided modes are even w.r.t. vertical symmetry plane
             if np.remainder(alpha, 2) == 0:
                 blocks_w.append(-block_w)
             elif np.remainder(alpha, 2) != 0:
                 blocks_w.append(block_w)
 
-
-
-
         # Change of basis matrix
         data_blocks = bd.hstack(data_blocks)
         col_blocks = bd.hstack(col_blocks)
         row_blocks = bd.hstack(row_blocks)
-        v_sigma_coo = coo((data_blocks,(row_blocks,col_blocks)),shape=(dim_final,dim_final))
-        
+        v_sigma_coo = coo((data_blocks, (row_blocks, col_blocks)),
+                          shape=(dim_final, dim_final))
+
         sigma_diag = bd.hstack(blocks_w)
 
         indexes_sigma = []
@@ -1687,11 +1696,11 @@ class GuidedModeExp(object):
         data_P = np.ones(len(indexes_sigma))
         col_P = np.arange(len(indexes_sigma))
         row_P = np.array(indexes_sigma)
-        P = coo((data_P,(row_P,col_P)),shape=(dim_final,dim_final))
-                    
+        P = coo((data_P, (row_P, col_P)), shape=(dim_final, dim_final))
+
         separ_mat_sparse = v_sigma_coo.transpose().dot(mat.T)
         separ_mat_sparse = P.transpose().dot(separ_mat_sparse)
-        separ_mat_sparse =  v_sigma_coo.transpose().dot(separ_mat_sparse.T)
+        separ_mat_sparse = v_sigma_coo.transpose().dot(separ_mat_sparse.T)
         separ_mat_sparse = P.transpose().dot(separ_mat_sparse)
 
         v_sigma_perm = v_sigma_coo.dot(P)
@@ -1707,10 +1716,9 @@ class GuidedModeExp(object):
         else:
             max_out_1 = 0
             max_out_2 = 0
-            raise ValueError(
-                "Only purely odd or even modes,"
-                " we need to implement this possibility, add"
-                " a guided mode with different polarisation.")
+            raise ValueError("Only purely odd or even modes,"
+                             " we need to implement this possibility, add"
+                             " a guided mode with different polarisation.")
 
         if bd.max((max_out_1, max_out_2)) > self.symm_thr:
             raise ValueError(

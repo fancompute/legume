@@ -67,11 +67,9 @@ def bands(gme,
         Plot the energy bands in [eV].
         Default is False
     a : optional
-        Needed if eV = True, lattice constant in [m]
-        If a is not provided and eV = True we gat a 
-        warning and eV becomes False.
-        Default is None,
-        It must be the last parameter in the function definition!
+        Lattice constant in [m], this parameters
+        is required if eV == True.
+        Default is None
 
     Returns
     -------
@@ -87,10 +85,10 @@ def bands(gme,
 
     # Check if lattice constant a is passed for plotting in eV units
     if eV == True:
-        if a is bands.__defaults__[-1]:
-            warnings.warn("Please, enter the lattice constant 'a' in [m] for"
-                          " plotting bands in [eV].")
-            eV = False
+        if a is None:
+            raise ValueError(
+                "The lattice constant 'a' in [m] for plotting bands in [eV] is required."
+            )
         else:
             # Conversion from dimensionless units to eV
             conv = cs.h * cs.c / cs.e / a
@@ -1450,7 +1448,6 @@ def field(struct,
         freqs = struct.freqs_even
         if str_type == 'gme':
             freqs_im = struct.freqs_im_even
-
 
     field = field.lower()
     val = val.lower()
