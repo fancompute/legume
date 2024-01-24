@@ -142,7 +142,6 @@ def guided_mode_given_g(g,
         omega = bd.fsolve_D22(D22real, lb, ub, g, eps_array, d_array)
         omega_solutions.append(omega)
 
-        # --------------- These omegas seems correct from plotting them
         chi_array = chi(omega, g, eps_array)
 
         if pol.lower() == 'te' or pol.lower() == 'tm':

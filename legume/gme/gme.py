@@ -363,11 +363,17 @@ class GuidedModeExp(object):
         gvec = self.phc.lattice.b1[:, np.newaxis].dot(inds1[np.newaxis, :]) + \
                 self.phc.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
         gnorm = np.sqrt(gvec[0, :]**2 + gvec[1, :]**2)
+
+        # Avoid to cut with gmax equal to one of the |G|
         if self.gmax * 2 * np.pi in gnorm:
-            gvec = gvec[:, gnorm <= 2 * np.pi * (self.gmax + 0.0001)]
+            gmax = self.gmax
+            while gmax * 2 * np.pi in gnorm:
+                gmax += 1e-10
+
+            gvec = gvec[:, gnorm <= 2 * np.pi * (gmax)]
             print(
                 f"Warning: gmax={self.gmax} exactly equal to one of the g-vectors modulus"
-                f", reciprocal lattice truncated with gmax={self.gmax+0.0001}"
+                f", reciprocal lattice truncated with gmax={gmax}"
                 f" to avoid problems."
                 f"\nPlane waves used in the expansion = {np.shape(gvec)[1]}.")
         else:
@@ -792,7 +798,7 @@ class GuidedModeExp(object):
                         eig_sigma: float = 0.,
                         eps_eff='average',
                         verbose: bool = True,
-                        symmetry: str = 'None',
+                        symmetry: str = 'none',
                         symm_thr: float = 1e-8,
                         delta_g: float = 1e-15,
                         use_sparse: bool = False):
@@ -839,7 +845,7 @@ class GuidedModeExp(object):
                 Print information at intermediate steps. Default is True.
             symmetry : string, optional
                 Symmetry with respect to the vertical plane of incidence,
-                it can be 'odd', 'even' or 'None'. Default is 'None'
+                it can be 'both', 'odd', 'even' or 'none'. Default is 'None'
             symm_thr : float, optional
                 Threshold for out-of-diagonal terms in odd/even separated
                 Hamiltonian.
@@ -847,7 +853,7 @@ class GuidedModeExp(object):
             delta_g: float, optional,
                 little component added to the x-component of vectors
                 g = k + G to avoid problems at g = 0 
-            use_sparse: boolea, optional
+            use_sparse: boolean, optional
                 if True, use sparse matrices for separating
                 even and odd modes w.r.t. the vertical plane of symmetry
             """
