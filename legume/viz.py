@@ -1440,7 +1440,7 @@ def field(struct,
         freqs = struct.freqs
         if str_type == 'gme':
             freqs_im = struct.freqs_im
-    elif vert_symm.lower() == 'even':
+    elif vert_symm.lower() == 'odd':
         freqs = struct.freqs_odd
         if str_type == 'gme':
             freqs_im = struct.freqs_im_odd
