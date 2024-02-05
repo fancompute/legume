@@ -85,29 +85,36 @@ class PhotCryst(object):
         self.claddings[1].z_min = z_min + d
         self.layers.append(layer)
 
-    def add_qw(self, z, Vmax, a, M, E0, loss, osc_str):
+    def add_qw(self, z: float, Vmax: float, a: float, M: float, E0: float,
+               loss: float, osc_str):
         """
         Add a quantum wells block in the phc structure.
 
         Parameters
         ----------
-        z: list or np.ndarray.
+        z: float.
             Positions of the QWs.
-        Vmax : list or np.ndarray., [eV]
-            Potential barrier of the QWs with respect to the sorrounding.
-            It's positive if the QW is in the layer, and negative if it's in the holes.
-        a : list or np.ndarray., [m]
-            dimensional lattice constant.
-        M : list or np.ndarray., [kg]
-            Exciton mass.
-        E0 : list or np.ndarray., [eV]
-            Free exciton energy
-        loss : list or np.ndarray. [eV]
-            Exciton non-radiative losses.
-        osc_str: list or np.ndarray of a list with three values, 
-            [[1,1,1]], or [[1,1,1],[1,1,1]] for example. [m^-2]
-            exciton oscillator strength.
+        Vmax : float,
+            Potential felt by excitons in Shapes in [eV].
+            The background is assumed to be at 0 eV.
+
+        a : float,
+            dimensional lattice constant in [m].
+        M : float
+            Exciton mass in [kg]
+        E0 : float
+            Free exciton energy in [eV]
+        loss : float
+            Exciton non-radiative losses in [eV]
+        osc_str: list or np.ndarray, 
+            exciton oscillator strength per unit area in [m^-2],
+            it has three component in th [x,y,z] frame of reference.
+            
         """
+
+        if z <= self.claddings[0].z_max or z >= self.claddings[1].z_min:
+            raise ValueError(
+                f"QuantumWellLayer cannot be in the claddings at z = {z}.")
         qw = QuantumWellLayer(z, Vmax, a, M, E0, loss, osc_str)
         self.qws.append(qw)
 

@@ -245,55 +245,16 @@ class FreeformLayer(Layer):
 
 class QuantumWellLayer():
     """Quantum well layers,
-    it can contain mutiple qws, dependi
      """
     def __init__(self, z, Vmax, a, M, E0, loss, osc_str):
 
-        self.z = bd.array(z)
-        num_qws = len(self.z)
-        num_qws_arr = np.ones(num_qws)
-
-        if len(bd.array(Vmax)) == num_qws:
-            self.Vmax = Vmax
-        elif len(bd.array(Vmax)) == 1:
-            self.Vmax = Vmax * num_qws_arr
-        else:
-            raise ValueError("'Vmax' dimension must be 1 or the same of z")
-
-        if len(bd.array(a)) == num_qws:
-            self.a = a
-        elif len(bd.array(a)) == 1:
-            self.a = a * num_qws_arr
-        else:
-            raise ValueError("'a' dimension must be 1 or the same of z")
-
-        if len(bd.array(M)) == num_qws:
-            self.M = M
-        elif len(bd.array(a)) == 1:
-            self.M = M * num_qws_arr
-        else:
-            raise ValueError("'M' dimension must be 1 or the same of z")
-
-        if len(bd.array(E0)) == num_qws:
-            self.E0 = E0
-        elif len(bd.array(E0)) == 1:
-            self.E0 = E0 * num_qws_arr
-        else:
-            raise ValueError("'E0' dimension must be 1 or the same of z")
-
-        if len(bd.array(loss)) == num_qws:
-            self.loss = loss
-        elif len(bd.array(loss)) == 1:
-            self.loss = loss * num_qws_arr
-        else:
-            raise ValueError("'loss' dimension must be 1 or the same of z")
-
-        if len(bd.array(osc_str)) == num_qws:
-            self.osc_str = osc_str
-        elif len(bd.array(osc_str)) == 1:
-            self.osc_str = np.repeat(osc_str, num_qws, axis=0)
-        else:
-            raise ValueError("'osc_str' dimension must be 1 or the same of z")
+        self.z = z
+        self.Vmax = Vmax
+        self.a = a
+        self.M = M
+        self.E0 = E0
+        self.loss = loss
+        self.osc_str = bd.array(osc_str)
 
     def __repr__(self):
         rep = f'QuantumWellLayer(z = {self.z}, Vmax = {self.Vmax} eV, a = {self.a*10**9} nm, \n \

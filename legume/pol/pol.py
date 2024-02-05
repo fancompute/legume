@@ -27,20 +27,19 @@ class HopfieldPol(object):
         self.gme = GuidedModeExp(phc, gmax, truncate_g=truncate_g)
 
         self.exc_list = []
-        for qw in phc.qws:  #loop over blocks of quantum wells added with add_qw
-            for ind, z in enumerate(qw.z):  #loop over qws in a single block
-                layer_ind = self.gme._z_to_lind(z)
-                self.exc_list.append(
-                    ExcitonSchroedEq(layer=phc.layers[layer_ind - 1],
-                                     z=z,
-                                     Vmax=qw.Vmax[ind],
-                                     a=qw.a[ind],
-                                     M=qw.M[ind],
-                                     E0=qw.E0[ind],
-                                     loss=qw.loss[ind],
-                                     osc_str=qw.osc_str[ind],
-                                     gmax=gmax,
-                                     truncate_g=truncate_g))
+        for qw in phc.qws:  #loop over quantum wells added with add_qw
+            layer_ind = self.gme._z_to_lind(qw.z)
+            self.exc_list.append(
+                ExcitonSchroedEq(layer=phc.layers[layer_ind - 1],
+                                 z=qw.z,
+                                 Vmax=qw.Vmax,
+                                 a=qw.a,
+                                 M=qw.M,
+                                 E0=qw.E0,
+                                 loss=qw.loss,
+                                 osc_str=qw.osc_str,
+                                 gmax=gmax,
+                                 truncate_g=truncate_g))
 
     @property
     def eners(self):
@@ -193,8 +192,7 @@ class HopfieldPol(object):
 
         #Calculate the photonic diagonal block
         diag_phot = np.zeros((self.N_max, self.N_max), dtype="complex")
-        if self.gme.symmetry.lower() is None or self.gme.symmetry.lower(
-        ) == 'both':
+        if self.gme.symmetry is None or self.gme.symmetry.lower() == 'both':
             np.fill_diagonal(
                 diag_phot, self.gme.freqs[kind, :] * conv_fact +
                 1j * self.gme.freqs_im[kind, :] * conv_fact)
