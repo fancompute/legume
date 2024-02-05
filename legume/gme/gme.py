@@ -943,7 +943,7 @@ class GuidedModeExp(object):
         self.gmode_include = []
 
         #Check if angles are provided in case is not None
-        if self.symmetry.lower() is None:
+        if self.symmetry is None:
             pass
         elif self.symmetry.lower() == 'odd':
             if bd.shape(angles)[0] == 0:
@@ -1152,7 +1152,7 @@ class GuidedModeExp(object):
                     self.t_symmetry += time.time() - t_sym
 
                 # Diagonalise matrix
-                if self.symmetry.lower() is None:
+                if self.symmetry is None:
                     (freq2, evecs) = bd.eigh(mat + bd.eye(mat.shape[0]))
                     freq1 = bd.sqrt(
                         bd.abs(freq2 - bd.ones(mat.shape[0]))) / 2 / np.pi
@@ -1254,7 +1254,7 @@ class GuidedModeExp(object):
                     elif self.use_sparse == False:
                         evec_even = bd.matmul(v_sigma_perm, evec_even)
             elif self.eig_solver == 'eigsh':
-                if self.symmetry.lower() != "none":
+                if self.symmetry:
                     raise ValueError(
                         "odd/even separation implemented with 'eigh' solver only."
                     )
@@ -1271,10 +1271,10 @@ class GuidedModeExp(object):
                 raise ValueError("'eig_solver' can be 'eigh' or 'eigsh'")
             self.t_eig += time.time() - t_eig
 
-            if self.symmetry.lower() is None:
+            if self.symmetry is None:
                 freqs.append(freq)
                 self._eigvecs.append(evec)
-            if self.symmetry.lower() == 'both':
+            elif self.symmetry.lower() == 'both':
                 freqs.append(freq)
                 self._eigvecs.append(evec)
                 self._symm.append(symm)
@@ -1362,7 +1362,7 @@ class GuidedModeExp(object):
         rad_gvec_even = {'l': [], 'u': []}
 
         minds = np.arange(0, self.numeig)
-        if symm.lower() == None or symm.lower() == 'both':
+        if symm == None or symm.lower() == 'both':
             if len(self.freqs) == 0:
                 raise RuntimeError("Run the GME computation first!")
 
@@ -1735,7 +1735,10 @@ class GuidedModeExp(object):
 
         return mat_even, mat_odd, v_sigma_perm
 
-    def compute_rad(self, kind: int, minds: list = [0], symm_im: Optional[str] = None):
+    def compute_rad(self,
+                    kind: int,
+                    minds: list = [0],
+                    symm_im: Optional[str] = None):
         """
         Compute the radiation losses of the eigenmodes after the dispersion
         has been computed.
@@ -2030,7 +2033,7 @@ class GuidedModeExp(object):
             The Fourier transform of the z-component of the specified field. 
 
         """
-        if self.symmetry.lower() is None or self.symmetry.lower() == 'both':
+        if self.symmetry is None or self.symmetry.lower() == 'both':
             evec = self.eigvecs[kind][:, mind]
             omega = self.freqs[kind][mind] * 2 * np.pi
         elif self.symmetry.lower() == 'odd':

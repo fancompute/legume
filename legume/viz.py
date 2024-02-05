@@ -79,7 +79,7 @@ def bands(gme,
 
     # Vertical symmetry is not implemented for PlaneWaveExp class
     if isinstance(gme, GuidedModeExp):
-        vert_symm = gme.symmetry.lower()
+        vert_symm = gme.symmetry
     elif isinstance(gme, PlaneWaveExp):
         vert_symm = None
 
@@ -101,18 +101,18 @@ def bands(gme,
     else:
         X0 = np.arange(len(gme.kpoints[0, :]))
 
-    if vert_symm == "none" or vert_symm == "both":
+    if vert_symm == None or vert_symm.lower() == "both":
         X = np.tile(X0.reshape(len(X0), 1), (1, gme.freqs.shape[1]))
-    elif vert_symm == "odd":
+    elif vert_symm.lower() == "odd":
         X = np.tile(X0.reshape(len(X0), 1), (1, gme.freqs_odd.shape[1]))
-    elif vert_symm == "even":
+    elif vert_symm.lower() == "even":
         X = np.tile(X0.reshape(len(X0), 1), (1, gme.freqs_even.shape[1]))
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
 
     if Q:
-        if vert_symm == "none":
+        if vert_symm == None:
             if len(gme.freqs_im) == 0:
                 gme.run_im()
             freqs_im = np.array(gme.freqs_im).flatten() + 1e-16
@@ -148,7 +148,7 @@ def bands(gme,
                              extend="max")
                 ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
 
-        elif vert_symm == "both":
+        elif vert_symm.lower() == "both":
             if symmetry == True:
                 if len(gme.freqs_im) == 0:
                     gme.run_im()
@@ -221,7 +221,7 @@ def bands(gme,
                                  extend="max")
                     ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
 
-        elif vert_symm == "odd":
+        elif vert_symm.lower() == "odd":
             if len(gme.freqs_im_odd) == 0:
                 gme.run_im(symm='odd')
             freqs_im_odd = np.array(gme.freqs_im_odd).flatten() + 1e-16
@@ -255,7 +255,7 @@ def bands(gme,
                              label="Radiative quality factor",
                              extend="max")
                 ax.set_ylim(bottom=0.0, top=conv * gme.freqs_odd[:].max())
-        elif vert_symm == "even":
+        elif vert_symm.lower() == "even":
             if len(gme.freqs_im_even) == 0:
                 gme.run_im(symm='even')
             freqs_im_even = np.array(gme.freqs_im_even).flatten() + 1e-16
@@ -291,7 +291,7 @@ def bands(gme,
                 ax.set_ylim(bottom=0.0, top=conv * gme.freqs_even[:].max())
 
     else:
-        if vert_symm == "none":
+        if vert_symm == None:
             if eV == False:
                 ax.plot(X,
                         gme.freqs,
@@ -313,7 +313,7 @@ def bands(gme,
                         mec=markeredgecolor)
                 ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
 
-        elif vert_symm == "both":
+        elif vert_symm.lower() == "both":
             if symmetry:
                 if eV == False:
                     ax.scatter(X.flatten(),
@@ -355,7 +355,7 @@ def bands(gme,
                             mec=markeredgecolor)
                     ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
 
-        elif vert_symm == "odd":
+        elif vert_symm.lower() == "odd":
             if eV == False:
                 ax.plot(X,
                         gme.freqs_odd,
@@ -376,7 +376,7 @@ def bands(gme,
                         mew=markeredgewidth,
                         mec=markeredgecolor)
                 ax.set_ylim(bottom=0.0, top=conv * gme.freqs_odd[:].max())
-        elif vert_symm == "even":
+        elif vert_symm.lower() == "even":
             if eV == False:
                 ax.plot(X,
                         gme.freqs_even,
@@ -407,19 +407,19 @@ def bands(gme,
                 np.square(gme.kpoints[0, :]) +
                 np.square(gme.kpoints[1, :])) / 2 / np.pi / np.sqrt(
                     max(eps_clad))
-            if vert_symm == "none" or vert_symm == "both":
+            if vert_symm == None or vert_symm.lower() == "both":
                 ax.fill_between(X0,
                                 vec_LL,
                                 max(100, vec_LL.max(), gme.freqs[:].max()),
                                 facecolor=conecolor,
                                 zorder=0)
-            elif vert_symm == "odd":
+            elif vert_symm.lower() == "odd":
                 ax.fill_between(X0,
                                 vec_LL,
                                 max(100, vec_LL.max(), gme.freqs_odd[:].max()),
                                 facecolor=conecolor,
                                 zorder=0)
-            elif vert_symm == "even":
+            elif vert_symm.lower() == "even":
                 ax.fill_between(X0,
                                 vec_LL,
                                 max(100, vec_LL.max(),
@@ -433,21 +433,21 @@ def bands(gme,
             vec_LL = conv * (np.sqrt(
                 np.square(gme.kpoints[0, :]) + np.square(gme.kpoints[1, :])) /
                              2 / np.pi / np.sqrt(max(eps_clad)))
-            if vert_symm == "none" or vert_symm == "both":
+            if vert_symm == None or vert_symm.lower() == "both":
                 ax.fill_between(X0,
                                 vec_LL,
                                 max(100, vec_LL.max(),
                                     conv * gme.freqs[:].max()),
                                 facecolor=conecolor,
                                 zorder=0)
-            elif vert_symm == "odd":
+            elif vert_symm.lower() == "odd":
                 ax.fill_between(X0,
                                 vec_LL,
                                 max(100, vec_LL.max(),
                                     conv * gme.freqs_odd[:].max()),
                                 facecolor=conecolor,
                                 zorder=0)
-            elif vert_symm == "even":
+            elif vert_symm.lower() == "even":
                 ax.fill_between(X0,
                                 vec_LL,
                                 max(100, vec_LL.max(),
@@ -1427,7 +1427,7 @@ def field(struct,
         Figure object for the plot.
     """
     if isinstance(struct, GuidedModeExp):
-        vert_symm = struct.symmetry.lower()
+        vert_symm = struct.symmetry
         str_type = 'gme'
     elif isinstance(struct, PlaneWaveExp):
         vert_symm = None
@@ -1436,15 +1436,15 @@ def field(struct,
         raise ValueError("'struct' should be a 'PlaneWaveExp' or a "
                          "'GuidedModeExp' instance")
 
-    if vert_symm == None or vert_symm == 'both':
+    if vert_symm == None or vert_symm.lower() == 'both':
         freqs = struct.freqs
         if str_type == 'gme':
             freqs_im = struct.freqs_im
-    elif vert_symm == 'even':
+    elif vert_symm.lower() == 'odd':
         freqs = struct.freqs_odd
         if str_type == 'gme':
             freqs_im = struct.freqs_im_odd
-    elif vert_symm == 'even':
+    elif vert_symm.lower() == 'even':
         freqs = struct.freqs_even
         if str_type == 'gme':
             freqs_im = struct.freqs_im_even
