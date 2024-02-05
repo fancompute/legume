@@ -18,7 +18,7 @@ class ExcitonSchroedEq(object):
                  loss,
                  osc_str,
                  gmax: float = 3.,
-                 truncate_g='tbt'):
+                 truncate_g='abs'):
         """Initialize the Schroedinger equation expansion.
         
         Parameters
