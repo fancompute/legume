@@ -4,6 +4,7 @@ from scipy.sparse import coo_matrix as coo  # Older versions of Scipy have coo_m
 
 import time, sys
 from itertools import zip_longest
+from typing import Optional
 
 from .slab_modes import guided_modes, rad_modes
 from . import matrix_elements
@@ -798,7 +799,7 @@ class GuidedModeExp(object):
                         eig_sigma: float = 0.,
                         eps_eff='average',
                         verbose: bool = True,
-                        symmetry: str = 'none',
+                        symmetry: Optional[str] | None = None,
                         symm_thr: float = 1e-8,
                         delta_g: float = 1e-15,
                         use_sparse: bool = False):
@@ -845,7 +846,7 @@ class GuidedModeExp(object):
                 Print information at intermediate steps. Default is True.
             symmetry : string, optional
                 Symmetry with respect to the vertical plane of incidence,
-                it can be 'both', 'odd', 'even' or 'none'. Default is 'None'
+                it can be 'both', 'odd', 'even' or None. Default is None
             symm_thr : float, optional
                 Threshold for out-of-diagonal terms in odd/even separated
                 Hamiltonian.
@@ -920,7 +921,7 @@ class GuidedModeExp(object):
             numpy array of shape (2, :) with the [kx, ky] coordinates of the 
             k-vectors over which the simulation is run.
         angles : np.ndarray, optional
-            This is needed only in cas symmetry != 'None'.
+            This is needed only in case symmetry is differnet from None.
             Numpy array with direction angle in kx-ky plane of kpoints.
 
         **kwargs
@@ -941,8 +942,8 @@ class GuidedModeExp(object):
         self.N_basis = []
         self.gmode_include = []
 
-        #Check if angles are provided in case symmetry!='None'
-        if self.symmetry.lower() == 'none':
+        #Check if angles are provided in case is not None
+        if self.symmetry.lower() is None:
             pass
         elif self.symmetry.lower() == 'odd':
             if bd.shape(angles)[0] == 0:
@@ -961,13 +962,13 @@ class GuidedModeExp(object):
                     " if 'symmetry' = 'both'")
         else:
             raise ValueError(
-                "'symmetry' can be 'None', 'odd', 'even' or 'both' ")
+                "'symmetry' can be None, 'odd', 'even' or 'both' ")
 
         #Check that kpoints are in high symmetry lines of the lattice
-        # we round the angle to avoid numerical errors, moreover with self.symmetry != 'none'
+        # we round the angle to avoid numerical errors, moreover with self.symmetry different from None
         #'self.trunate_g' must be 'abs'
 
-        if self.symmetry.lower() != 'none':
+        if self.symmetry:
             if self.truncate_g == 'tbt':
                 raise ValueError(
                     "'truncate_g' must be 'abs' to separate odd and even modes"
@@ -1137,7 +1138,7 @@ class GuidedModeExp(object):
             if self.eig_solver == 'eigh':
 
                 # Separates odd and even blocks of Hamiltonian
-                if self.symmetry.lower() != 'none':
+                if self.symmetry:
                     t_sym = time.time()
                     symm_mat = refl_mat[str(angles[ik])]
 
@@ -1151,7 +1152,7 @@ class GuidedModeExp(object):
                     self.t_symmetry += time.time() - t_sym
 
                 # Diagonalise matrix
-                if self.symmetry.lower() == 'none':
+                if self.symmetry.lower() is None:
                     (freq2, evecs) = bd.eigh(mat + bd.eye(mat.shape[0]))
                     freq1 = bd.sqrt(
                         bd.abs(freq2 - bd.ones(mat.shape[0]))) / 2 / np.pi
@@ -1270,7 +1271,7 @@ class GuidedModeExp(object):
                 raise ValueError("'eig_solver' can be 'eigh' or 'eigsh'")
             self.t_eig += time.time() - t_eig
 
-            if self.symmetry.lower() == 'none':
+            if self.symmetry.lower() is None:
                 freqs.append(freq)
                 self._eigvecs.append(evec)
             if self.symmetry.lower() == 'both':
@@ -1309,7 +1310,7 @@ class GuidedModeExp(object):
             f"  {self.t_creat_mat:.3f}s ({self.t_creat_mat/total_time*100:.0f}%) for creating GME matrix"
         )
 
-        if self.symmetry.lower() != 'none':
+        if self.symmetry:
             if self.use_sparse == True:
                 str_mat_used = "sparse"
             elif self.use_sparse == False:
@@ -1329,7 +1330,7 @@ class GuidedModeExp(object):
                 " run it, or compute_rad() to compute the radiative rates"
                 " of selected eigenmodes")
 
-    def run_im(self, symm='none'):
+    def run_im(self, symm=None):
         """
         Compute the radiative rates associated to all the eigenmodes that were 
         computed during :meth:`GuidedModeExp.run`. Results are stored in 
@@ -1361,7 +1362,7 @@ class GuidedModeExp(object):
         rad_gvec_even = {'l': [], 'u': []}
 
         minds = np.arange(0, self.numeig)
-        if symm.lower() == 'none' or symm.lower() == 'both':
+        if symm.lower() == None or symm.lower() == 'both':
             if len(self.freqs) == 0:
                 raise RuntimeError("Run the GME computation first!")
 
@@ -1734,7 +1735,7 @@ class GuidedModeExp(object):
 
         return mat_even, mat_odd, v_sigma_perm
 
-    def compute_rad(self, kind: int, minds: list = [0], symm_im: str = 'None'):
+    def compute_rad(self, kind: int, minds: list = [0], symm_im: Optional[str] = None):
         """
         Compute the radiation losses of the eigenmodes after the dispersion
         has been computed.
@@ -1767,7 +1768,7 @@ class GuidedModeExp(object):
             If freqs_im=0 we set unbalance_im = 0.5.
         """
 
-        if symm_im.lower() == 'none' or symm_im.lower() == 'both':
+        if symm_im is None or symm_im.lower() == 'both':
             freqs = self.freqs
             eigvecs = self.eigvecs
         elif symm_im.lower() == 'odd':
@@ -2029,7 +2030,7 @@ class GuidedModeExp(object):
             The Fourier transform of the z-component of the specified field. 
 
         """
-        if self.symmetry.lower() == 'none' or self.symmetry.lower() == 'both':
+        if self.symmetry.lower() is None or self.symmetry.lower() == 'both':
             evec = self.eigvecs[kind][:, mind]
             omega = self.freqs[kind][mind] * 2 * np.pi
         elif self.symmetry.lower() == 'odd':

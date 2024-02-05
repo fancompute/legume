@@ -8,6 +8,7 @@ from .phc import PhotCryst, Layer, ShapesLayer, FreeformLayer, Lattice
 
 from . import gds
 from . import viz
+from . import constants
 
 from .pol import HopfieldPol
 from .exc import ExcitonSchroedEq

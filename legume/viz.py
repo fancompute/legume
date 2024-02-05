@@ -81,7 +81,7 @@ def bands(gme,
     if isinstance(gme, GuidedModeExp):
         vert_symm = gme.symmetry.lower()
     elif isinstance(gme, PlaneWaveExp):
-        vert_symm = 'none'
+        vert_symm = None
 
     # Check if lattice constant a is passed for plotting in eV units
     if eV == True:
@@ -1430,13 +1430,13 @@ def field(struct,
         vert_symm = struct.symmetry.lower()
         str_type = 'gme'
     elif isinstance(struct, PlaneWaveExp):
-        vert_symm = 'none'
+        vert_symm = None
         str_type = 'pwe'
     else:
         raise ValueError("'struct' should be a 'PlaneWaveExp' or a "
                          "'GuidedModeExp' instance")
 
-    if vert_symm == 'none' or vert_symm == 'both':
+    if vert_symm == None or vert_symm == 'both':
         freqs = struct.freqs
         if str_type == 'gme':
             freqs_im = struct.freqs_im
