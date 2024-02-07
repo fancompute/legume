@@ -192,18 +192,10 @@ class HopfieldPol(object):
 
         #Calculate the photonic diagonal block
         diag_phot = np.zeros((self.N_max, self.N_max), dtype="complex")
-        if self.gme.symmetry is None or self.gme.symmetry.lower() == 'both':
-            np.fill_diagonal(
-                diag_phot, self.gme.freqs[kind, :] * conv_fact +
-                1j * self.gme.freqs_im[kind, :] * conv_fact)
-        elif self.gme.symmetry.lower() == 'odd':
-            np.fill_diagonal(
-                diag_phot, self.gme.freqs_odd[kind, :] * conv_fact +
-                1j * self.gme.freqs_im_odd[kind, :] * conv_fact)
-        elif self.gme.symmetry.lower() == 'even':
-            np.fill_diagonal(
-                diag_phot, self.gme.freqs_even[kind, :] * conv_fact +
-                1j * self.gme.freqs_im_even[kind, :] * conv_fact)
+
+        np.fill_diagonal(
+            diag_phot, self.gme.freqs[kind, :] * conv_fact +
+            1j * self.gme.freqs_im[kind, :] * conv_fact)
 
         for ind_ex, exc_sch in enumerate(self.exc_list):
             C, D = self._calculate_C_D(exc=exc_sch, kind=kind)

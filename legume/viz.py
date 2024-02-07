@@ -21,7 +21,7 @@ def bands(gme,
           markersize=6,
           markeredgecolor='w',
           markeredgewidth=1.5,
-          symmetry=True,
+          show_symmetry=True,
           eV=False,
           a=None):
     """Plot photonic band structure from a GME simulation
@@ -58,10 +58,11 @@ def bands(gme,
         Band marker edge border color. Default is white.
     markeredgewidth : float, optional
         Band marker edge border width. Default is 1.5.
-    symmetry : bool, optional
+    show_symmetry : bool, optional
         Plot odd and even modes w.r.t. the vertical plane of symmetry
         with different colours if gme.symmetry == 'both',
-        note that this symmetry is not implemented for PlaneWaveExp
+        odd modes are blue, even modes are red.
+        Note that this symmetry is not implemented for PlaneWaveExp
         class
     eV : bool, optional
         Plot the energy bands in [eV].
@@ -79,7 +80,7 @@ def bands(gme,
 
     # Vertical symmetry is not implemented for PlaneWaveExp class
     if isinstance(gme, GuidedModeExp):
-        vert_symm = gme.symmetry
+        vert_symm = gme.kz_symmetry
     elif isinstance(gme, PlaneWaveExp):
         vert_symm = None
 
@@ -92,6 +93,8 @@ def bands(gme,
         else:
             # Conversion from dimensionless units to eV
             conv = cs.h * cs.c / cs.e / a
+    else:
+        conv = 1
 
     if np.all(gme.kpoints[0,:]==0) and not np.all(gme.kpoints[1,:]==0) \
         or np.all(gme.kpoints[1,:]==0) and not np.all(gme.kpoints[0,:]==0):
@@ -101,39 +104,64 @@ def bands(gme,
     else:
         X0 = np.arange(len(gme.kpoints[0, :]))
 
-    if vert_symm == None or vert_symm.lower() == "both":
-        X = np.tile(X0.reshape(len(X0), 1), (1, gme.freqs.shape[1]))
-    elif vert_symm.lower() == "odd":
-        X = np.tile(X0.reshape(len(X0), 1), (1, gme.freqs_odd.shape[1]))
-    elif vert_symm.lower() == "even":
-        X = np.tile(X0.reshape(len(X0), 1), (1, gme.freqs_even.shape[1]))
+    X = np.tile(X0.reshape(len(X0), 1), (1, gme.freqs.shape[1]))
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
 
     if Q:
-        if vert_symm == None:
+        if (vert_symm == None) or (vert_symm.lower() in {"odd", "even"}):
             if len(gme.freqs_im) == 0:
                 gme.run_im()
             freqs_im = np.array(gme.freqs_im).flatten() + 1e-16
             Q = gme.freqs.flatten() / 2 / freqs_im
             Q_max = np.max(Q[Q < Q_clip])
 
-            if eV == False:
+            p = ax.scatter(X.flatten(),
+                           conv * gme.freqs.flatten(),
+                           c=Q,
+                           cmap=Q_cmap,
+                           s=markersize**2,
+                           norm=mpl.colors.LogNorm(vmax=Q_max),
+                           edgecolors=markeredgecolor,
+                           linewidth=markeredgewidth)
+            plt.colorbar(p,
+                         ax=ax,
+                         label="Radiative quality factor",
+                         extend="max")
+            ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
+
+        elif vert_symm.lower() == "both":
+            if show_symmetry == True:
+                if len(gme.freqs_im) == 0:
+                    gme.run_im()
+                freqs_im = np.array(gme.freqs_im).flatten() + 1e-16
+                Q = gme.freqs.flatten() / 2 / freqs_im
+                Q_max = np.max(Q[Q < Q_clip])
+                edgecolors = mpl.cm.get_cmap('bwr')(
+                    (np.asarray(gme.kz_symms).flatten() + 1) / 2)
+
                 p = ax.scatter(X.flatten(),
-                               gme.freqs.flatten(),
+                               conv * gme.freqs.flatten(),
                                c=Q,
                                cmap=Q_cmap,
                                s=markersize**2,
                                norm=mpl.colors.LogNorm(vmax=Q_max),
-                               edgecolors=markeredgecolor,
+                               edgecolors=edgecolors,
                                linewidth=markeredgewidth)
                 plt.colorbar(p,
                              ax=ax,
                              label="Radiative quality factor",
                              extend="max")
-                ax.set_ylim(bottom=0.0, top=gme.freqs[:].max())
-            elif eV == True:
+                ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
+
+            else:
+                if len(gme.freqs_im) == 0:
+                    gme.run_im()
+                freqs_im = np.array(gme.freqs_im).flatten() + 1e-16
+                Q = gme.freqs.flatten() / 2 / freqs_im
+                Q_max = np.max(Q[Q < Q_clip])
+
                 p = ax.scatter(X.flatten(),
                                conv * gme.freqs.flatten(),
                                c=Q,
@@ -148,161 +176,29 @@ def bands(gme,
                              extend="max")
                 ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
 
-        elif vert_symm.lower() == "both":
-            if symmetry == True:
-                if len(gme.freqs_im) == 0:
-                    gme.run_im()
-                freqs_im = np.array(gme.freqs_im).flatten() + 1e-16
-                Q = gme.freqs.flatten() / 2 / freqs_im
-                Q_max = np.max(Q[Q < Q_clip])
-                edgecolors = mpl.cm.get_cmap('bwr')(
-                    (np.asarray(gme.symm).flatten() + 1) / 2)
-                if eV == False:
-                    p = ax.scatter(X.flatten(),
-                                   gme.freqs.flatten(),
-                                   c=Q,
-                                   cmap=Q_cmap,
-                                   s=markersize**2,
-                                   norm=mpl.colors.LogNorm(vmax=Q_max),
-                                   edgecolors=edgecolors,
-                                   linewidth=markeredgewidth)
-                    plt.colorbar(p,
-                                 ax=ax,
-                                 label="Radiative quality factor",
-                                 extend="max")
-                    ax.set_ylim(bottom=0.0, top=gme.freqs[:].max())
-                elif eV == True:
-                    p = ax.scatter(X.flatten(),
-                                   conv * gme.freqs.flatten(),
-                                   c=Q,
-                                   cmap=Q_cmap,
-                                   s=markersize**2,
-                                   norm=mpl.colors.LogNorm(vmax=Q_max),
-                                   edgecolors=edgecolors,
-                                   linewidth=markeredgewidth)
-                    plt.colorbar(p,
-                                 ax=ax,
-                                 label="Radiative quality factor",
-                                 extend="max")
-                    ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
-
-            else:
-                if len(gme.freqs_im) == 0:
-                    gme.run_im()
-                freqs_im = np.array(gme.freqs_im).flatten() + 1e-16
-                Q = gme.freqs.flatten() / 2 / freqs_im
-                Q_max = np.max(Q[Q < Q_clip])
-                if eV == False:
-                    p = ax.scatter(X.flatten(),
-                                   gme.freqs.flatten(),
-                                   c=Q,
-                                   cmap=Q_cmap,
-                                   s=markersize**2,
-                                   norm=mpl.colors.LogNorm(vmax=Q_max),
-                                   edgecolors=markeredgecolor,
-                                   linewidth=markeredgewidth)
-                    plt.colorbar(p,
-                                 ax=ax,
-                                 label="Radiative quality factor",
-                                 extend="max")
-                    ax.set_ylim(bottom=0.0, top=gme.freqs[:].max())
-                elif eV == True:
-                    p = ax.scatter(X.flatten(),
-                                   conv * gme.freqs.flatten(),
-                                   c=Q,
-                                   cmap=Q_cmap,
-                                   s=markersize**2,
-                                   norm=mpl.colors.LogNorm(vmax=Q_max),
-                                   edgecolors=markeredgecolor,
-                                   linewidth=markeredgewidth)
-                    plt.colorbar(p,
-                                 ax=ax,
-                                 label="Radiative quality factor",
-                                 extend="max")
-                    ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
-
-        elif vert_symm.lower() == "odd":
-            if len(gme.freqs_im_odd) == 0:
-                gme.run_im(symm='odd')
-            freqs_im_odd = np.array(gme.freqs_im_odd).flatten() + 1e-16
-            Q_odd = gme.freqs_odd.flatten() / 2 / freqs_im_odd
-            Q_max_odd = np.max(Q_odd[Q_odd < Q_clip])
-            if eV == False:
-                p_odd = ax.scatter(X.flatten(),
-                                   gme.freqs_odd.flatten(),
-                                   c=Q_odd,
-                                   cmap=Q_cmap,
-                                   s=markersize**2,
-                                   norm=mpl.colors.LogNorm(vmax=Q_max_odd),
-                                   edgecolors=markeredgecolor,
-                                   linewidth=markeredgewidth)
-                plt.colorbar(p_odd,
-                             ax=ax,
-                             label="Radiative quality factor",
-                             extend="max")
-                ax.set_ylim(bottom=0.0, top=gme.freqs_odd[:].max())
-            elif eV == True:
-                p_odd = ax.scatter(X.flatten(),
-                                   conv * gme.freqs_odd.flatten(),
-                                   c=Q_odd,
-                                   cmap=Q_cmap,
-                                   s=markersize**2,
-                                   norm=mpl.colors.LogNorm(vmax=Q_max_odd),
-                                   edgecolors=markeredgecolor,
-                                   linewidth=markeredgewidth)
-                plt.colorbar(p_odd,
-                             ax=ax,
-                             label="Radiative quality factor",
-                             extend="max")
-                ax.set_ylim(bottom=0.0, top=conv * gme.freqs_odd[:].max())
-        elif vert_symm.lower() == "even":
-            if len(gme.freqs_im_even) == 0:
-                gme.run_im(symm='even')
-            freqs_im_even = np.array(gme.freqs_im_even).flatten() + 1e-16
-            Q_even = gme.freqs_even.flatten() / 2 / freqs_im_even
-            Q_max_even = np.max(Q_even[Q_even < Q_clip])
-            if eV == False:
-                p_even = ax.scatter(X.flatten(),
-                                    gme.freqs_even.flatten(),
-                                    c=Q_even,
-                                    cmap=Q_cmap,
-                                    s=markersize**2,
-                                    norm=mpl.colors.LogNorm(vmax=Q_max_even),
-                                    edgecolors=markeredgecolor,
-                                    linewidth=markeredgewidth)
-                plt.colorbar(p_even,
-                             ax=ax,
-                             label="Radiative quality factor",
-                             extend="max")
-                ax.set_ylim(bottom=0.0, top=gme.freqs_even[:].max())
-            elif eV == True:
-                p_even = ax.scatter(X.flatten(),
-                                    conv * gme.freqs_even.flatten(),
-                                    c=Q_even,
-                                    cmap=Q_cmap,
-                                    s=markersize**2,
-                                    norm=mpl.colors.LogNorm(vmax=Q_max_even),
-                                    edgecolors=markeredgecolor,
-                                    linewidth=markeredgewidth)
-                plt.colorbar(p_even,
-                             ax=ax,
-                             label="Radiative quality factor",
-                             extend="max")
-                ax.set_ylim(bottom=0.0, top=conv * gme.freqs_even[:].max())
-
     else:
-        if vert_symm == None:
-            if eV == False:
-                ax.plot(X,
-                        gme.freqs,
-                        'o',
-                        c="#1f77b4",
-                        label="",
-                        ms=markersize,
-                        mew=markeredgewidth,
-                        mec=markeredgecolor)
-                ax.set_ylim(bottom=0.0, top=gme.freqs[:].max())
-            elif eV == True:
+        if vert_symm == None or vert_symm.lower() in {"odd", "even"}:
+            ax.plot(X,
+                    conv * gme.freqs,
+                    'o',
+                    c="#1f77b4",
+                    label="",
+                    ms=markersize,
+                    mew=markeredgewidth,
+                    mec=markeredgecolor)
+            ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
+
+        elif vert_symm.lower() == "both":
+            if show_symmetry:
+                ax.scatter(X.flatten(),
+                           conv * gme.freqs.flatten(),
+                           c=gme.kz_symms,
+                           cmap='bwr',
+                           s=markersize**2,
+                           edgecolors=markeredgecolor,
+                           linewidth=markeredgewidth)
+                ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
+            else:
                 ax.plot(X,
                         conv * gme.freqs,
                         'o',
@@ -313,147 +209,19 @@ def bands(gme,
                         mec=markeredgecolor)
                 ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
 
-        elif vert_symm.lower() == "both":
-            if symmetry:
-                if eV == False:
-                    ax.scatter(X.flatten(),
-                               gme.freqs.flatten(),
-                               c=gme.symm,
-                               cmap='bwr',
-                               s=markersize**2,
-                               edgecolors=markeredgecolor,
-                               linewidth=markeredgewidth)
-                    ax.set_ylim(bottom=0.0, top=gme.freqs[:].max())
-                elif eV == True:
-                    ax.scatter(X.flatten(),
-                               conv * gme.freqs.flatten(),
-                               c=gme.symm,
-                               cmap='bwr',
-                               s=markersize**2,
-                               edgecolors=markeredgecolor,
-                               linewidth=markeredgewidth)
-                    ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
-            else:
-                if eV == False:
-                    ax.plot(X,
-                            gme.freqs,
-                            'o',
-                            c="#1f77b4",
-                            label="",
-                            ms=markersize,
-                            mew=markeredgewidth,
-                            mec=markeredgecolor)
-                    ax.set_ylim(bottom=0.0, top=gme.freqs[:].max())
-                elif eV == True:
-                    ax.plot(X,
-                            conv * gme.freqs,
-                            'o',
-                            c="#1f77b4",
-                            label="",
-                            ms=markersize,
-                            mew=markeredgewidth,
-                            mec=markeredgecolor)
-                    ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
-
-        elif vert_symm.lower() == "odd":
-            if eV == False:
-                ax.plot(X,
-                        gme.freqs_odd,
-                        'o',
-                        c="#1f77b4",
-                        label="",
-                        ms=markersize,
-                        mew=markeredgewidth,
-                        mec=markeredgecolor)
-                ax.set_ylim(bottom=0.0, top=gme.freqs_odd[:].max())
-            elif eV == True:
-                ax.plot(X,
-                        conv * gme.freqs_odd,
-                        'o',
-                        c="#1f77b4",
-                        label="",
-                        ms=markersize,
-                        mew=markeredgewidth,
-                        mec=markeredgecolor)
-                ax.set_ylim(bottom=0.0, top=conv * gme.freqs_odd[:].max())
-        elif vert_symm.lower() == "even":
-            if eV == False:
-                ax.plot(X,
-                        gme.freqs_even,
-                        'o',
-                        c="#1f77b4",
-                        label="",
-                        ms=markersize,
-                        mew=markeredgewidth,
-                        mec=markeredgecolor)
-                ax.set_ylim(bottom=0.0, top=gme.freqs_even[:].max())
-            elif eV == True:
-                ax.plot(X,
-                        conv * gme.freqs_even,
-                        'o',
-                        c="#1f77b4",
-                        label="",
-                        ms=markersize,
-                        mew=markeredgewidth,
-                        mec=markeredgecolor)
-                ax.set_ylim(bottom=0.0, top=conv * gme.freqs_even[:].max())
-
     if cone:
-        if eV == False:
-            eps_clad = [
-                gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg
-            ]
-            vec_LL = np.sqrt(
-                np.square(gme.kpoints[0, :]) +
-                np.square(gme.kpoints[1, :])) / 2 / np.pi / np.sqrt(
-                    max(eps_clad))
-            if vert_symm == None or vert_symm.lower() == "both":
-                ax.fill_between(X0,
-                                vec_LL,
-                                max(100, vec_LL.max(), gme.freqs[:].max()),
-                                facecolor=conecolor,
-                                zorder=0)
-            elif vert_symm.lower() == "odd":
-                ax.fill_between(X0,
-                                vec_LL,
-                                max(100, vec_LL.max(), gme.freqs_odd[:].max()),
-                                facecolor=conecolor,
-                                zorder=0)
-            elif vert_symm.lower() == "even":
-                ax.fill_between(X0,
-                                vec_LL,
-                                max(100, vec_LL.max(),
-                                    gme.freqs_even[:].max()),
-                                facecolor=conecolor,
-                                zorder=0)
-        elif eV == True:
-            eps_clad = [
-                gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg
-            ]
-            vec_LL = conv * (np.sqrt(
-                np.square(gme.kpoints[0, :]) + np.square(gme.kpoints[1, :])) /
-                             2 / np.pi / np.sqrt(max(eps_clad)))
-            if vert_symm == None or vert_symm.lower() == "both":
-                ax.fill_between(X0,
-                                vec_LL,
-                                max(100, vec_LL.max(),
-                                    conv * gme.freqs[:].max()),
-                                facecolor=conecolor,
-                                zorder=0)
-            elif vert_symm.lower() == "odd":
-                ax.fill_between(X0,
-                                vec_LL,
-                                max(100, vec_LL.max(),
-                                    conv * gme.freqs_odd[:].max()),
-                                facecolor=conecolor,
-                                zorder=0)
-            elif vert_symm.lower() == "even":
-                ax.fill_between(X0,
-                                vec_LL,
-                                max(100, vec_LL.max(),
-                                    conv * gme.freqs_even[:].max()),
-                                facecolor=conecolor,
-                                zorder=0)
+        eps_clad = [
+            gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg
+        ]
+        vec_LL = conv * (np.sqrt(
+            np.square(gme.kpoints[0, :]) + np.square(gme.kpoints[1, :])) / 2 /
+                         np.pi / np.sqrt(max(eps_clad)))
+
+        ax.fill_between(X0,
+                        vec_LL,
+                        max(100, vec_LL.max(), conv * gme.freqs[:].max()),
+                        facecolor=conecolor,
+                        zorder=0)
 
     ax.set_xlim(left=0, right=max(X0))
     ax.set_xlabel('Wave vector')
@@ -1427,7 +1195,7 @@ def field(struct,
         Figure object for the plot.
     """
     if isinstance(struct, GuidedModeExp):
-        vert_symm = struct.symmetry
+        vert_symm = struct.kz_symmetry
         str_type = 'gme'
     elif isinstance(struct, PlaneWaveExp):
         vert_symm = None
@@ -1436,18 +1204,9 @@ def field(struct,
         raise ValueError("'struct' should be a 'PlaneWaveExp' or a "
                          "'GuidedModeExp' instance")
 
-    if vert_symm == None or vert_symm.lower() == 'both':
-        freqs = struct.freqs
-        if str_type == 'gme':
-            freqs_im = struct.freqs_im
-    elif vert_symm.lower() == 'odd':
-        freqs = struct.freqs_odd
-        if str_type == 'gme':
-            freqs_im = struct.freqs_im_odd
-    elif vert_symm.lower() == 'even':
-        freqs = struct.freqs_even
-        if str_type == 'gme':
-            freqs_im = struct.freqs_im_even
+    freqs = struct.freqs
+    if str_type == 'gme':
+        freqs_im = struct.freqs_im
 
     field = field.lower()
     val = val.lower()
