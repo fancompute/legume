@@ -17,7 +17,7 @@ class ExcitonSchroedEq(object):
                  M,
                  E0,
                  loss,
-                 osc_str= None,
+                 osc_str=None,
                  gmax: float = 3.,
                  truncate_g='abs'):
         """Initialize the Schroedinger equation expansion.
@@ -54,17 +54,17 @@ class ExcitonSchroedEq(object):
         # Number of layers in the PhC
         self.N_layers = len(phc.layers)
         layer_index = self._z_to_lind(z)
-        if layer_index == 0 or layer_index == self.N_layers+1:
-            raise ValueError(f"ExcitonSchroedEq cannot be intilized in a cladding"
-                            f" layer at z={z:.3f}, change the position 'z'.")
+        if layer_index == 0 or layer_index == self.N_layers + 1:
+            raise ValueError(
+                f"ExcitonSchroedEq cannot be intilized in a cladding"
+                f" layer at z={z:.3f}, change the position 'z'.")
         else:
-            # Note that layer_index=1 corresponds to the first layer phc.layers[0] 
-            self.layer = phc.layers[layer_index-1]
+            # Note that layer_index=1 corresponds to the first layer phc.layers[0]
+            self.layer = phc.layers[layer_index - 1]
 
         self.E0 = E0
         self.M = M
         self.a = a
-
 
         self.gmax = gmax
         self.loss = loss
@@ -72,9 +72,6 @@ class ExcitonSchroedEq(object):
         self.V_shapes = V_shapes
         self.osc_str = osc_str
         self.truncate_g = truncate_g
-
-        
-        
 
         if osc_str is not None:
             if type(self.osc_str) == list:
@@ -94,6 +91,21 @@ class ExcitonSchroedEq(object):
             self._compute_pot_ft_abs()
         else:
             raise ValueError("'truncate_g' must be 'tbt' or 'abs'.")
+
+    def __repr__(self):
+        rep = 'ExcitonSchroedEq(\n'
+        rep += 'gmax = ' + repr(self.gmax) + ', \n'
+        rep += 'a = ' + repr(self.a) + ' m, \n'
+        rep += 'M = ' + f'{self.M:.3e}' + ' kg, \n'
+        rep += 'E0 = ' + repr(self.E0) + ' eV, \n'
+        rep += 'loss = ' + repr(self.loss * 1e3) + ' ueV, \n'
+        rep += 'z = ' + f'{self.z:.6f}' + ', \n'
+        rep += 'V_shapes = ' + repr(self.V_shapes) + ' eV, \n'
+        if self.osc_str is not None:
+            rep += 'osc_str = ' + repr(self.osc_str) + ' m^-2, \n'
+
+        rep += ')'
+        return rep
 
     @property
     def eners(self):
@@ -143,7 +155,7 @@ class ExcitonSchroedEq(object):
 
         z_max = self.phc.claddings[0].z_max
         lind = 0  # Index denoting which layer (including claddings) z is in
-        
+
         while z > z_max and lind < self.N_layers:
             lind += 1
             z_max = self.phc.layers[lind - 1].z_max

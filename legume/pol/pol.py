@@ -28,6 +28,13 @@ class HopfieldPol(object):
         self.gme = GuidedModeExp(phc, gmax, truncate_g=truncate_g)
 
         self.exc_list = []
+
+        if len(phc.qws) == 0:
+            raise ValueError(
+                "There are no active layers in the PhotCryst"
+                ", add them with 'add_qw()' or run a GuidedModeExp"
+                " simulation.")
+
         for qw in phc.qws:  #loop over quantum wells added with add_qw
             layer_ind = self.gme._z_to_lind(qw.z)
             self.exc_list.append(
@@ -41,6 +48,24 @@ class HopfieldPol(object):
                                  osc_str=qw.osc_str,
                                  gmax=gmax,
                                  truncate_g=truncate_g))
+
+    def __repr__(self):
+        rep = 'HopfieldPol(\n'
+        rep += 'phc = PhotCryst object' + ', \n'
+        GME_run_options = [
+            'gmax', 'gmode_compute', 'gmode_inds', 'gmode_step', 'gradients',
+            'eig_solver', 'eig_sigma', 'eps_eff'
+        ]
+        for option in GME_run_options:
+            try:
+                val = getattr(self.gme, option)
+                rep += "\tGME: " + option + ' = ' + repr(val) + ', \n'
+            except:
+                pass
+        for active in self.exc_list:
+            rep += "\tESE at z = " + f"{active.z:.6f}" + ', \n'
+        rep += ')'
+        return rep
 
     @property
     def eners(self):

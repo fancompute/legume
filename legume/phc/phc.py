@@ -89,7 +89,7 @@ class PhotCryst(object):
     def add_qw(self, z: float, V_shapes: float, a: float, M: float, E0: float,
                loss: float, osc_str):
         """
-        Add a quantum wells block in the phc structure.
+        Add an active layer to in the photonic crystal.
 
         Parameters
         ----------

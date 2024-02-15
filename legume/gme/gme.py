@@ -840,64 +840,13 @@ class GuidedModeExp(object):
             raise ValueError(
                 "'kz_symmetry' can be None, 'odd', 'even' or 'both' ")
 
-        #Check that kpoints are in high symmetry lines of the lattice
-        # we round the angle to avoid numerical errors, moreover with self.symmetry different from None
-        #'self.trunate_g' must be 'abs'
-
         if self.kz_symmetry:
             if self.truncate_g == 'tbt':
                 raise ValueError(
                     "'truncate_g' must be 'abs' to separate odd and even modes"
                     " w.r.t. a vertical plane of symmetry.")
-            #Square lattice
-            if (all(self.phc.lattice.a1/bd.sqrt(self.phc.lattice.ec_area) == [1,0]) and \
-                 all(self.phc.lattice.a2/bd.sqrt(self.phc.lattice.ec_area) == [0,1])):
-                for ang in angles:
-                    if (bd.round(ang, 8) in self._square_an) == False:
-                        raise ValueError(
-                            "Some kpoints are not along a high-symmetry line"
-                            " of square lattice")
-                #Dictionary with all reflection matrices used
-                refl_mat = {}
-                # Loop over unique angles
-                for ang in set(angles):
-                    re_mat = self._construct_sym_mat(ang)
-                    refl_mat.update({str(ang): re_mat})
-            #Hexagonal lattice
-            elif (all(self.phc.lattice.a1 == [0.5, bd.sqrt(3) / 2])
-                  and all(self.phc.lattice.a2 == [0.5, -bd.sqrt(3) / 2])):
 
-                for ang in angles:
-                    if (bd.round(ang, 8) in self._hex_an) == False:
-                        raise ValueError(
-                            "Some kpoints are not along a high-symmetry line"
-                            " of hexagonal lattice")
-                #Dictionary with all reflection matrices used
-                refl_mat = {}
-                # Loop over unique angles
-                for ang in set(angles):
-                    re_mat = self._construct_sym_mat(ang)
-                    refl_mat.update({str(ang): re_mat})
-            #Rectangular lattice
-            elif (bd.dot(self.phc.lattice.a1,self.phc.lattice.a1) != \
-                  bd.dot(self.phc.lattice.a2,self.phc.lattice.a2))  and \
-                 (( self.phc.lattice.a1[0]==0 and self.phc.lattice.a2[1]==0) or \
-                  ( self.phc.lattice.a1[1]==0 and self.phc.lattice.a2[0]==0 )):
-                for ang in angles:
-                    if (bd.round(ang, 8) in self._rec_an) == False:
-                        raise ValueError(
-                            "Some kpoints are not along a high-symmetry line"
-                            " of hexagonal lattice")
-                #Dictionary with all reflection matrices used
-                refl_mat = {}
-                # Loop over unique angles
-                for ang in set(angles):
-                    re_mat = self._construct_sym_mat(ang)
-                    refl_mat.update({str(ang): re_mat})
-            else:
-                raise ValueError(
-                    "Symmetry separation w.r.t. vertical plane is implemented"
-                    " for 'square', 'hexagonal' and rectangular lattices only")
+            refl_mat = self._calculate_refl_mat(angles)
 
         # Array of effective permittivity of every layer (including claddings)
         if self.eps_eff == 'average':
@@ -1542,6 +1491,76 @@ class GuidedModeExp(object):
         self.even_counts.append(even_count)
 
         return mat_even, mat_odd, v_sigma_perm
+
+    def _calculate_refl_mat(self, angles):
+        """
+        Calculate the reflection matrices used for 
+        the symmetry separation with respect to
+        the vertical (kz) plane of symmetry, where
+        k is the in-plane wavevector and z is vertical direction.
+        Before calculating the reflection matrices, 
+        we check that kpoints are in high symmetry lines of the lattice.
+
+        Returns
+        -------
+
+        refl_mat : dict
+            Dictionary containing the reflection matrix
+            for each angle theta of the wavevector k in
+            the xy plane.
+        """
+
+        #Square lattice
+        if (all(self.phc.lattice.a1/bd.sqrt(self.phc.lattice.ec_area) == [1,0]) and \
+             all(self.phc.lattice.a2/bd.sqrt(self.phc.lattice.ec_area) == [0,1])):
+            for ang in angles:
+                if (bd.round(ang, 8) in self._square_an) == False:
+                    raise ValueError(
+                        "Some kpoints are not along a high-symmetry line"
+                        " of square lattice")
+            #Dictionary with all reflection matrices used
+            refl_mat = {}
+            # Loop over unique angles
+            for ang in set(angles):
+                re_mat = self._construct_sym_mat(ang)
+                refl_mat.update({str(ang): re_mat})
+        #Hexagonal lattice
+        elif (all(self.phc.lattice.a1 == [0.5, bd.sqrt(3) / 2])
+              and all(self.phc.lattice.a2 == [0.5, -bd.sqrt(3) / 2])):
+
+            for ang in angles:
+                if (bd.round(ang, 8) in self._hex_an) == False:
+                    raise ValueError(
+                        "Some kpoints are not along a high-symmetry line"
+                        " of hexagonal lattice")
+            #Dictionary with all reflection matrices used
+            refl_mat = {}
+            # Loop over unique angles
+            for ang in set(angles):
+                re_mat = self._construct_sym_mat(ang)
+                refl_mat.update({str(ang): re_mat})
+        #Rectangular lattice
+        elif (bd.dot(self.phc.lattice.a1,self.phc.lattice.a1) != \
+              bd.dot(self.phc.lattice.a2,self.phc.lattice.a2))  and \
+             (( self.phc.lattice.a1[0]==0 and self.phc.lattice.a2[1]==0) or \
+              ( self.phc.lattice.a1[1]==0 and self.phc.lattice.a2[0]==0 )):
+            for ang in angles:
+                if (bd.round(ang, 8) in self._rec_an) == False:
+                    raise ValueError(
+                        "Some kpoints are not along a high-symmetry line"
+                        " of rectangular lattice")
+            #Dictionary with all reflection matrices used
+            refl_mat = {}
+            # Loop over unique angles
+            for ang in set(angles):
+                re_mat = self._construct_sym_mat(ang)
+                refl_mat.update({str(ang): re_mat})
+        else:
+            raise ValueError(
+                "Symmetry separation w.r.t. vertical kz plane is implemented"
+                " for 'square', 'hexagonal' and rectangular lattices only.")
+
+        return refl_mat
 
     def compute_rad(self, kind: int, minds: list = [0]):
         """

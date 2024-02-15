@@ -14,3 +14,6 @@ Examples
     examples/06_Guided_mode_expansion_with_autograd
     examples/07_Enhancing_your_GME_optimization
     examples/08_Zero_index_BICs_with_GME
+    examples/10_excitons_and_polaritons
+    examples/11_GME_horizontal_xy_symmetry_plane
+    examples/12_GME_vertical_kz_symmetry_plane
