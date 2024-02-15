@@ -8,15 +8,16 @@ import sys, time
 class ExcitonSchroedEq(object):
     """Main simulation class of the excitonic Schroedinger equation.
     """
+
     def __init__(self,
-                 layer,
+                 phc,
                  z,
-                 Vmax,
+                 V_shapes,
                  a,
                  M,
                  E0,
                  loss,
-                 osc_str,
+                 osc_str= None,
                  gmax: float = 3.,
                  truncate_g='abs'):
         """Initialize the Schroedinger equation expansion.
@@ -24,42 +25,66 @@ class ExcitonSchroedEq(object):
         Parameters
         ----------
 
-        layer : Layer
-            Layer defining the 2D structure.
+        phc : PhotCryst
+            Photonic crystal object to be simulated.
         gmax : float, optional
             Maximum reciprocal lattice wave-vector length in units of 2pi/a.
-        a : lattice constant [m]
-        M : exciton mass [kg]
-        Vmax: potential of the shapes in the layer [eV]
-        E0 : free exciton energy [eV]
-        z : position of the QW in z direction,
-        loss : losses assumed to be contant [eV]
-        osc_str : list or numpy array with 3 components
-            oscillator strength [m^-2]
+        a : float
+            lattice constant [m]
+        M : float
+            exciton mass [kg]
+        V_shapes: float
+            potential of the shapes in the layer [eV]
+        E0 : float
+            free exciton energy [eV]
+        z : float
+            position of the excitonic layer in z direction.
+            This cannot be in the claddings
+        loss : float
+            losses assumed to be contant [eV]
+        osc_str : list or numpy array,optional
+            oscillator strength in units [m^-2],
+            it must have  3 components (x,y,z)
         truncate_g : {'tbt', 'abs'}
             Truncation of the reciprocal lattice vectors, ``'tbt'`` takes a 
             parallelogram in reciprocal space, while ``'abs'`` takes a circle.
         """
 
+        self.phc = phc
+        # Number of layers in the PhC
+        self.N_layers = len(phc.layers)
+        layer_index = self._z_to_lind(z)
+        if layer_index == 0 or layer_index == self.N_layers+1:
+            raise ValueError(f"ExcitonSchroedEq cannot be intilized in a cladding"
+                            f" layer at z={z:.3f}, change the position 'z'.")
+        else:
+            # Note that layer_index=1 corresponds to the first layer phc.layers[0] 
+            self.layer = phc.layers[layer_index-1]
+
         self.E0 = E0
         self.M = M
         self.a = a
-        self.layer = layer
+
+
         self.gmax = gmax
         self.loss = loss
         self.z = z
-        self.Vmax = Vmax
+        self.V_shapes = V_shapes
         self.osc_str = osc_str
         self.truncate_g = truncate_g
 
-        if type(self.osc_str) == list:
-            self.osc_str = np.asarray(self.osc_str)
-        elif type(self.osc_str) == np.ndarray:
-            pass
-        else:
-            raise TypeError("'osc_str' must be a list or a numpy array.")
-        if np.shape(self.osc_str)[0] != 3:
-            raise ValueError("'osc_str' must have 3 componets.")
+        
+        
+
+        if osc_str is not None:
+            if type(self.osc_str) == list:
+                self.osc_str = np.asarray(self.osc_str)
+            elif type(self.osc_str) == np.ndarray:
+                pass
+            else:
+                raise TypeError("'osc_str' must be a list or a numpy array.")
+            if np.shape(self.osc_str)[0] != 3:
+                raise ValueError("'osc_str' must have 3 componets.")
 
         if self.truncate_g == 'tbt':
             self._init_reciprocal_tbt()
@@ -118,6 +143,7 @@ class ExcitonSchroedEq(object):
 
         z_max = self.phc.claddings[0].z_max
         lind = 0  # Index denoting which layer (including claddings) z is in
+        
         while z > z_max and lind < self.N_layers:
             lind += 1
             z_max = self.phc.layers[lind - 1].z_max
@@ -194,8 +220,8 @@ class ExcitonSchroedEq(object):
                             self.gvec[:, range(n2max)]
 
         # Compute and store T1 and T2
-        self.T1 = self.layer.compute_exc_ft(G1, self.Vmax)
-        self.T2 = self.layer.compute_exc_ft(G2, self.Vmax)
+        self.T1 = self.layer.compute_exc_ft(G1, self.V_shapes)
+        self.T2 = self.layer.compute_exc_ft(G2, self.V_shapes)
 
         # Store the g-vectors to which T1 and T2 correspond
         self.G1 = G1
@@ -212,8 +238,8 @@ class ExcitonSchroedEq(object):
         self.T1 = []
         self.T2 = []
 
-        T1 = self.layer.compute_exc_ft(self.gvec, self.Vmax)
-        T2 = self.layer.compute_exc_ft(self.gvec, self.Vmax)
+        T1 = self.layer.compute_exc_ft(self.gvec, self.V_shapes)
+        T2 = self.layer.compute_exc_ft(self.gvec, self.V_shapes)
 
         # Store T1 and T2
         if bd.amax(bd.abs(bd.imag(T1))) < 1e-10 * bd.amax(bd.abs(bd.real(T1))):
@@ -234,7 +260,7 @@ class ExcitonSchroedEq(object):
                   self.gvec[1, :][:, np.newaxis]).ravel()
 
         pot_ft = self.layer.compute_exc_ft(np.vstack((ggridx, ggridy)),
-                                           self.Vmax)
+                                           self.V_shapes)
         self.pot_ft = bd.reshape(pot_ft,
                                  (self.gvec[0, :].size, self.gvec[0, :].size))
 
@@ -383,6 +409,7 @@ class ExcitonSchroedEq(object):
     def ft_wavef_xy(self, kind, mind):
         """
         Compute the wavefunction Fourier components in the xy-plane
+
         kind : int
             The wavefunction of the mode at `ExcitonSchroedEq.kpoints[:, kind]` is 
             computed.
@@ -395,10 +422,9 @@ class ExcitonSchroedEq(object):
         ft = evec
         return ft
 
-    def get_wavef_xy(self, kind, mind, z=0, Nx=100, Ny=100):
+    def get_wavef_xy(self, kind, mind, Nx=100, Ny=100):
         """
-        Compute the wavefunction in the xy-plane at 
-        position z.
+        Compute the wavefunction in the xy-plane.
         
         Parameters
         ----------
@@ -407,9 +433,6 @@ class ExcitonSchroedEq(object):
             computed.
         mind : int
             The wavefunction of the `mind` mode at that kpoint is computed.
-        z : float
-            Position of the xy-plane. This doesn't matter for the PWE or EqSchroe, but is 
-            added for consistency with the GME definitions.
         Nx : int, optional
             A grid of Nx points in the elementary cell is created.
         Ny : int, optional

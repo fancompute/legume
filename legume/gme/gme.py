@@ -16,6 +16,7 @@ class GuidedModeExp(object):
     """
     Main simulation class of the guided-mode expansion.
     """
+
     def __init__(self, phc, gmax=3., truncate_g='abs'):
         """Initialize the guided-mode expansion.
         
@@ -124,9 +125,9 @@ class GuidedModeExp(object):
             corresponds to s (te) coupling component, and 
             p (tm) component. 
             If unbalance_im ==
-            1 -> all coupling comes from s (te) wave
-            0 -> all coupling comes from p (tm) wave
-            0.5 -> half coupling from s and p waves
+            - 1 -> all coupling comes from s (te) wave
+            - 0 -> all coupling comes from p (tm) wave
+            - 0.5 -> half coupling from s and p waves
             If freqs_im=0 we set unbalance_im = 0.5.
         """
         return self._unbalance_im
@@ -281,6 +282,7 @@ class GuidedModeExp(object):
         Variable 'indmode' stores the indexes of 'gk' over which a guided
         mode solution was found
         """
+
         def interp_coeff(coeffs, il, ic, indmode, gs):
             """
             Interpolate the A/B coefficient (ic = 0/1) in layer number il
@@ -1560,15 +1562,24 @@ class GuidedModeExp(object):
             Imaginary part of the frequencies of the eigenmodes computed by the 
             guided-mode expansion.
         rad_coup : dict 
-            Coupling to TE and TM radiative modes in the lower/upper cladding.
+            Coupling to te (s) and tm (p) radiative modes in the lower/upper cladding.
         rad_gvec : dict
             Reciprocal lattice vectors in the lower/upper cladding 
             corresponding to ``rad_coup``.
-        unbalance : unbalance between s (te) and p (tm) coupling:
+        unbalance :np.ndarray  
+
+            Unbalance between of the radiative losses between
+            s (te) and p (tm) coupling. It can vary between
+            0 and 1 where:
+
             1 -> all coupling comes from s (te) wave
+        
             0 -> all coupling comes from p (tm) wave
-            0.5 -> half coupling from s and p waves
-            If freqs_im=0 we set unbalance_im = 0.5.
+        
+            0.5 -> half coupling from s and p waves.
+        
+            If for a given mode freqs_im=0, we set
+            the realitve unbalance = 0.5.
         """
 
         freqs = self.freqs

@@ -103,6 +103,7 @@ def grad_num(fn, arg, step_size=1e-7):
 def vjp_maker_num(fn, arg_inds, steps):
     """ Makes a vjp_maker for the numerical derivative of a function `fn`
     w.r.t. argument at position `arg_ind` using step sizes `steps` """
+
     def vjp_single_arg(ia):
         arg_ind = arg_inds[ia]
         step = steps[ia]

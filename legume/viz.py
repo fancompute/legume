@@ -24,7 +24,7 @@ def bands(gme,
           show_symmetry=True,
           eV=False,
           a=None):
-    """Plot photonic band structure from a GME simulation
+    """Plot photonic band structure from a GME or PWE simulation
 
     Note
     ----
@@ -60,8 +60,8 @@ def bands(gme,
         Band marker edge border width. Default is 1.5.
     show_symmetry : bool, optional
         Plot odd and even modes w.r.t. the vertical plane of symmetry
-        with different colours if gme.symmetry == 'both',
-        odd modes are blue, even modes are red.
+        with different colours if gme.symmetry == 'both'. 
+        Odd modes are blue, even modes are red.
         Note that this symmetry is not implemented for PlaneWaveExp
         class
     eV : bool, optional
@@ -254,7 +254,7 @@ def pol_bands(pol,
     The bands must be solved for and stored in the `HopfieldPol`
     object prior to calling this function.
 
-    If both "Q" and "fraction" are True, "Q" will be considered False.
+    If both ``Q`` and ``fraction`` are True, ``Q`` will be considered False.
 
     Parameters
     ----------
@@ -1015,8 +1015,8 @@ def pot_ft(struct,
            yz=False):
     """Plot a potentail cross section computed from an inverse FT
 
-    The Fourier transform is computed with respect to the GME reciprocal
-    lattice vectors.
+    The Fourier transform is computed with respect to the 'ExcitonSchroedEq'
+    reciprocal lattice vectors.
 
     Parameters
     ----------
@@ -1127,11 +1127,11 @@ def pot_ft(struct,
 
 
 def reciprocal(struct):
-    """Plot the reciprocal lattice of a GME or PWE object
+    """Plot the reciprocal lattice of a GME, PWE, ESE or HP object
 
     Parameters
     ----------
-    struct : GuidedModeExp or PlaneWaveExp 
+    struct : GuidedModeExp, PlaneWaveExp, ExcitonSchroedEq, HopfieldPol 
     """
     fig, ax = plt.subplots(1, constrained_layout=True)
     plt.plot(struct.gvec[0, :], struct.gvec[1, :], 'bx')
@@ -1348,13 +1348,11 @@ def wavef(struct, kind, mind, val="abs2", N1=100, N2=200, cbar=True):
 
     Parameters
     ----------
-    struct : GuidedModeExp or PlaneWaveExp 
+    struct : ExcitonSchroedEq 
     kind : int
         The wave vector index to plot
     mind : int
         The mode index to plot
-    component : str, optional
-        Component of the scalar field to plot
     val : {'re', 'im', 'abs2'}, optional
     N1 : int, optional
         Number of grid points to sample in first spatial dim

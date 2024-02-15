@@ -23,6 +23,7 @@ extend_ag = primitive(extend)
 
 
 def vjp_maker_extend(ans, vals, inds, shape):
+
     def vjp(g):
         return g[inds]
 
@@ -35,6 +36,7 @@ sqrt_ag = primitive(np.sqrt)
 
 
 def vjp_maker_sqrt(ans, x):
+
     def vjp(g):
         return g * 0.5 * (x + 1e-10)**0.5 / (x + 1e-10)
         # return np.where(np.abs(x) > 1e-10, g * 0.5 * x**-0.5, 0.)
@@ -50,6 +52,7 @@ toeplitz_block_ag = primitive(toeplitz_block)
 
 def vjp_maker_TB_T1(Tmat, n, T1, T2):
     """ Gives vjp for Tmat = toeplitz_block(n, T1, T2) w.r.t. T1"""
+
     def vjp(v):
         ntot = Tmat.shape[0]
         p = int(ntot / n)  # Linear size of each block
@@ -71,6 +74,7 @@ def vjp_maker_TB_T1(Tmat, n, T1, T2):
 
 def vjp_maker_TB_T2(Tmat, n, T1, T2):
     """ Gives vjp for Tmat = toeplitz_block(n, T1, T2) w.r.t. T2"""
+
     def vjp(v):
         ntot = Tmat.shape[0]
         p = int(ntot / n)  # Linear size of each block
@@ -234,6 +238,7 @@ interp_ag = primitive(np.interp)
 def vjp_maker_interp(ans, x, xp, yp):
     """Construct the vjp of interp(x, xp, yp) w.r.t. yp
     """
+
     def vjp(g):
         dydyp = np.zeros((x.size, xp.size))
         for ix in range(x.size):
@@ -273,6 +278,7 @@ def vjp_factory_fsolve(ginds):
     vjp_makers = [None, None, None]
 
     def vjp_single_arg(ia):
+
         def vjp_maker(ans, *args):
             f = args[0]
             fargs = args[3:]

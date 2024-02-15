@@ -9,6 +9,7 @@ class PhotCryst(object):
     """
     Class for a photonic crystal which can contain a number of layers.
     """
+
     def __init__(self, lattice, eps_l: float = 1, eps_u: float = 1):
         """Initialize a photonic crystal.
         
@@ -85,20 +86,20 @@ class PhotCryst(object):
         self.claddings[1].z_min = z_min + d
         self.layers.append(layer)
 
-    def add_qw(self, z: float, Vmax: float, a: float, M: float, E0: float,
+    def add_qw(self, z: float, V_shapes: float, a: float, M: float, E0: float,
                loss: float, osc_str):
         """
         Add a quantum wells block in the phc structure.
 
         Parameters
         ----------
-        z: float.
+        z: float
             Positions of the QWs.
-        Vmax : float,
+        V_shapes : float
             Potential felt by excitons in Shapes in [eV].
             The background is assumed to be at 0 eV.
 
-        a : float,
+        a : float
             dimensional lattice constant in [m].
         M : float
             Exciton mass in [kg]
@@ -106,16 +107,16 @@ class PhotCryst(object):
             Free exciton energy in [eV]
         loss : float
             Exciton non-radiative losses in [eV]
-        osc_str: list or np.ndarray, 
+        osc_str: list or np.ndarray
             exciton oscillator strength per unit area in [m^-2],
-            it has three component in th [x,y,z] frame of reference.
+            it has three component in the [x,y,z] frame of reference.
             
         """
 
         if z <= self.claddings[0].z_max or z >= self.claddings[1].z_min:
             raise ValueError(
                 f"QuantumWellLayer cannot be in the claddings at z = {z}.")
-        qw = QuantumWellLayer(z, Vmax, a, M, E0, loss, osc_str)
+        qw = QuantumWellLayer(z, V_shapes, a, M, E0, loss, osc_str)
         self.qws.append(qw)
 
     def add_shape(self, shapes, layer=-1, cladding=None):

@@ -10,6 +10,7 @@ from legume.exc import ExcitonSchroedEq
 class HopfieldPol(object):
     """Main simulation class of the generalized Hopfield matrix method.
     """
+
     def __init__(self, phc, gmax, truncate_g='abs'):
         """Initialize the Schroedinger equation expansion.
         
@@ -30,9 +31,9 @@ class HopfieldPol(object):
         for qw in phc.qws:  #loop over quantum wells added with add_qw
             layer_ind = self.gme._z_to_lind(qw.z)
             self.exc_list.append(
-                ExcitonSchroedEq(layer=phc.layers[layer_ind - 1],
+                ExcitonSchroedEq(phc=phc,
                                  z=qw.z,
-                                 Vmax=qw.Vmax,
+                                 V_shapes=qw.V_shapes,
                                  a=qw.a,
                                  M=qw.M,
                                  E0=qw.E0,
@@ -65,14 +66,14 @@ class HopfieldPol(object):
 
     @property
     def fractions_ex(self):
-        """Photonic and excitonic fractions of the bands
+        """Excitonic fractions of the polaritonic eigenmodes.
         """
         if self._fractions_ex is None: self._fractions_ex = []
         return self._fractions_ex
 
     @property
     def fractions_ph(self):
-        """Photonic and excitonic fractions of the bands
+        """Photonic fractions of the polaritonic eigenmodes.
         """
         if self._fractions_ph is None: self._fractions_ph = []
         return self._fractions_ph
@@ -106,7 +107,7 @@ class HopfieldPol(object):
     def _z_to_lind(self, z):
         """
         Get a layer index corresponding to a position z. Claddings are included 
-        as first and last layer
+        as first and last layer.
         """
 
         z_max = self.phc.claddings[0].z_max
@@ -122,7 +123,6 @@ class HopfieldPol(object):
         """
         Calculate the photonic and excitonic fraction of the bands starting from
         the polaritonic eigenvectors.
-
 
          """
 
@@ -234,9 +234,31 @@ class HopfieldPol(object):
             kpoints: np.ndarray = np.array([[0], [0]]),
             verbose=True):
         """
-        Run the simulation. The computed eigen-frequencies are stored in
-        :attr:`ExcitonSchroedEq.freqs`, and the corresponding eigenvectors - 
-        in :attr:`ExcitonSchroedEq.eigvecs`.
+        Compute the eigenmodes of the photonic crystal taking
+        into account light-matter interaction.
+        
+        The generalized Hopfield method implemented
+        proceeds as follows:
+
+            Iterate over the k points:
+
+                Run the :meth:`GuidedModeExp.run` method for
+                the input phc.
+
+                Run :meth:`ExcitonSchroedEq.run` for each
+                quantum well layer added with :meth:`PhotCrys.add_qw`
+                method to the photonic crystal.
+
+                Compute the photons-excitons coupling terms and
+                construct the Hopfield matrix for diagonalization.
+                The properties of the eigenmodes are stored only
+                for mode with positive energy. The energy modes are
+                stored in :attr:`HopfieldPol.eners`. The losses are stored
+                in :attr:`HopfieldPol.eners_im`. From the eigenvectors
+                we calulate the photonic (excitonic) fractions of
+                the polaritonic modes which are stored in
+                :attr:`HopfieldPol.fractions_ph` (:attr:`HopfieldPol.fractions_ph`).
+
         
         Parameters
         ----------
