@@ -152,16 +152,16 @@ class HopfieldPol(object):
          """
 
         # Not pythonic, could be done better
-        num_bands = np.shape(eigenvectors)[1]
-        frac_ex = np.zeros((num_bands))
-        frac_ph = np.zeros((num_bands))
+        num_bands = bd.shape(eigenvectors)[1]
+        frac_ex = bd.zeros((num_bands))
+        frac_ph = bd.zeros((num_bands))
 
         for band in range(num_bands):
-            frac_ph[band] = np.sum(np.abs(eigenvectors[0:self.N_max,band])**2)\
-            +np.sum(np.abs(eigenvectors[self.N_max+self.M_max*self.num_QWs:2*self.N_max+self.M_max*self.num_QWs,band])**2)
+            frac_ph[band] = bd.sum(bd.abs(eigenvectors[0:self.N_max,band])**2)\
+            +bd.sum(bd.abs(eigenvectors[self.N_max+self.M_max*self.num_QWs:2*self.N_max+self.M_max*self.num_QWs,band])**2)
 
-            frac_ex[band] = np.sum(np.abs(eigenvectors[self.N_max:self.N_max+self.M_max*self.num_QWs,band])**2)\
-            +np.sum(np.abs(eigenvectors[2*self.N_max+self.M_max*self.num_QWs:,band])**2)
+            frac_ex[band] = bd.sum(bd.abs(eigenvectors[self.N_max:self.N_max+self.M_max*self.num_QWs,band])**2)\
+            +bd.sum(bd.abs(eigenvectors[2*self.N_max+self.M_max*self.num_QWs:,band])**2)
 
         return frac_ex, frac_ph
 
@@ -179,26 +179,26 @@ class HopfieldPol(object):
         The Oscillator strength must be converted to 'float'.
 
          """
-        pref = -1j * np.sqrt(cs.hbar**2 * cs.e**2 /
-                             (4 * cs.m_e * cs.epsilon_0)) / cs.e / np.sqrt(
+        pref = -1j * bd.sqrt(cs.hbar**2 * cs.e**2 /
+                             (4 * cs.m_e * cs.epsilon_0)) / cs.e / bd.sqrt(
                                  self.a)
-        C = np.zeros((self.N_max, self.M_max), dtype="complex")
+        C = bd.zeros((self.N_max, self.M_max), dtype="complex")
         #n: loop over photonic modes, nu: loop over excitonic modes
         for n in range(self.N_max):
             E_comp = self.gme.ft_field_xy("E", kind=kind, mind=n, z=exc.z)
             for nu in range(self.M_max):
                 W_comp = exc.ft_wavef_xy(kind=kind, mind=nu)
-                C[n, nu] = pref * np.sum(
-                    np.dot(np.sqrt(exc.osc_str.astype(float)), E_comp) *
-                    np.conjugate(W_comp))
+                C[n, nu] = pref * bd.sum(
+                    bd.dot(bd.sqrt(exc.osc_str.astype(float)), E_comp) *
+                    bd.conj(W_comp))
 
-        D = np.zeros((self.N_max, self.N_max), dtype="complex")
+        D = bd.zeros((self.N_max, self.N_max), dtype="complex")
         #n_1, n_2 loop over photonic modes (n and n' in the paper), nu loop over excitonic modes
         for n_1 in range(self.N_max):
             for n_2 in range(self.N_max):
-                D[n_1, n_2] = np.sum(
-                    np.conjugate(C[n_1, :]) * C[n_2, :] /
-                    np.real(exc.eners[kind, :]))
+                D[n_1, n_2] = bd.sum(
+                    bd.conj(C[n_1, :]) * C[n_2, :] /
+                    bd.real(exc.eners[kind, :]))
 
         return C, D
 
@@ -213,10 +213,10 @@ class HopfieldPol(object):
 
         #Initialise the list which contains all the C blocks, and the final D block
         C_blocks = [[] for i in range(self.num_QWs)]
-        D_final_block = np.zeros((self.N_max, self.N_max), dtype="complex")
+        D_final_block = bd.zeros((self.N_max, self.N_max), dtype="complex")
 
         #Calculate the photonic diagonal block
-        diag_phot = np.zeros((self.N_max, self.N_max), dtype="complex")
+        diag_phot = bd.zeros((self.N_max, self.N_max), dtype="complex")
 
         np.fill_diagonal(
             diag_phot, self.gme.freqs[kind, :] * conv_fact +
@@ -228,28 +228,28 @@ class HopfieldPol(object):
             C_blocks[ind_ex] = C
 
         C_final_block = bd.hstack([c for c in C_blocks])
-        C_dagger_final_block = np.conjugate(C_final_block.T)
+        C_dagger_final_block = bd.conj(C_final_block.T)
 
         #Initialise the excitonic block
-        diag_exc = np.zeros(
+        diag_exc = bd.zeros(
             (self.M_max * self.num_QWs, self.M_max * self.num_QWs),
             dtype="complex")
-        exc_el = np.concatenate(
+        exc_el = bd.concatenate(
             [exc_out.eners[kind] for exc_out in self.exc_list])
 
         np.fill_diagonal(diag_exc, exc_el)
 
         diag_phot = diag_phot + 2 * bd.real(D_final_block)
 
-        row_0 = np.hstack(
+        row_0 = bd.hstack(
             (diag_phot, -1j * C_final_block, -2 * D, -1j * C_final_block))
-        row_1 = np.hstack((1j * C_dagger_final_block, diag_exc,
+        row_1 = bd.hstack((1j * C_dagger_final_block, diag_exc,
                            -1j * C_dagger_final_block, diag_exc * 0.))
-        row_2 = np.hstack(
+        row_2 = bd.hstack(
             (2 * D, -1j * C_final_block, -diag_phot, -1j * C_final_block))
-        row_3 = np.hstack((-1j * C_dagger_final_block, diag_exc * 0.,
+        row_3 = bd.hstack((-1j * C_dagger_final_block, diag_exc * 0.,
                            1j * C_dagger_final_block, -diag_exc))
-        M = np.vstack((row_0, row_1, row_2, row_3))
+        M = bd.vstack((row_0, row_1, row_2, row_3))
 
         return M
 

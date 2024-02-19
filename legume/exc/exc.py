@@ -339,18 +339,18 @@ class ExcitonSchroedEq(object):
             # Construct the matrix for diagonalization in eV
             diag_vec = np.asarray([[k[0] + self.gvec[0, :]],
                                    [k[1] + self.gvec[1, :]]]) / self.a
-            diag = np.linalg.norm(diag_vec,
+            diag = bd.norm(diag_vec,
                                   axis=0)**2 * cs.hbar**2 / (2 * self.M * cs.e)
-            mat = np.zeros((np.shape(self.gvec)[1], np.shape(self.gvec)[1]),
+            mat = bd.zeros((np.shape(self.gvec)[1], np.shape(self.gvec)[1]),
                            dtype="complex")
             np.fill_diagonal(mat, diag)
             mat = mat + self.pot_mat
             # Check if mat is Hermitian
-            check = np.max(np.abs(mat - np.conjugate(mat.T)))
+            check = bd.max(bd.abs(mat - bd.conj(mat.T)))
             if check > 1e-10:
                 raise ValueError(
                     f"Excitonic Hamiltonian at {ik+1} of {kpoints.shape[1]}"
-                    " k pointsis not Hermitian.")
+                    " k points is not Hermitian.")
 
             #    Gk = bd.sqrt(bd.square(k[0] + self.gvec[0, :]) + \
             #            bd.square(k[1] + self.gvec[1, :]))
@@ -411,9 +411,9 @@ class ExcitonSchroedEq(object):
 
         (xgrid, ygrid) = self.layer.lattice.xy_grid(Nx=Nx, Ny=Ny)
 
-        ft_coeffs = np.hstack(
-            (self.T1, self.T2, np.conj(self.T1), np.conj(self.T2)))
-        gvec = np.hstack((self.G1, self.G2, -self.G1, -self.G2))
+        ft_coeffs = bd.hstack(
+            (self.T1, self.T2, bd.conj(self.T1), bd.conj(self.T2)))
+        gvec = bd.hstack((self.G1, self.G2, -self.G1, -self.G2))
         #ft_coeffs[0] sincewe have only one layer
         pot_r = ftinv(ft_coeffs[0], gvec, xgrid, ygrid)
         return (pot_r, xgrid, ygrid)

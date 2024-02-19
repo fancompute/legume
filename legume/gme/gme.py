@@ -672,7 +672,7 @@ class GuidedModeExp(object):
                         eig_sigma: float = 0.,
                         eps_eff='average',
                         verbose: bool = True,
-                        kz_symmetry: Optional[str] | None = None,
+                        kz_symmetry: Optional[str] = None,
                         symm_thr: float = 1e-8,
                         delta_g: float = 1e-15,
                         use_sparse: bool = False,
@@ -1024,7 +1024,7 @@ class GuidedModeExp(object):
                     evec = evecs[:, i_near[i_sort]]
                     #Rewrite eigenvector in original basis
                     if self.use_sparse == True:
-                        evec = v_sigma_perm.dot(evec)
+                        evec = bd.spdot(v_sigma_perm, evec)
                     elif self.use_sparse == False:
                         evec = bd.matmul(v_sigma_perm, evec)
 
@@ -1456,12 +1456,10 @@ class GuidedModeExp(object):
         row_P = np.array(indexes_sigma)
         P = coo((data_P, (row_P, col_P)), shape=(dim_final, dim_final))
 
-        separ_mat_sparse = v_sigma_coo.transpose().dot(mat.T)
-        separ_mat_sparse = P.transpose().dot(separ_mat_sparse)
-        separ_mat_sparse = v_sigma_coo.transpose().dot(separ_mat_sparse.T)
-        separ_mat_sparse = P.transpose().dot(separ_mat_sparse)
-
         v_sigma_perm = v_sigma_coo.dot(P)
+
+        separ_mat_sparse = bd.spdot(v_sigma_perm.T, mat.T)
+        separ_mat_sparse = bd.spdot(v_sigma_perm.T, separ_mat_sparse.T)
 
         mat_even = separ_mat_sparse[0:even_count, 0:even_count]
         mat_odd = separ_mat_sparse[even_count:, even_count:]
