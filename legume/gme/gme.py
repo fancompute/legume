@@ -415,6 +415,7 @@ class GuidedModeExp(object):
         Compute the unique FT coefficients of the permittivity, eps(g-g') for
         every layer in the PhC, assuming TBT-initialized reciprocal lattice
         """
+        t0 = time.time()
         (n1max, n2max) = (self.n1g, self.n2g)
         G1 = -self.gvec + self.gvec[:, [0]]
         G2 = np.zeros((2, n1max * n2max))
@@ -448,6 +449,7 @@ class GuidedModeExp(object):
         # Store the g-vectors to which T1 and T2 correspond
         self.G1 = G1
         self.G2 = G2
+        print(f"Time for tbt {time.time()-t0:.4f}")
 
     def _compute_ft_abs(self):
         """
@@ -457,7 +459,7 @@ class GuidedModeExp(object):
         #(n1max, n2max) = (self.n1g, self.n2g)
         #G1 = - self.gvec + self.gvec[:, [0]]
         #G2 = np.zeros((2, n1max*n2max))
-
+        t0 = time.time()
         # Initialize the FT coefficient lists; in the end the length of these
         # will be equal to the total number of layers in the PhC
         self.T1 = []
@@ -487,7 +489,8 @@ class GuidedModeExp(object):
         # Store the g-vectors to which T1 and T2 correspond
         self.G1 = self.gvec
         self.G2 = self.gvec
-
+        t_mid = time.time()
+        print(f"Time for mid (should be the same of 'tbt' {t_mid-t0:.4f}")
         ggridx = (self.gvec[0, :][np.newaxis, :] -
                   self.gvec[0, :][:, np.newaxis]).ravel()
         ggridy = (self.gvec[1, :][np.newaxis, :] -
@@ -500,6 +503,7 @@ class GuidedModeExp(object):
             self.eps_ft.append(
                 bd.reshape(eps_ft,
                            (self.gvec[0, :].size, self.gvec[0, :].size)))
+        print(f"Time for total 'abs' {time.time()-t0:.4f} of which {time.time()-t_mid:.4f} comes from additional part")
 
     def _construct_mat(self, kind):
         """
@@ -634,9 +638,6 @@ class GuidedModeExp(object):
             self.eps_inv_mat = []
 
             if self.truncate_g == 'tbt':
-                if self.only_gmodes:
-                    raise ValueError(
-                        "only_gmodes can be true only with 'abs' truncation.")
                 for it, T1 in enumerate(self.T1):
                     self.hom_layer = []
                     # For now we just use the numpy inversion. Later on we could
@@ -652,7 +653,7 @@ class GuidedModeExp(object):
             elif self.truncate_g == 'abs':
 
                 for eps_mat in self.eps_ft:
-                    # We keep only the diagonal terms of eps^-1 if we want to plot ony the guided modes
+                    # We keep only the diagonal terms of eps if we want to plot ony the guided modes
                     if self.only_gmodes:
                         self.eps_inv_mat.append(
                             bd.inv(np.diagflat(np.diag(eps_mat).copy())))
@@ -841,12 +842,17 @@ class GuidedModeExp(object):
                 "'kz_symmetry' can be None, 'odd', 'even' or 'both' ")
 
         if self.kz_symmetry:
-            if self.truncate_g == 'tbt':
-                raise ValueError(
-                    "'truncate_g' must be 'abs' to separate odd and even modes"
-                    " w.r.t. a vertical plane of symmetry.")
+        #     if self.truncate_g == 'tbt':
+        #         raise ValueError(
+        #             "'truncate_g' must be 'abs' to separate odd and even modes"
+        #             " w.r.t. a vertical plane of symmetry.")
 
             refl_mat = self._calculate_refl_mat(angles)
+        
+        if self.truncate_g == 'tbt':
+                if self.only_gmodes:
+                    raise ValueError(
+                        "only_gmodes can be true only with 'abs' truncation.")
 
         # Array of effective permittivity of every layer (including claddings)
         if self.eps_eff == 'average':
