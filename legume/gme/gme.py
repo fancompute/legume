@@ -415,7 +415,6 @@ class GuidedModeExp(object):
         Compute the unique FT coefficients of the permittivity, eps(g-g') for
         every layer in the PhC, assuming TBT-initialized reciprocal lattice
         """
-        t0 = time.time()
         (n1max, n2max) = (self.n1g, self.n2g)
         G1 = -self.gvec + self.gvec[:, [0]]
         G2 = np.zeros((2, n1max * n2max))
@@ -449,7 +448,6 @@ class GuidedModeExp(object):
         # Store the g-vectors to which T1 and T2 correspond
         self.G1 = G1
         self.G2 = G2
-        print(f"Time for tbt {time.time()-t0:.4f}")
 
     def _compute_ft_abs(self):
         """
@@ -459,7 +457,7 @@ class GuidedModeExp(object):
         #(n1max, n2max) = (self.n1g, self.n2g)
         #G1 = - self.gvec + self.gvec[:, [0]]
         #G2 = np.zeros((2, n1max*n2max))
-        t0 = time.time()
+
         # Initialize the FT coefficient lists; in the end the length of these
         # will be equal to the total number of layers in the PhC
         self.T1 = []
@@ -489,21 +487,6 @@ class GuidedModeExp(object):
         # Store the g-vectors to which T1 and T2 correspond
         self.G1 = self.gvec
         self.G2 = self.gvec
-        t_mid = time.time()
-        print(f"Time for mid (should be the same of 'tbt' {t_mid-t0:.4f}")
-        ggridx = (self.gvec[0, :][np.newaxis, :] -
-                  self.gvec[0, :][:, np.newaxis]).ravel()
-        ggridy = (self.gvec[1, :][np.newaxis, :] -
-                  self.gvec[1, :][:, np.newaxis]).ravel()
-
-        self.eps_ft = []
-        for layer in [self.phc.claddings[0]] + self.phc.layers + \
-                            [self.phc.claddings[1]]:
-            eps_ft = layer.compute_ft(np.vstack((ggridx, ggridy)))
-            self.eps_ft.append(
-                bd.reshape(eps_ft,
-                           (self.gvec[0, :].size, self.gvec[0, :].size)))
-        print(f"Time for total 'abs' {time.time()-t0:.4f} of which {time.time()-t_mid:.4f} comes from additional part")
 
     def _construct_mat(self, kind):
         """
@@ -651,14 +634,40 @@ class GuidedModeExp(object):
                         self.eps_inv_mat.append(bd.inv(eps_mat))
                         self.hom_layer.append(False)
             elif self.truncate_g == 'abs':
+                ggridx = (self.gvec[0, :][np.newaxis, :] -
+                                      self.gvec[0, :][:, np.newaxis]).ravel()
+                ggridy = (self.gvec[1, :][np.newaxis, :] -
+                                      self.gvec[1, :][:, np.newaxis]).ravel()
+                self.eps_mat = []
+                self.hom_layer = []
+                # We keep only the diagonal terms of eps if we want to plot ony the guided modes
+                #if self.only_gmodes:
+                #    self.eps_inv_mat.append(
+                #        bd.inv(np.diagflat(np.diag(eps_mat).copy())))
+                #else:
+                for it, T1 in enumerate(self.T1):
+                    
+                    mod_G1 = bd.norm(self.G1,axis=0)
+                    # Calculate the eps only if there are shapes in layer
+                    # and eps is not trivially diagonal
 
-                for eps_mat in self.eps_ft:
-                    # We keep only the diagonal terms of eps if we want to plot ony the guided modes
-                    if self.only_gmodes:
+                    index_G0 = np.argmin(mod_G1)
+                    if bd.sum(bd.abs(T1[mod_G1>1e-10]))< 1e-10 or self.only_gmodes:
+                        # Here eps is diagonal
+                        self.hom_layer.append(True)
+                        self.eps_mat.append(bd.eye(T1.size, T1.size) * T1[index_G0])
                         self.eps_inv_mat.append(
-                            bd.inv(np.diagflat(np.diag(eps_mat).copy())))
+                            bd.eye(T1.size, T1.size) / T1[index_G0])
                     else:
-                        self.eps_inv_mat.append(bd.inv(eps_mat))
+                        # Here explicitly calculate eps
+                        layers = [self.phc.claddings[0]] + self.phc.layers + \
+                                [self.phc.claddings[1]]
+                        eps_ft = layers[it].compute_ft(np.vstack((ggridx, ggridy)))
+                        eps_ft = bd.reshape(eps_ft,
+                           (self.gvec[0, :].size, self.gvec[0, :].size))
+                        self.eps_mat.append(eps_ft)
+                        self.eps_inv_mat.append(bd.inv(eps_ft))
+                        self.hom_layer.append(False)
 
     def set_run_options(self,
                         gmode_compute='exact',
