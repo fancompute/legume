@@ -375,7 +375,7 @@ spdot_ag = primitive(lambda spmat, mat: spmat.dot(mat))
 def vjp_maker_spdot(ans, spmat, mat):
     """vjp for the gradient w.r.t. mat"""
     def vjp(g):
-        return spmat.dot(g)
+        return spmat.T.dot(g)
     return vjp
 
 defvjp(spdot_ag, None, vjp_maker_spdot)

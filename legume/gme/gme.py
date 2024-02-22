@@ -855,7 +855,6 @@ class GuidedModeExp(object):
         #         raise ValueError(
         #             "'truncate_g' must be 'abs' to separate odd and even modes"
         #             " w.r.t. a vertical plane of symmetry.")
-
             refl_mat = self._calculate_refl_mat(angles)
         
         if self.truncate_g == 'tbt':
@@ -1065,7 +1064,7 @@ class GuidedModeExp(object):
                         (self.even_counts[ik], np.shape(evec)[1]))
                     evec = bd.concatenate((zeros_arr, evec))
                     if self.use_sparse == True:
-                        evec = v_sigma_perm.dot(evec)
+                        evec = bd.spdot(v_sigma_perm, evec)
                     elif self.use_sparse == False:
                         evec = bd.matmul(v_sigma_perm, evec)
                 elif self.kz_symmetry.lower() == 'even':
@@ -1090,7 +1089,7 @@ class GuidedModeExp(object):
                         (self.odd_counts[ik], np.shape(evec)[1]))
                     evec = bd.concatenate((evec, zeros_arr))
                     if self.use_sparse == True:
-                        evec = v_sigma_perm.dot(evec)
+                        evec = bd.spdot(v_sigma_perm, evec)
                     elif self.use_sparse == False:
                         evec = bd.matmul(v_sigma_perm, evec)
             elif self.eig_solver == 'eigsh':
