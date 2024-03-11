@@ -72,7 +72,7 @@ class Test_Guided(unittest.TestCase):
             'gmode_tol': 1e-12,
             'gmode_compute': 'interp',
             'compute_im': False,
-            'delta_g' : 1
+            'delta_gabs': 1e-6
         }
 
         gme.run(kpoints=np.array([[0.], [0.]]), **options)
@@ -82,8 +82,8 @@ class Test_Guided(unittest.TestCase):
             gms[2 * im, -len(gme.omegas_te[0][im]):] = gme.omegas_te[0][im]
             gms[2 * im + 1, -len(gme.omegas_tm[0][im]):] = gme.omegas_tm[0][im]
 
-        gms_store = np.load("./tests/data/guided_modes_grating.npy")
 
+        gms_store = np.load("./tests/data/guided_modes_grating.npy")
         self.assertLessEqual(np.sum(np.abs(gms_store - gms)), 1e-5)
 
 

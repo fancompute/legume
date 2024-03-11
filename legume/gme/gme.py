@@ -377,8 +377,8 @@ class GuidedModeExp(object):
         # Expand boundaries a bit to make sure we get all the modes
         # Note that the 'exact' computation still uses interpolation,
         # but the grid is defined by the actual gk values
-        g_array -= 1e-15
-        g_array[-1] += 2e-15
+        g_array -= self.delta_gabs
+        g_array[-1] += self.delta_gabs
         self.g_array.append(g_array)
         self.gmode_te = self.gmode_inds[np.remainder(self.gmode_inds, 2) == 0]
         self.gmode_tm = self.gmode_inds[np.remainder(self.gmode_inds, 2) != 0]
@@ -498,7 +498,7 @@ class GuidedModeExp(object):
         Construct the Hermitian matrix for diagonalization for a given k
         """
         # G + k vectors
-        gkx = self.gvec[0, :] + self.kpoints[0, kind] + self.delta_g
+        gkx = self.gvec[0, :] + self.kpoints[0, kind] + self.delta_gx
         gky = self.gvec[1, :] + self.kpoints[1, kind]
         gk = np.sqrt(np.square(gkx) + np.square(gky))
 
@@ -689,7 +689,8 @@ class GuidedModeExp(object):
                         verbose: bool = True,
                         kz_symmetry: Optional[str] = None,
                         symm_thr: float = 1e-8,
-                        delta_g: float = 1e-15,
+                        delta_gx: float = 1e-15,
+                        delta_gabs: float = 1e-15,
                         use_sparse: bool = False,
                         only_gmodes: bool = False):
         """Set multiple options for the guided-mode expansion.
@@ -748,9 +749,13 @@ class GuidedModeExp(object):
                 Threshold for out-of-diagonal terms in odd/even separated
                 Hamiltonian.
                 Default is 1e-8.
-            delta_g: float, optional,
+            delta_gx: float, optional,
                 little component added to the x-component of vectors
                 g = k + G to avoid problems at g = 0.
+                Default is 1e-15.
+            delta_gabs:  float, optional,
+                small shift of the absolute value of g = k + G
+                , kept for backwards compatibility.
                 Default is 1e-15.
             use_sparse: boolean, optional
                 If True, use sparse matrices for separating
@@ -778,7 +783,8 @@ class GuidedModeExp(object):
             'verbose': verbose,
             'kz_symmetry': kz_symmetry,
             'symm_thr': symm_thr,
-            'delta_g': delta_g,
+            'delta_gx': delta_gx,
+            'delta_gabs':delta_gabs,
             'use_sparse': use_sparse,
             'only_gmodes': only_gmodes
         }
@@ -1618,7 +1624,7 @@ class GuidedModeExp(object):
                              "stored eigenmodes" % self.numeig)
 
         # G + k vectors
-        gkx = self.gvec[0, :] + self.kpoints[0, kind] + self.delta_g
+        gkx = self.gvec[0, :] + self.kpoints[0, kind] + self.delta_gx
         gky = self.gvec[1, :] + self.kpoints[1, kind]
         gk = np.sqrt(np.square(gkx) + np.square(gky))
 
@@ -1941,7 +1947,7 @@ class GuidedModeExp(object):
         k = self.kpoints[:, kind]
 
         # G + k vectors
-        gkx = self.gvec[0, :] + k[0] + self.delta_g
+        gkx = self.gvec[0, :] + k[0] + self.delta_gx
         gky = self.gvec[1, :] + k[1]
         gnorm = bd.sqrt(bd.square(gkx) + bd.square(gky))
 
