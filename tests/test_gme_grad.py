@@ -46,7 +46,7 @@ class TestGMEgrad(unittest.TestCase):
             phc.add_shape(poly)
 
             # Define and run the GME
-            gme = GuidedModeExp(phc, gmax=3)
+            gme = GuidedModeExp(phc, gmax=3, truncate_g="tbt")
             options = {'gmode_inds': [0, 1, 2], 'numeig': 5, 'verbose': False}
             gme.run(kpoints=np.array([[0., 0.1], [0., 0.2]]), **options)
 

@@ -23,7 +23,8 @@ try:
     import autograd.scipy as spa
     #from autograd.scipy import spa_sparse
     from .primitives import (toeplitz_block_ag, eigh_ag, interp_ag, fsolve_ag,
-                             eigsh_ag, inv_ag, sqrt_ag, extend_ag, eig_ag, spdot_ag)
+                             eigsh_ag, inv_ag, sqrt_ag, extend_ag, eig_ag,
+                             spdot_ag)
     AG_AVAILABLE = True
 except ImportError:
     AG_AVAILABLE = False

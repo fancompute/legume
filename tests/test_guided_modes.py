@@ -64,14 +64,15 @@ class Test_Guided(unittest.TestCase):
         phc.add_shape([rect_add, rect_air])
 
         # Run a small GME simulation
-        gme = legume.GuidedModeExp(phc, gmax=5)
+        gme = legume.GuidedModeExp(phc, gmax=5, truncate_g="tbt")
         options = {
             'gmode_inds': np.arange(4),
             'verbose': False,
             'gmode_step': 1e-3,
             'gmode_tol': 1e-12,
             'gmode_compute': 'interp',
-            'compute_im': False
+            'compute_im': False,
+            'delta_g' : 1
         }
 
         gme.run(kpoints=np.array([[0.], [0.]]), **options)

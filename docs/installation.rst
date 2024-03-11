@@ -16,14 +16,24 @@ Optional dependencies
 - `gdspy <https://gdspy.readthedocs.io/>`__ (>= 1.5): For GDS structure export
 - `scikit-image <https://scikit-image.org/>`__ (>= 0.15): For GDS structure export via rasterization
 
-Instructions
-------------
+Instructions for local installation
+-----------------------------------
 
-To install the latest version of Legume from PyPi::
+To install the Legume version provided for the CPC submission (1.0.1),
+enter in the legume folder. There you should be able to locate
+the ``setup.py`` file. From this directory::
 
-    pip install legume-gme
+    pip install -e ./
 
-Alternatively, you can ``git clone`` Legume from the Fan group GitHub, manually install all of the required dependencies, and add the path to the Legume in your python path environment variable::
 
-    git clone https://github.com/fancompute/legume.git
-    export PYTHONPATH=$PYTHONPATH:/path/to/the/location/of/legume
+To run inverse design you have to install autograd with the command::
+
+    pip install autograd
+
+
+
+To run all examples you need to install jupyter notebook with the command::
+
+    pip install notebook 
+
+then use jupyter notebook and navigate to the docs/examples folder.

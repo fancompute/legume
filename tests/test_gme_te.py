@@ -24,7 +24,7 @@ class TestGME_TE(unittest.TestCase):
         phc.add_shape(Circle(r=0.2))
 
         # Find the modes of the structure and compare to the saved .mat file
-        gme = GuidedModeExp(phc, gmax=5)
+        gme = GuidedModeExp(phc, gmax=5, truncate_g="tbt")
         options = {'gmode_inds': [0], 'numeig': 10, 'verbose': False}
         gme.run(kpoints=np.array([[0., 0.1], [0., 0.2]]), **options)
 

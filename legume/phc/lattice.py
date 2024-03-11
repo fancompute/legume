@@ -7,7 +7,6 @@ class Lattice(object):
     """
     Class for constructing a Bravais lattice
     """
-
     def __init__(self, *args):
         """
         Initialize a Bravais lattice.

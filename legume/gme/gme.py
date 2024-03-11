@@ -55,7 +55,7 @@ class GuidedModeExp(object):
         self._symm = []
         self._freqs = []
         self._freqs_im = []
-        self._unbalance_im = []
+        self._unbalance_sp = []
         self._eigvecs = []
         self._rad_coup = {}
         self._rad_gvec = {}
@@ -119,18 +119,23 @@ class GuidedModeExp(object):
         return self._freqs_im
 
     @property
-    def unbalance_im(self):
+    def unbalance_sp(self):
         """Unbalance between the two addends in the summation
             of the imaginary part of the energy. The two addends
             corresponds to s (te) coupling component, and 
             p (tm) component. 
-            If unbalance_im ==
-            - 1 -> all coupling comes from s (te) wave
-            - 0 -> all coupling comes from p (tm) wave
-            - 0.5 -> half coupling from s and p waves
-            If freqs_im=0 we set unbalance_im = 0.5.
+
+            When ``unbalance_sp=``: 
+
+            * 1 -> all coupling comes from s (te) wave
+            * 0 -> all coupling comes from p (tm) wave
+            * 0.5 -> half coupling from s (te) waves and half from p (tm) waves
+            
+            Note
+            ----
+            If ``freqs_im=0`` then ``unbalance_sp = 0.5``.
         """
-        return self._unbalance_im
+        return self._unbalance_sp
 
     @property
     def eigvecs(self):
@@ -731,27 +736,30 @@ class GuidedModeExp(object):
             kz_symmetry : string, optional
                 Symmetry seleced with respect to the vertical kz plane of incidence,
                 it can be 'both', 'odd', 'even' or None.
-                With None there is no symmetry sepeartion, and kz_symms is an
-                empty list.
-                With 'both' both even and odd modes are saved in freqs and
-                their parity wrt the veritcal plane are saved in kz_symms.
-                With 'even' ('odd') only 'even' modes are calculated and 
+                With None there is no symmetry sepeartion, and :attr:`GuidedModeExp.kz_symms`
+                is an empty list.
+                If 'both', both even and odd modes are saved in
+                attr:`GuidedModeExp.freqs` and their parity wrt the veritcal
+                plane are saved in :attr:`GuidedModeExp.kz_symms`.
+                With 'even' ('odd') only 'even' ('odd') modes are calculated and 
                 stored.
-                Default is None
+                Default is None.
             symm_thr : float, optional
                 Threshold for out-of-diagonal terms in odd/even separated
                 Hamiltonian.
-                Default is 1e-8
+                Default is 1e-8.
             delta_g: float, optional,
                 little component added to the x-component of vectors
-                g = k + G to avoid problems at g = 0 
+                g = k + G to avoid problems at g = 0.
+                Default is 1e-15.
             use_sparse: boolean, optional
-                if True, use sparse matrices for separating
-                even and odd modes w.r.t. the vertical plane of symmetry
+                If True, use sparse matrices for separating
+                even and odd modes w.r.t. the vertical plane of symmetry.
+                Default is False.
             only_gmodes: boolean, optional
                 Should only the guided modes computed withouth the 
                 coupling of the PhC periodic patterning. 
-                Default is True.
+                Default is False.
             """
 
         # Make a dictionary that stores all the options
@@ -1169,8 +1177,8 @@ class GuidedModeExp(object):
         """
         Compute the radiative rates associated to all the eigenmodes that were 
         computed during :meth:`GuidedModeExp.run`. Results are stored in 
-        :attr:`GuidedModeExp.freqs_im`, :attr:`GuidedModeExp.rad_coup`, and 
-        :attr:`GuidedModeExp.rad_gvec`.
+        :attr:`GuidedModeExp.freqs_im`, :attr:`GuidedModeExp.rad_coup`, 
+        :attr:`GuidedModeExp.rad_gvec` and :attr:`GuidedModeExp.unbalance_sp`.
         """
 
         freqs_i = []  # Imaginary part of frequencies
@@ -1188,7 +1196,7 @@ class GuidedModeExp(object):
 
         for kind in range(len(self.freqs)):
             (freqs_im, freqs_im_te, freqs_im_tm, rc,
-             rv) = self.compute_rad(kind, minds)
+             rv) = self.compute_rad_sp(kind, minds)
             freqs_i.append(freqs_im)
             freqs_i_te.append(
                 freqs_im_te
@@ -1205,7 +1213,7 @@ class GuidedModeExp(object):
         # unbalance 0.5 where there are no losses
         unbalance_i[np.abs(np.array(freqs_i)) < 1e-15] = 0.5
 
-        self._unbalance_im = bd.array(unbalance_i)
+        self._unbalance_sp = bd.array(unbalance_i)
         self._freqs_im = bd.array(freqs_i)
         self._rad_coup = rad_coup
         self._rad_gvec = rad_gvec
@@ -1574,7 +1582,7 @@ class GuidedModeExp(object):
 
         return refl_mat
 
-    def compute_rad(self, kind: int, minds: list = [0]):
+    def _compute_rad_components(self, kind: int, minds: list = [0]):
         """
         Compute the radiation losses of the eigenmodes after the dispersion
         has been computed.
@@ -1597,20 +1605,7 @@ class GuidedModeExp(object):
         rad_gvec : dict
             Reciprocal lattice vectors in the lower/upper cladding 
             corresponding to ``rad_coup``.
-        unbalance :np.ndarray  
 
-            Unbalance between of the radiative losses between
-            s (te) and p (tm) coupling. It can vary between
-            0 and 1 where:
-
-            1 -> all coupling comes from s (te) wave
-        
-            0 -> all coupling comes from p (tm) wave
-        
-            0.5 -> half coupling from s and p waves.
-        
-            If for a given mode freqs_im=0, we set
-            the realitve unbalance = 0.5.
         """
 
         freqs = self.freqs
@@ -1780,10 +1775,82 @@ class GuidedModeExp(object):
             rad_tot_te.append(bd.imag(bd.sqrt(omr**2 + 1j * rad_te)))
             rad_tot_tm.append(bd.imag(bd.sqrt(omr**2 + 1j * rad_tm)))
 
+        return (rad_tot, rad_tot_te, rad_tot_tm, rad_coup, rad_gvec)
+
+    def compute_rad(self, kind: int, minds: list = [0]):
+        """
+        Compute the radiation losses of the eigenmodes after the dispersion
+        has been computed.
+        
+        Parameters
+        ----------
+        kind : int
+            Index of the k-point for the computation.
+        minds : list, optional
+            Indexes of which modes to be computed. Max value must be smaller 
+            than `GuidedModeExp.numeig` set in :meth:`GuidedModeExp.run`.
+
+        Returns
+        -------
+        freqs_im : np.ndarray
+            Imaginary part of the frequencies of the eigenmodes computed by the 
+            guided-mode expansion.
+        rad_coup : dict 
+            Coupling to te (s) and tm (p) radiative modes in the lower/upper cladding.
+        rad_gvec : dict
+            Reciprocal lattice vectors in the lower/upper cladding 
+            corresponding to ``rad_coup``.
+        """
+
+        rad_tot, _, _, rad_coup, rad_gvec = self._compute_rad_components(
+            kind, minds)
+
+        # Compute radiation rate in units of frequency
+        freqs_im = bd.array(rad_tot) / 2 / np.pi
+
+        return (freqs_im, rad_coup, rad_gvec)
+
+    def compute_rad_sp(self, kind: int, minds: list = [0]):
+        """
+        Compute the radiation losses of the eigenmodes after the dispersion
+        has been computed. Unlike :meth:`GuidedModeExp.compute_rad`, this
+        method separates the contribution form coupling to te-(s-) and
+        tm-(p-)polarized radiative modes.
+        
+        Parameters
+        ----------
+        kind : int
+            Index of the k-point for the computation.
+        minds : list, optional
+            Indexes of which modes to be computed. Max value must be smaller 
+            than `GuidedModeExp.numeig` set in :meth:`GuidedModeExp.run`.
+
+        Returns
+        -------
+        freqs_im : np.ndarray
+            Imaginary part of the frequencies of the eigenmodes computed by the 
+            guided-mode expansion.
+        freqs_im_te : np.ndarray
+            Imaginary part of the frequencies of the eigenmodes computed by the 
+            guided-mode expansion due to coupling to te (s) radiative mode
+        freqs_im_tm : np.ndarray
+            Imaginary part of the frequencies of the eigenmodes computed by the 
+            guided-mode expansion due to coupling to tm (p) radiative mode
+        rad_coup : dict 
+            Coupling to te (s) and tm (p) radiative modes in the lower/upper cladding.
+        rad_gvec : dict
+            Reciprocal lattice vectors in the lower/upper cladding 
+            corresponding to ``rad_coup``.
+        """
+
+        rad_tot, rad_tot_te, rad_tot_tm, rad_coup, rad_gvec = self._compute_rad_components(
+            kind, minds)
+
         # Compute radiation rate in units of frequency
         freqs_im = bd.array(rad_tot) / 2 / np.pi
         freqs_im_te = bd.array(rad_tot_te) / 2 / np.pi
         freqs_im_tm = bd.array(rad_tot_tm) / 2 / np.pi
+
         return (freqs_im, freqs_im_te, freqs_im_tm, rad_coup, rad_gvec)
 
     def get_eps_xy(self, z: float, xgrid=None, ygrid=None, Nx=100, Ny=100):

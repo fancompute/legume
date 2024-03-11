@@ -1326,7 +1326,7 @@ def field(struct,
         title_str += "%s-plane at $%s = %1.2f$\n" % (pl, o, v)
         title_str += "$f = %.2f$" % (freqs[kind, mind])
         if str_type == 'gme':
-            if len(freqs_im) >0:
+            if len(freqs_im) > 0:
                 if np.abs(freqs_im[kind, mind]) > 1e-20:
                     title_str += " $Q = %.2E$\n" % (freqs[kind, mind] / 2 /
                                                     freqs_im[kind, mind])

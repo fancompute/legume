@@ -23,7 +23,6 @@ extend_ag = primitive(extend)
 
 
 def vjp_maker_extend(ans, vals, inds, shape):
-
     def vjp(g):
         return g[inds]
 
@@ -36,7 +35,6 @@ sqrt_ag = primitive(np.sqrt)
 
 
 def vjp_maker_sqrt(ans, x):
-
     def vjp(g):
         return g * 0.5 * (x + 1e-10)**0.5 / (x + 1e-10)
         # return np.where(np.abs(x) > 1e-10, g * 0.5 * x**-0.5, 0.)
@@ -52,7 +50,6 @@ toeplitz_block_ag = primitive(toeplitz_block)
 
 def vjp_maker_TB_T1(Tmat, n, T1, T2):
     """ Gives vjp for Tmat = toeplitz_block(n, T1, T2) w.r.t. T1"""
-
     def vjp(v):
         ntot = Tmat.shape[0]
         p = int(ntot / n)  # Linear size of each block
@@ -74,7 +71,6 @@ def vjp_maker_TB_T1(Tmat, n, T1, T2):
 
 def vjp_maker_TB_T2(Tmat, n, T1, T2):
     """ Gives vjp for Tmat = toeplitz_block(n, T1, T2) w.r.t. T2"""
-
     def vjp(v):
         ntot = Tmat.shape[0]
         p = int(ntot / n)  # Linear size of each block
@@ -238,7 +234,6 @@ interp_ag = primitive(np.interp)
 def vjp_maker_interp(ans, x, xp, yp):
     """Construct the vjp of interp(x, xp, yp) w.r.t. yp
     """
-
     def vjp(g):
         dydyp = np.zeros((x.size, xp.size))
         for ix in range(x.size):
@@ -278,7 +273,6 @@ def vjp_factory_fsolve(ginds):
     vjp_makers = [None, None, None]
 
     def vjp_single_arg(ia):
-
         def vjp_maker(ans, *args):
             f = args[0]
             fargs = args[3:]
@@ -338,44 +332,49 @@ def vjp_maker_fmap(ans, fns, params):
 
 
 defvjp(fmap, None, vjp_maker_fmap)
-
-
 """=========== NUMPY.LINALG.EIG =========== """
 
-
 eig_ag = primitive(np.linalg.eig)
+
+
 def vjp_maker_eig(ans, x):
     """Gradient of a general square (complex valued) matrix"""
-    e, u = ans # eigenvalues as 1d array, eigenvectors in columns
+    e, u = ans  # eigenvalues as 1d array, eigenvectors in columns
     n = e.shape[-1]
+
     def vjp(g):
         ge, gu = g
         ge = _matrix_diag(ge)
-        f = 1/(e[..., np.newaxis, :] - e[..., :, np.newaxis] + 1.e-20)
+        f = 1 / (e[..., np.newaxis, :] - e[..., :, np.newaxis] + 1.e-20)
         f -= _diag(f)
         ut = np.swapaxes(u, -1, -2)
         r1 = f * _dot(ut, gu)
-        r2 = -f * (_dot(_dot(ut, np.conj(u)), np.real(_dot(ut,gu)) * np.eye(n)))
+        r2 = -f * (_dot(_dot(ut, np.conj(u)),
+                        np.real(_dot(ut, gu)) * np.eye(n)))
         r = _dot(_dot(inv(ut), ge + r1 + r2), ut)
         if not np.iscomplexobj(x):
             r = np.real(r)
             # the derivative is still complex for real input (imaginary delta is allowed), real output
             # but the derivative should be real in real input case when imaginary delta is forbidden
         return r
+
     return vjp
 
+
 defvjp(eig_ag, vjp_maker_eig)
-
-
 """=========== SCIPY.SPARSE.DOT =========== """
 # Dot product between a scipy sparse matrix and a numpy array.
 # Differentiable w.r.t. the numpy array."
 
 spdot_ag = primitive(lambda spmat, mat: spmat.dot(mat))
+
+
 def vjp_maker_spdot(ans, spmat, mat):
     """vjp for the gradient w.r.t. mat"""
     def vjp(g):
         return spmat.T.dot(g)
+
     return vjp
+
 
 defvjp(spdot_ag, None, vjp_maker_spdot)

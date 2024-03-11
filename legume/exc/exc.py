@@ -8,7 +8,6 @@ import sys, time
 class ExcitonSchroedEq(object):
     """Main simulation class of the excitonic Schroedinger equation.
     """
-
     def __init__(self,
                  phc,
                  z,
@@ -340,7 +339,7 @@ class ExcitonSchroedEq(object):
             diag_vec = np.asarray([[k[0] + self.gvec[0, :]],
                                    [k[1] + self.gvec[1, :]]]) / self.a
             diag = bd.norm(diag_vec,
-                                  axis=0)**2 * cs.hbar**2 / (2 * self.M * cs.e)
+                           axis=0)**2 * cs.hbar**2 / (2 * self.M * cs.e)
             mat = bd.zeros((np.shape(self.gvec)[1], np.shape(self.gvec)[1]),
                            dtype="complex")
             np.fill_diagonal(mat, diag)

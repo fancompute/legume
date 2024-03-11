@@ -39,6 +39,7 @@ Attributes
    GuidedModeExp.gvec
    GuidedModeExp.rad_coup
    GuidedModeExp.rad_gvec
+   GuidedModeExp.unbalance_sp
 
 
 Methods
@@ -50,6 +51,7 @@ Methods
    GuidedModeExp.run
    GuidedModeExp.run_im
    GuidedModeExp.compute_rad
+   GuidedModeExp.compute_rad_sp
    GuidedModeExp.get_eps_xy
    GuidedModeExp.ft_field_xy
    GuidedModeExp.get_field_xy
