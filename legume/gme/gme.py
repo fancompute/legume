@@ -229,6 +229,10 @@ class GuidedModeExp(object):
         inds1 = np.tile(np.arange(-n1max, n1max + 1), (2*n2max + 1, 1))  \
                          .reshape((2*n2max + 1)*(2*n1max + 1), order='F')
         inds2 = np.tile(np.arange(-n2max, n2max + 1), 2 * n1max + 1)
+
+        # Add dimension to indexes arrays
+        #inds1 = inds1[np.newaxis, :]
+        #inds2 = inds2[np.newaxis, :]
         gvec = self.phc.lattice.b1[:, np.newaxis].dot(inds1[np.newaxis, :]) + \
                 self.phc.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
         gnorm = np.sqrt(gvec[0, :]**2 + gvec[1, :]**2)
@@ -240,6 +244,8 @@ class GuidedModeExp(object):
                 gmax += 1e-10
 
             gvec = gvec[:, gnorm <= 2 * np.pi * (gmax)]
+            inds1= inds1[:, gnorm <= 2 * np.pi * (gmax)]
+            inds2= inds2[:, gnorm <= 2 * np.pi * (gmax)]
             print(
                 f"Warning: gmax={self.gmax} exactly equal to one of the g-vectors modulus"
                 f", reciprocal lattice truncated with gmax={gmax}"
@@ -247,6 +253,8 @@ class GuidedModeExp(object):
                 f"\nPlane waves used in the expansion = {np.shape(gvec)[1]}.")
         else:
             gvec = gvec[:, gnorm <= 2 * np.pi * self.gmax]
+            inds1= inds1[:, gnorm <= 2 * np.pi * (gmax)]
+            inds2= inds2[:, gnorm <= 2 * np.pi * (gmax)]
 
         # Save the reciprocal lattice vectors
         self._gvec = gvec
