@@ -243,9 +243,9 @@ class GuidedModeExp(object):
             while gmax * 2 * np.pi in gnorm:
                 gmax += 1e-10
 
-            gvec = gvec[:, gnorm <= 2 * np.pi * (gmax)]
-            inds1= inds1[:, gnorm <= 2 * np.pi * (gmax)]
-            inds2= inds2[:, gnorm <= 2 * np.pi * (gmax)]
+            gvec = gvec[:, gnorm <= 2 * np.pi * gmax]
+            inds1= inds1[gnorm <= 2 * np.pi * gmax]
+            inds2= inds2[gnorm <= 2 * np.pi * gmax]
             print(
                 f"Warning: gmax={self.gmax} exactly equal to one of the g-vectors modulus"
                 f", reciprocal lattice truncated with gmax={gmax}"
@@ -253,15 +253,18 @@ class GuidedModeExp(object):
                 f"\nPlane waves used in the expansion = {np.shape(gvec)[1]}.")
         else:
             gvec = gvec[:, gnorm <= 2 * np.pi * self.gmax]
-            inds1= inds1[:, gnorm <= 2 * np.pi * (gmax)]
-            inds2= inds2[:, gnorm <= 2 * np.pi * (gmax)]
+            inds1= inds1[gnorm <= 2 * np.pi * self.gmax]
+            inds2= inds2[gnorm <= 2 * np.pi * self.gmax]
+
 
         # Save the reciprocal lattice vectors
         self._gvec = gvec
 
         # TO be tested
-        self.n1g = round(-gvec[0, 0] / 2 / np.pi) * 2 + 1
-        self.n2g = self.n1g
+        self.n1g = bd.max(inds1)
+        self.n2g = bd.max(inds2)
+        self.inds1 = inds1
+        self.inds2 = inds2
 
     def _ind_g(self, gvecs, g_x, g_y, thr=1e-7):
         """
@@ -467,39 +470,53 @@ class GuidedModeExp(object):
         Compute the unique FT coefficients of the permittivity, eps(g-g') for
         every layer in the PhC, assuming abs-initialized reciprocal lattice
         """
-        #(n1max, n2max) = (self.n1g, self.n2g)
-        #G1 = - self.gvec + self.gvec[:, [0]]
-        #G2 = np.zeros((2, n1max*n2max))
 
-        # Initialize the FT coefficient lists; in the end the length of these
-        # will be equal to the total number of layers in the PhC
+        # x and y components of delta_G = G1-G2, 
+        #the dimension of ggrdix and ggrdiy is [Ng^2] 
+        ggridx = (self.gvec[0, :][np.newaxis, :] -
+                              self.gvec[0, :][:, np.newaxis]).ravel()
+        ggridy = (self.gvec[1, :][np.newaxis, :] -
+                              self.gvec[1, :][:, np.newaxis]).ravel()
+
+        # The dimension of G1 is [2,Ng^2]
+        self.G1 = np.vstack((ggridx, ggridy))
+
+        # indexes corresponding to ggdrix,ggridy
+        indgridx = (self.inds1[np.newaxis, :] -
+                              self.inds1[:, np.newaxis]).ravel().astype(int)
+        indgridy = (self.inds2[np.newaxis, :] -
+                              self.inds2[:, np.newaxis]).ravel().astype(int)
+
+        # We find the list of unique (indgridx,indgridy)
+        indgrid = np.array([indgridx,indgridy]) 
+        unique, ind_unique = np.unique(indgrid,axis=1,return_inverse=True)
+
+        # Unique g-vectors for calculting f-transform
+        gvec_unique = self.phc.lattice.b1[:, np.newaxis].dot(unique[0][np.newaxis, :]) + \
+                        self.phc.lattice.b2[:, np.newaxis].dot(unique[1][np.newaxis, :])
+
+        # T1 stores FT of all possible delta_G 
         self.T1 = []
-        self.T2 = []
 
-        #for ind1 in range(n1max):
-        #    G2[:, ind1*n2max:(ind1+1)*n2max] = - self.gvec[:, [ind1*n2max]] + \
-        #                    self.gvec[:, range(n2max)]
+        # T1_unique and G1_unique stores unique delta_G and their FT, used for invft()
+        self.T1_unique= []
+        self.G1_unique = gvec_unique
 
-        for layer in [self.phc.claddings[0]] + self.phc.layers + \
-                            [self.phc.claddings[1]]:
-            T1 = layer.compute_ft(self.gvec)
-            T2 = layer.compute_ft(self.gvec)
+        layers = [self.phc.claddings[0]] + self.phc.layers + \
+                                [self.phc.claddings[1]]
+        for layer in layers:
+            """
+            In the old code we calculated for all delta_G, but most of
+            them were redundant. We aviod the redundancies by
+            calculating the FT only for the unique delta_G.
+            eps_ft = layer.compute_ft(np.vstack((ggridx, ggridy))) 
+            """
+            eps_ft_uniq = layer.compute_ft((gvec_unique))
+            self.T1_unique.append(eps_ft_uniq)
 
-            # Store T1 and T2
-            if bd.amax(bd.abs(
-                    bd.imag(T1))) < 1e-10 * bd.amax(bd.abs(bd.real(T1))):
-                self.T1.append(bd.real(T1))
-            else:
-                self.T1.append(T1)
-            if bd.amax(bd.abs(
-                    bd.imag(T2))) < 1e-10 * bd.amax(bd.abs(bd.real(T2))):
-                self.T2.append(bd.real(T2))
-            else:
-                self.T2.append(T2)
+            eps_ft = eps_ft_uniq[ind_unique]
+            self.T1.append(eps_ft)
 
-        # Store the g-vectors to which T1 and T2 correspond
-        self.G1 = self.gvec
-        self.G2 = self.gvec
 
     def _construct_mat(self, kind):
         """
@@ -623,7 +640,7 @@ class GuidedModeExp(object):
         return bd.triu(mat, 1) + bd.transpose(bd.conj(bd.triu(mat, 1))) + \
                 bd.real(bd.diag(bd.diag(mat)))
 
-    def compute_eps_inv(self):
+    def compute_eps_inv(self, only_gmodes=False):
         """
         Construct the inverse FT matrices for the permittivity in each layer
         """
@@ -638,7 +655,7 @@ class GuidedModeExp(object):
                     self.hom_layer = []
                     # For now we just use the numpy inversion. Later on we could
                     # implement the Toeplitz-Block-Toeplitz inversion (faster)
-                    if bd.sum(bd.abs(T1[1:])) < 1e-10:
+                    if bd.sum(bd.abs(T1[1:])) < 1e-10 or only_gmodes:
                         self.eps_inv_mat.append(
                             bd.eye(T1.size, T1.size) / T1[0])
                         self.hom_layer.append(True)
@@ -647,37 +664,32 @@ class GuidedModeExp(object):
                         self.eps_inv_mat.append(bd.inv(eps_mat))
                         self.hom_layer.append(False)
             elif self.truncate_g == 'abs':
-                ggridx = (self.gvec[0, :][np.newaxis, :] -
-                                      self.gvec[0, :][:, np.newaxis]).ravel()
-                ggridy = (self.gvec[1, :][np.newaxis, :] -
-                                      self.gvec[1, :][:, np.newaxis]).ravel()
+
                 self.eps_mat = []
                 self.hom_layer = []
-                # We keep only the diagonal terms of eps if we want to plot ony the guided modes
-                #if self.only_gmodes:
-                #    self.eps_inv_mat.append(
-                #        bd.inv(np.diagflat(np.diag(eps_mat).copy())))
-                #else:
+
+                layers = [self.phc.claddings[0]] + self.phc.layers + \
+                                [self.phc.claddings[1]]
                 for it, T1 in enumerate(self.T1):
-                    
+                    # We are iterating of layers
+
                     mod_G1 = bd.norm(self.G1,axis=0)
                     # Calculate the eps only if there are shapes in layer
                     # and eps is not trivially diagonal
 
                     index_G0 = np.argmin(mod_G1)
-                    if bd.sum(bd.abs(T1[mod_G1>1e-10]))< 1e-10 or self.only_gmodes:
+                    eps_ft = bd.reshape(T1,
+                           (self.gvec[0, :].size, self.gvec[0, :].size))
+
+                    if bd.sum(bd.abs(T1[mod_G1>1e-10]))< 1e-10 or only_gmodes:
                         # Here eps is diagonal
                         self.hom_layer.append(True)
-                        self.eps_mat.append(bd.eye(T1.size, T1.size) * T1[index_G0])
+                        self.eps_mat.append(bd.eye(np.shape(eps_ft)[0],np.shape(eps_ft)[1]) * T1[index_G0])
                         self.eps_inv_mat.append(
-                            bd.eye(T1.size, T1.size) / T1[index_G0])
+                            bd.eye(np.shape(eps_ft)[0],np.shape(eps_ft)[1]) / T1[index_G0])
                     else:
                         # Here explicitly calculate eps
-                        layers = [self.phc.claddings[0]] + self.phc.layers + \
-                                [self.phc.claddings[1]]
-                        eps_ft = layers[it].compute_ft(np.vstack((ggridx, ggridy)))
-                        eps_ft = bd.reshape(eps_ft,
-                           (self.gvec[0, :].size, self.gvec[0, :].size))
+
                         self.eps_mat.append(eps_ft)
                         self.eps_inv_mat.append(bd.inv(eps_ft))
                         self.hom_layer.append(False)
@@ -957,13 +969,13 @@ class GuidedModeExp(object):
         self.t_creat_mat = 0
         # Compute inverse matrix of FT of permittivity
         t = time.time()
-        self.compute_eps_inv()
+        self.compute_eps_inv(self.only_gmodes)
 
         # We keep only the diagonal terms of eps^-1 if we want to plot ony the guided modes
-        if self.only_gmodes:
-            self.eps_inv_mat = [
-                np.diagflat(np.diag(a).copy()) for a in self.eps_inv_mat
-            ]
+        #if self.only_gmodes:
+        #    self.eps_inv_mat = [
+        #        np.diagflat(np.diag(a).copy()) for a in self.eps_inv_mat
+        #    ]
         t_eps_inv = time.time() - t
 
         # Loop over all k-points, construct the matrix, diagonalize, and compute
@@ -1908,11 +1920,18 @@ class GuidedModeExp(object):
         # Layer index where z lies
         lind = self._z_to_lind(z)
 
-        ft_coeffs = np.hstack((self.T1[lind], self.T2[lind],
-                               np.conj(self.T1[lind]), np.conj(self.T2[lind])))
-        gvec = np.hstack((self.G1, self.G2, -self.G1, -self.G2))
+        if self.truncate_g == "tbt":
+            ft_coeffs = np.hstack((self.T1[lind], self.T2[lind],
+                                   np.conj(self.T1[lind]), np.conj(self.T2[lind])))
+            gvec = np.hstack((self.G1, self.G2, -self.G1, -self.G2))
+            eps_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
 
-        eps_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
+        elif self.truncate_g == "abs":
+            ft_coeffs = self.T1_unique[lind]
+            gvec = self.G1_unique
+            #ft_coeffs = np.hstack((self.T1[lind], np.conj(self.T1[lind])) )
+            #gvec = np.hstack((self.G1, -self.G1))
+            eps_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
 
         return (eps_r, xgrid, ygrid)
 

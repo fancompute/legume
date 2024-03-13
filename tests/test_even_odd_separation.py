@@ -21,13 +21,14 @@ class TestGME_symmetry(unittest.TestCase):
         def load_GME_Fort(file):
 
             k, e, im = [], [], []
-            for line in open(file, 'r'):
-                values = [s for s in line.split()]
-                if len(values) > 0:
-                    if values[0] != '#':  #
-                        k.append(float(values[0]))
-                        e.append(float(values[1]))
-                        im.append(float(values[2]))
+            with open(file, 'r') as f:
+                for line in f:
+                    values = [s for s in line.split()]
+                    if len(values) > 0:
+                        if values[0] != '#':  #
+                            k.append(float(values[0]))
+                            e.append(float(values[1]))
+                            im.append(float(values[2]))
             k = np.asarray(k)
             e = np.asarray(e)
             im = np.asarray(im)
@@ -44,7 +45,7 @@ class TestGME_symmetry(unittest.TestCase):
         phc_asymm.add_layer(d=0.5, eps_b=3.54**2)
         phc_asymm.layers[-1].add_shape(Circle(eps=1, r=0.2))
         path_gx = lattice.bz_path(["G", "X"], [50])
-        gme_asymm = GuidedModeExp(phc_asymm, 4, truncate_g='abs')
+        gme_asymm = GuidedModeExp(phc_asymm, 4.01, truncate_g='abs')
 
         # Dense matrix test
         gme_options = {
