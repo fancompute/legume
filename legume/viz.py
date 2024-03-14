@@ -10,6 +10,43 @@ from .exc import ExcitonSchroedEq
 from .pol import HopfieldPol
 
 
+def calculate_x(struc):
+    """
+    Calculates x-axis coordinates for polaritonic 
+    and photonic bands plotting.
+
+    Parameters
+    ----------
+    struc : GuidedModeExp or HopfieldPol
+
+    Returns
+    -------
+    X0 : np.array
+        x cooridnates for light line plotting,
+        its length corresponds to the number of
+        wavevectors in the input simulation.
+
+    X : np.array
+        x cooridnates for band plotting. It
+        has the same shape of gme.freqs or pol.eners.
+    """
+
+    if np.all(struc.kpoints[0,:]==0) and not np.all(struc.kpoints[1,:]==0) \
+        or np.all(struc.kpoints[1,:]==0) and not np.all(struc.kpoints[0,:]==0):
+        X0 = np.sqrt(
+            np.square(struc.kpoints[0, :]) +
+            np.square(struc.kpoints[1, :])) / 2 / np.pi
+    else:
+        X0 = np.arange(len(struc.kpoints[0, :]))
+
+    if isinstance(struc, GuidedModeExp):
+        X = np.tile(X0.reshape(len(X0), 1), (1, struc.freqs.shape[1]))
+    elif isinstance(struc, HopfieldPol):
+        X = np.tile(X0.reshape(len(X0), 1), (1, pol.eners.shape[1]))
+
+    return (X0, X)
+
+
 def bands(gme,
           Q=False,
           Q_clip=1e10,
@@ -96,15 +133,7 @@ def bands(gme,
     else:
         conv = 1
 
-    if np.all(gme.kpoints[0,:]==0) and not np.all(gme.kpoints[1,:]==0) \
-        or np.all(gme.kpoints[1,:]==0) and not np.all(gme.kpoints[0,:]==0):
-        X0 = np.sqrt(
-            np.square(gme.kpoints[0, :]) +
-            np.square(gme.kpoints[1, :])) / 2 / np.pi
-    else:
-        X0 = np.arange(len(gme.kpoints[0, :]))
-
-    X = np.tile(X0.reshape(len(X0), 1), (1, gme.freqs.shape[1]))
+    X0, X = calculate_x(gme)
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
@@ -295,15 +324,7 @@ def pol_bands(pol,
         Axis object for the plot.
     """
 
-    if np.all(pol.kpoints[0,:]==0) and not np.all(pol.kpoints[1,:]==0) \
-        or np.all(pol.kpoints[1,:]==0) and not np.all(pol.kpoints[0,:]==0):
-        X0 = np.sqrt(
-            np.square(pol.kpoints[0, :]) +
-            np.square(pol.kpoints[1, :])) / 2 / np.pi
-    else:
-        X0 = np.arange(len(pol.kpoints[0, :]))
-
-    X = np.tile(X0.reshape(len(X0), 1), (1, pol.eners.shape[1]))
+    X0, X = calculate_x(pol)
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)

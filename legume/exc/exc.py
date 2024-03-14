@@ -195,28 +195,48 @@ class ExcitonSchroedEq(object):
         Initialize reciprocal lattice vectors with circular truncation.
         """
         n1max = np.int_(
-            (4 * np.pi * self.gmax) / np.linalg.norm(self.layer.lattice.b1))
+            (4 * np.pi * self.gmax) / np.linalg.norm(self.phc.lattice.b1))
         n2max = np.int_(
-            (4 * np.pi * self.gmax) / np.linalg.norm(self.layer.lattice.b2))
+            (4 * np.pi * self.gmax) / np.linalg.norm(self.phc.lattice.b2))
 
         inds1 = np.tile(np.arange(-n1max, n1max + 1), (2*n2max + 1, 1))  \
                          .reshape((2*n2max + 1)*(2*n1max + 1), order='F')
         inds2 = np.tile(np.arange(-n2max, n2max + 1), 2 * n1max + 1)
-        gvec = self.layer.lattice.b1[:, np.newaxis].dot(inds1[np.newaxis, :]) + \
-                self.layer.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
+
+        # Add dimension to indexes arrays
+        #inds1 = inds1[np.newaxis, :]
+        #inds2 = inds2[np.newaxis, :]
+        gvec = self.phc.lattice.b1[:, np.newaxis].dot(inds1[np.newaxis, :]) + \
+                self.phc.lattice.b2[:, np.newaxis].dot(inds2[np.newaxis, :])
         gnorm = np.sqrt(gvec[0, :]**2 + gvec[1, :]**2)
+
+        # Avoid to cut with gmax equal to one of the |G|
         if self.gmax * 2 * np.pi in gnorm:
-            gvec = gvec[:, gnorm <= 2 * np.pi * (self.gmax + 0.0001)]
+            gmax = self.gmax
+            while gmax * 2 * np.pi in gnorm:
+                gmax += 1e-10
+
+            gvec = gvec[:, gnorm <= 2 * np.pi * gmax]
+            inds1 = inds1[gnorm <= 2 * np.pi * gmax]
+            inds2 = inds2[gnorm <= 2 * np.pi * gmax]
             print(
                 f"Warning: gmax={self.gmax} exactly equal to one of the g-vectors modulus"
-                f", reciprocal lattice truncated with gmax={self.gmax+0.0001}"
+                f", reciprocal lattice truncated with gmax={gmax}"
                 f" to avoid problems."
                 f"\nPlane waves used in the expansion = {np.shape(gvec)[1]}.")
         else:
             gvec = gvec[:, gnorm <= 2 * np.pi * self.gmax]
+            inds1 = inds1[gnorm <= 2 * np.pi * self.gmax]
+            inds2 = inds2[gnorm <= 2 * np.pi * self.gmax]
 
         # Save the reciprocal lattice vectors
         self._gvec = gvec
+
+        # TO be tested
+        self.n1g = bd.max(inds1)
+        self.n2g = bd.max(inds2)
+        self.inds1 = inds1
+        self.inds2 = inds2
 
     def _compute_pot_ft_tbt(self):
         """
@@ -243,35 +263,43 @@ class ExcitonSchroedEq(object):
         Compute the unique FT coefficients of the potential, V(g-g') for
          assuming abs-initialized reciprocal lattice
         """
-        #self.pot_ft = []
-        # Initialize the FT coefficient lists; in the end the length of these
-        # will be equal to the total number of layers in the PhC
-        self.T1 = []
-        self.T2 = []
-
-        T1 = self.layer.compute_exc_ft(self.gvec, self.V_shapes)
-        T2 = self.layer.compute_exc_ft(self.gvec, self.V_shapes)
-
-        # Store T1 and T2
-        if bd.amax(bd.abs(bd.imag(T1))) < 1e-10 * bd.amax(bd.abs(bd.real(T1))):
-            self.T1.append(bd.real(T1))
-        else:
-            self.T1.append(T1)
-        if bd.amax(bd.abs(bd.imag(T2))) < 1e-10 * bd.amax(bd.abs(bd.real(T2))):
-            self.T2.append(bd.real(T2))
-        else:
-            self.T2.append(T2)
-
-        self.G1 = self.gvec
-        self.G2 = self.gvec
 
         ggridx = (self.gvec[0, :][np.newaxis, :] -
                   self.gvec[0, :][:, np.newaxis]).ravel()
         ggridy = (self.gvec[1, :][np.newaxis, :] -
                   self.gvec[1, :][:, np.newaxis]).ravel()
-
+        """
+        Old code calculating all redundant delta_g = Gi-Gj
         pot_ft = self.layer.compute_exc_ft(np.vstack((ggridx, ggridy)),
                                            self.V_shapes)
+        """
+
+        # The dimension of G1 is [2,Ng^2]
+        self.G1 = bd.vstack((ggridx, ggridy))
+
+        # indexes corresponding to ggdrix,ggridy
+        indgridx = (self.inds1[np.newaxis, :] -
+                    self.inds1[:, np.newaxis]).ravel().astype(int)
+        indgridy = (self.inds2[np.newaxis, :] -
+                    self.inds2[:, np.newaxis]).ravel().astype(int)
+
+        # We find the list of unique (indgridx,indgridy)
+        indgrid = bd.array([indgridx, indgridy])
+        unique, ind_unique = bd.unique(indgrid, axis=1, return_inverse=True)
+
+        # Unique g-vectors for calculting f-transform
+        gvec_unique = self.phc.lattice.b1[:, np.newaxis].dot(unique[0][np.newaxis, :]) + \
+                        self.phc.lattice.b2[:, np.newaxis].dot(unique[1][np.newaxis, :])
+
+        pot_ft_uniq = self.layer.compute_exc_ft((gvec_unique), self.V_shapes)
+
+        # T1_unique and G1_unique stores unique delta_G and their FT, used for invft()
+        self.G1_unique = gvec_unique
+        self.T1_unique = pot_ft_uniq
+
+        pot_ft = pot_ft_uniq[ind_unique]
+        self.T1 = pot_ft
+
         self.pot_ft = bd.reshape(pot_ft,
                                  (self.gvec[0, :].size, self.gvec[0, :].size))
 
@@ -394,9 +422,7 @@ class ExcitonSchroedEq(object):
             A grid of Nx points in the elementary cell is created.
         Ny : int, optional
             A grid of Ny points in the elementary cell is created.
-        z : float
-            Position of the xy-plane.
-        
+
         Returns
         -------
         pot_r : np.ndarray
@@ -406,15 +432,20 @@ class ExcitonSchroedEq(object):
         ygrid : np.ndarray
             The constructed grid in y.
         """
-        # Layer index where z lies
 
         (xgrid, ygrid) = self.layer.lattice.xy_grid(Nx=Nx, Ny=Ny)
 
-        ft_coeffs = bd.hstack(
-            (self.T1, self.T2, bd.conj(self.T1), bd.conj(self.T2)))
-        gvec = bd.hstack((self.G1, self.G2, -self.G1, -self.G2))
-        #ft_coeffs[0] sincewe have only one layer
-        pot_r = ftinv(ft_coeffs[0], gvec, xgrid, ygrid)
+        if self.truncate_g == "tbt":
+            ft_coeffs = bd.hstack(
+                (self.T1, self.T2, bd.conj(self.T1), bd.conj(self.T2)))
+            gvec = bd.hstack((self.G1, self.G2, -self.G1, -self.G2))
+            #ft_coeffs[0] sincewe have only one layer
+            pot_r = ftinv(ft_coeffs[0], gvec, xgrid, ygrid)
+        elif self.truncate_g == "abs":
+            ft_coeffs = self.T1_unique
+            gvec = self.G1_unique
+            pot_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
+
         return (pot_r, xgrid, ygrid)
 
     def ft_wavef_xy(self, kind, mind):

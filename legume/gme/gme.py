@@ -485,8 +485,11 @@ class GuidedModeExp(object):
                     self.inds2[:, np.newaxis]).ravel().astype(int)
 
         # We find the list of unique (indgridx,indgridy)
+        # This is the bottleneck in terms of timing, we should find
+        # an analytical expression for the unique elements to speedup
         indgrid = bd.array([indgridx, indgridy])
         unique, ind_unique = bd.unique(indgrid, axis=1, return_inverse=True)
+        num_unique = np.shape(unique)[1]
 
         # Unique g-vectors for calculting f-transform
         gvec_unique = self.phc.lattice.b1[:, np.newaxis].dot(unique[0][np.newaxis, :]) + \
@@ -501,6 +504,7 @@ class GuidedModeExp(object):
 
         layers = [self.phc.claddings[0]] + self.phc.layers + \
                                 [self.phc.claddings[1]]
+
         for layer in layers:
             """
             In the old code we calculated for all delta_G, but most of
@@ -508,7 +512,24 @@ class GuidedModeExp(object):
             calculating the FT only for the unique delta_G.
             eps_ft = layer.compute_ft(np.vstack((ggridx, ggridy))) 
             """
+            """
+            here we calculate only for unique delta_G with gx> = 0,
+            and then we just calculate conjugates for -delta_G elements.
+            In gvec_unique, the first half of the array has negative gx,
+            in the "middle" of the array there is (0,0), and in
+            the second half the are all gx>0 terms with a reversed
+            order, e.g. something like:
+            [[...,  0,  0,  0,  0,  0, ...],
+            [...,  -2, -1,  0,  1,  2, ...]]
+
+            To explicity calulate all unique delta_G
             eps_ft_uniq = layer.compute_ft((gvec_unique))
+            """
+            eps_ft_pos = layer.compute_ft(
+                (gvec_unique[:, 0:(num_unique - 1) // 2 + 1]))
+            eps_ft_uniq = bd.concatenate(
+                (eps_ft_pos, bd.conj(eps_ft_pos[-2::-1])))
+
             self.T1_unique.append(eps_ft_uniq)
 
             eps_ft = eps_ft_uniq[ind_unique]
