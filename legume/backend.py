@@ -152,7 +152,6 @@ if AG_AVAILABLE:
         full = staticmethod(npa.full)
         unique = staticmethod(npa.unique)
 
-
         # math functions
         exp = staticmethod(npa.exp)
         bessel1 = staticmethod(spa.special.j1)

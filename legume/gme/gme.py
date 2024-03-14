@@ -16,7 +16,6 @@ class GuidedModeExp(object):
     """
     Main simulation class of the guided-mode expansion.
     """
-
     def __init__(self, phc, gmax=3., truncate_g='abs'):
         """Initialize the guided-mode expansion.
         
@@ -244,8 +243,8 @@ class GuidedModeExp(object):
                 gmax += 1e-10
 
             gvec = gvec[:, gnorm <= 2 * np.pi * gmax]
-            inds1= inds1[gnorm <= 2 * np.pi * gmax]
-            inds2= inds2[gnorm <= 2 * np.pi * gmax]
+            inds1 = inds1[gnorm <= 2 * np.pi * gmax]
+            inds2 = inds2[gnorm <= 2 * np.pi * gmax]
             print(
                 f"Warning: gmax={self.gmax} exactly equal to one of the g-vectors modulus"
                 f", reciprocal lattice truncated with gmax={gmax}"
@@ -253,9 +252,8 @@ class GuidedModeExp(object):
                 f"\nPlane waves used in the expansion = {np.shape(gvec)[1]}.")
         else:
             gvec = gvec[:, gnorm <= 2 * np.pi * self.gmax]
-            inds1= inds1[gnorm <= 2 * np.pi * self.gmax]
-            inds2= inds2[gnorm <= 2 * np.pi * self.gmax]
-
+            inds1 = inds1[gnorm <= 2 * np.pi * self.gmax]
+            inds2 = inds2[gnorm <= 2 * np.pi * self.gmax]
 
         # Save the reciprocal lattice vectors
         self._gvec = gvec
@@ -298,7 +296,6 @@ class GuidedModeExp(object):
         Variable 'indmode' stores the indexes of 'gk' over which a guided
         mode solution was found
         """
-
         def interp_coeff(coeffs, il, ic, indmode, gs):
             """
             Interpolate the A/B coefficient (ic = 0/1) in layer number il
@@ -471,35 +468,35 @@ class GuidedModeExp(object):
         every layer in the PhC, assuming abs-initialized reciprocal lattice
         """
 
-        # x and y components of delta_G = G1-G2, 
-        #the dimension of ggrdix and ggrdiy is [Ng^2] 
+        # x and y components of delta_G = G1-G2,
+        #the dimension of ggrdix and ggrdiy is [Ng^2]
         ggridx = (self.gvec[0, :][np.newaxis, :] -
-                              self.gvec[0, :][:, np.newaxis]).ravel()
+                  self.gvec[0, :][:, np.newaxis]).ravel()
         ggridy = (self.gvec[1, :][np.newaxis, :] -
-                              self.gvec[1, :][:, np.newaxis]).ravel()
+                  self.gvec[1, :][:, np.newaxis]).ravel()
 
         # The dimension of G1 is [2,Ng^2]
         self.G1 = bd.vstack((ggridx, ggridy))
 
         # indexes corresponding to ggdrix,ggridy
         indgridx = (self.inds1[np.newaxis, :] -
-                              self.inds1[:, np.newaxis]).ravel().astype(int)
+                    self.inds1[:, np.newaxis]).ravel().astype(int)
         indgridy = (self.inds2[np.newaxis, :] -
-                              self.inds2[:, np.newaxis]).ravel().astype(int)
+                    self.inds2[:, np.newaxis]).ravel().astype(int)
 
         # We find the list of unique (indgridx,indgridy)
-        indgrid = bd.array([indgridx,indgridy]) 
-        unique, ind_unique = bd.unique(indgrid,axis=1,return_inverse=True)
+        indgrid = bd.array([indgridx, indgridy])
+        unique, ind_unique = bd.unique(indgrid, axis=1, return_inverse=True)
 
         # Unique g-vectors for calculting f-transform
         gvec_unique = self.phc.lattice.b1[:, np.newaxis].dot(unique[0][np.newaxis, :]) + \
                         self.phc.lattice.b2[:, np.newaxis].dot(unique[1][np.newaxis, :])
 
-        # T1 stores FT of all possible delta_G 
+        # T1 stores FT of all possible delta_G
         self.T1 = []
 
         # T1_unique and G1_unique stores unique delta_G and their FT, used for invft()
-        self.T1_unique= []
+        self.T1_unique = []
         self.G1_unique = gvec_unique
 
         layers = [self.phc.claddings[0]] + self.phc.layers + \
@@ -516,7 +513,6 @@ class GuidedModeExp(object):
 
             eps_ft = eps_ft_uniq[ind_unique]
             self.T1.append(eps_ft)
-
 
     def _construct_mat(self, kind):
         """
@@ -673,20 +669,24 @@ class GuidedModeExp(object):
                 for it, T1 in enumerate(self.T1):
                     # We are iterating of layers
 
-                    mod_G1 = bd.norm(self.G1,axis=0)
+                    mod_G1 = bd.norm(self.G1, axis=0)
                     # Calculate the eps only if there are shapes in layer
                     # and eps is not trivially diagonal
 
                     index_G0 = np.argmin(mod_G1)
-                    eps_ft = bd.reshape(T1,
-                           (self.gvec[0, :].size, self.gvec[0, :].size))
+                    eps_ft = bd.reshape(
+                        T1, (self.gvec[0, :].size, self.gvec[0, :].size))
 
-                    if bd.sum(bd.abs(T1[mod_G1>1e-10]))< 1e-10 or only_gmodes:
+                    if bd.sum(bd.abs(
+                            T1[mod_G1 > 1e-10])) < 1e-10 or only_gmodes:
                         # Here eps is diagonal
                         self.hom_layer.append(True)
-                        self.eps_mat.append(bd.eye(np.shape(eps_ft)[0],np.shape(eps_ft)[1]) * T1[index_G0])
+                        self.eps_mat.append(
+                            bd.eye(np.shape(eps_ft)[0],
+                                   np.shape(eps_ft)[1]) * T1[index_G0])
                         self.eps_inv_mat.append(
-                            bd.eye(np.shape(eps_ft)[0],np.shape(eps_ft)[1]) / T1[index_G0])
+                            bd.eye(np.shape(eps_ft)[0],
+                                   np.shape(eps_ft)[1]) / T1[index_G0])
                     else:
                         # Here explicitly calculate eps
 
@@ -804,7 +804,7 @@ class GuidedModeExp(object):
             'kz_symmetry': kz_symmetry,
             'symm_thr': symm_thr,
             'delta_gx': delta_gx,
-            'delta_gabs':delta_gabs,
+            'delta_gabs': delta_gabs,
             'use_sparse': use_sparse,
             'only_gmodes': only_gmodes
         }
@@ -890,11 +890,11 @@ class GuidedModeExp(object):
         #             "'truncate_g' must be 'abs' to separate odd and even modes"
         #             " w.r.t. a vertical plane of symmetry.")
             refl_mat = self._calculate_refl_mat(angles)
-        
+
         if self.truncate_g == 'tbt':
-                if self.only_gmodes:
-                    raise ValueError(
-                        "only_gmodes can be true only with 'abs' truncation.")
+            if self.only_gmodes:
+                raise ValueError(
+                    "only_gmodes can be true only with 'abs' truncation.")
 
         # Array of effective permittivity of every layer (including claddings)
         if self.eps_eff == 'average':
@@ -1921,8 +1921,9 @@ class GuidedModeExp(object):
         lind = self._z_to_lind(z)
 
         if self.truncate_g == "tbt":
-            ft_coeffs = np.hstack((self.T1[lind], self.T2[lind],
-                                   np.conj(self.T1[lind]), np.conj(self.T2[lind])))
+            ft_coeffs = np.hstack(
+                (self.T1[lind], self.T2[lind], np.conj(self.T1[lind]),
+                 np.conj(self.T2[lind])))
             gvec = np.hstack((self.G1, self.G2, -self.G1, -self.G2))
             eps_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
 

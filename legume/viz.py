@@ -974,10 +974,7 @@ def eps_ft(struct,
 
     for (indl, layer) in enumerate(all_layers):
         ax.append(fig.add_subplot(gs[indl, :]))
-        (eps_r, xgrid,
-         ygrid) = struct.get_eps_xy(Nx=Nx,
-                                    Ny=Ny,
-                                    z=layer.z_mid)
+        (eps_r, xgrid, ygrid) = struct.get_eps_xy(Nx=Nx, Ny=Ny, z=layer.z_mid)
 
         eps_min = min([eps_min, np.amin(np.real(eps_r))])
         eps_max = max([eps_max, np.amax(np.real(eps_r))])
