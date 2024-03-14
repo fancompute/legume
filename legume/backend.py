@@ -72,6 +72,7 @@ class NumpyBackend(Backend):
     concatenate = staticmethod(np.concatenate)
     size = staticmethod(np.size)
     full = staticmethod(np.full)
+    unique = staticmethod(np.unique)
 
     # math functions
     exp = staticmethod(np.exp)
@@ -149,6 +150,8 @@ if AG_AVAILABLE:
         concatenate = staticmethod(npa.concatenate)
         size = staticmethod(npa.size)
         full = staticmethod(npa.full)
+        unique = staticmethod(npa.unique)
+
 
         # math functions
         exp = staticmethod(npa.exp)
@@ -189,9 +192,6 @@ if AG_AVAILABLE:
         linspace = staticmethod(npa.linspace)
         arange = staticmethod(npa.arange)
         newaxis = staticmethod(npa.newaxis)
-
-        # Sparse matrix class
-        #coo = staticmethod(spa_sparse.coo_array)
 
 
 backend = NumpyBackend()

@@ -479,7 +479,7 @@ class GuidedModeExp(object):
                               self.gvec[1, :][:, np.newaxis]).ravel()
 
         # The dimension of G1 is [2,Ng^2]
-        self.G1 = np.vstack((ggridx, ggridy))
+        self.G1 = bd.vstack((ggridx, ggridy))
 
         # indexes corresponding to ggdrix,ggridy
         indgridx = (self.inds1[np.newaxis, :] -
@@ -488,8 +488,8 @@ class GuidedModeExp(object):
                               self.inds2[:, np.newaxis]).ravel().astype(int)
 
         # We find the list of unique (indgridx,indgridy)
-        indgrid = np.array([indgridx,indgridy]) 
-        unique, ind_unique = np.unique(indgrid,axis=1,return_inverse=True)
+        indgrid = bd.array([indgridx,indgridy]) 
+        unique, ind_unique = bd.unique(indgrid,axis=1,return_inverse=True)
 
         # Unique g-vectors for calculting f-transform
         gvec_unique = self.phc.lattice.b1[:, np.newaxis].dot(unique[0][np.newaxis, :]) + \
@@ -1929,8 +1929,6 @@ class GuidedModeExp(object):
         elif self.truncate_g == "abs":
             ft_coeffs = self.T1_unique[lind]
             gvec = self.G1_unique
-            #ft_coeffs = np.hstack((self.T1[lind], np.conj(self.T1[lind])) )
-            #gvec = np.hstack((self.G1, -self.G1))
             eps_r = ftinv(ft_coeffs, gvec, xgrid, ygrid)
 
         return (eps_r, xgrid, ygrid)
