@@ -10,7 +10,7 @@ from .exc import ExcitonSchroedEq
 from .pol import HopfieldPol
 
 
-def calculate_x(struc):
+def calculate_x(struc, k_units):
     """
     Calculates x-axis coordinates for polaritonic 
     and photonic bands plotting.
@@ -18,6 +18,11 @@ def calculate_x(struc):
     Parameters
     ----------
     struc : GuidedModeExp or HopfieldPol
+    k_units : boolean
+            If True the x-coordinates in the outputs
+            are proportional to wavevector increment.
+            If False x-points in the outputs
+            are simply linearly spaced.
 
     Returns
     -------
@@ -30,7 +35,7 @@ def calculate_x(struc):
         x cooridnates for band plotting. It
         has the same shape of gme.freqs or pol.eners.
     """
-
+    """
     if np.all(struc.kpoints[0,:]==0) and not np.all(struc.kpoints[1,:]==0) \
         or np.all(struc.kpoints[1,:]==0) and not np.all(struc.kpoints[0,:]==0):
         X0 = np.sqrt(
@@ -38,11 +43,26 @@ def calculate_x(struc):
             np.square(struc.kpoints[1, :])) / 2 / np.pi
     else:
         X0 = np.arange(len(struc.kpoints[0, :]))
+    """
+
+    mod_k = np.sqrt(
+        np.square(struc.kpoints[0, :]) +
+        np.square(struc.kpoints[1, :])) / 2 / np.pi
+
+    delta_k = np.diff(struc.kpoints, axis=-1)
+    mod_delta_k = np.sqrt(np.square(delta_k[0, :]) + np.square(delta_k[1, :]))
+    delta_k_norm = mod_delta_k / np.sum(mod_delta_k)
+
+    # X0 is a normalised ([0,..,1]) array proportional to the wavevectors
+    if k_units:
+        X0 = np.concatenate((np.array([0]), np.cumsum(delta_k_norm)))
+    else:
+        X0 = np.arange(len(struc.kpoints[0, :]))
 
     if isinstance(struc, GuidedModeExp):
         X = np.tile(X0.reshape(len(X0), 1), (1, struc.freqs.shape[1]))
     elif isinstance(struc, HopfieldPol):
-        X = np.tile(X0.reshape(len(X0), 1), (1, pol.eners.shape[1]))
+        X = np.tile(X0.reshape(len(X0), 1), (1, struc.eners.shape[1]))
 
     return (X0, X)
 
@@ -60,7 +80,8 @@ def bands(gme,
           markeredgewidth=1.5,
           show_symmetry=True,
           eV=False,
-          a=None):
+          a=None,
+          k_units=False):
     """Plot photonic band structure from a GME or PWE simulation
 
     Note
@@ -96,11 +117,11 @@ def bands(gme,
     markeredgewidth : float, optional
         Band marker edge border width. Default is 1.5.
     show_symmetry : bool, optional
-        Plot odd and even modes w.r.t. the vertical plane of symmetry
+        Plot odd and even modes w.r.t. the kz plane of symmetry
         with different colours if gme.symmetry == 'both'. 
         Odd modes are blue, even modes are red.
         Note that this symmetry is not implemented for PlaneWaveExp
-        class
+        class.
     eV : bool, optional
         Plot the energy bands in [eV].
         Default is False
@@ -108,6 +129,10 @@ def bands(gme,
         Lattice constant in [m], this parameters
         is required if eV == True.
         Default is None
+    k_units : bool, optional
+        Whether x-coordinates are calculated from
+        wavevector increments and have physical meaning or
+        they are simply linearly spaced points. 
 
     Returns
     -------
@@ -133,7 +158,7 @@ def bands(gme,
     else:
         conv = 1
 
-    X0, X = calculate_x(gme)
+    X0, X = calculate_x(gme, k_units)
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
@@ -275,7 +300,8 @@ def pol_bands(pol,
               fraction_cmap='coolwarm',
               markersize=6,
               markeredgecolor='w',
-              markeredgewidth=1.5):
+              markeredgewidth=1.5,
+              k_points=False):
     """Plot polaritonic band structure from a polaritonic simulation
 
     Note
@@ -317,6 +343,11 @@ def pol_bands(pol,
         Band marker edge border color. Default is white.
     markeredgewidth : float, optional
         Band marker edge border width. Default is 1.5.
+    k_units : bool, optional
+        Whether x-coordinates are calculated from
+        wavevector increments and have physical meaning or
+        they are simply linearly spaced points. 
+
 
     Returns
     -------
@@ -324,7 +355,7 @@ def pol_bands(pol,
         Axis object for the plot.
     """
 
-    X0, X = calculate_x(pol)
+    X0, X = calculate_x(pol, k_units)
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)

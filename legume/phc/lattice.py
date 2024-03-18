@@ -129,7 +129,7 @@ class Lattice(object):
         -------
         path: dict 
             A dictionary with the 'kpoints', 'labels',
-            'indexes', and the 'angles' corresponding to the labels.      
+            'indexes', 'k_indexes', and the 'angles' corresponding to the labels.      
         """
         if not isinstance(ns, list): ns = list(ns)
         npts = len(pts)
@@ -156,6 +156,7 @@ class Lattice(object):
             inds.append(count)
         kpoints[:, -1] = p2
 
+        # Angles of wavevectors in (kx,ky) plane
         angs = np.angle(kpoints[0] + 1j * kpoints[1], deg=True)
         #If gamma point is present, force symmetry from 'symm_g'
         index_g = np.where((kpoints[0] == 0) & (kpoints[1] == 0))
@@ -167,10 +168,24 @@ class Lattice(object):
 
         angs = tuple(angs)
 
+        delta_k = np.diff(kpoints, axis=-1)
+        mod_delta_k = np.sqrt(
+            np.square(delta_k[0, :]) + np.square(delta_k[1, :]))
+        delta_k_norm = mod_delta_k / np.sum(mod_delta_k)
+
+        ks = np.concatenate((np.array([0]), np.cumsum(delta_k_norm)))
+        k_indexes = ks[inds]
+
+        labels = [
+            str(pt).upper() if type(pt) == str else
+            f"$\\pi$ [{pt[0]/np.pi:.2f},{pt[1]/np.pi:.2f}]" for pt in pts
+        ]
+
         path = {
             'kpoints': kpoints,
-            'labels': [str(pt) for pt in pts],
+            'labels': labels,
             'indexes': inds,
+            'k_indexes': k_indexes,
             'angles': angs
         }
 
