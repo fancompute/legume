@@ -229,3 +229,19 @@ def extend(vals, inds, shape):
     z = np.zeros(shape, dtype=vals.dtype)
     z[inds] = vals
     return z
+
+
+def z_to_lind(phc, z):
+    """
+        Get a layer index corresponding to a position z. Claddings are included 
+        as first and last layer
+        """
+    N_layers = len(phc.layers)
+    z_max = phc.claddings[0].z_max
+    lind = 0  # Index denoting which layer (including claddings) z is in
+    while z > z_max and lind < N_layers:
+        lind += 1
+        z_max = phc.layers[lind - 1].z_max
+    if z > z_max and lind == N_layers: lind += 1
+
+    return lind

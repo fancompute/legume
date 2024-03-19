@@ -9,7 +9,7 @@ from typing import Optional
 from .slab_modes import guided_modes, rad_modes
 from . import matrix_elements
 from legume.backend import backend as bd
-from legume.utils import get_value, ftinv, find_nearest
+from legume.utils import get_value, ftinv, find_nearest, z_to_lind
 
 
 class GuidedModeExp(object):
@@ -258,7 +258,6 @@ class GuidedModeExp(object):
         # Save the reciprocal lattice vectors
         self._gvec = gvec
 
-        # TO be tested
         self.n1g = bd.max(inds1)
         self.n2g = bd.max(inds2)
         self.inds1 = inds1
@@ -360,21 +359,6 @@ class GuidedModeExp(object):
         (Xs, Ys) = rad_modes(omr, gkr, self.eps_array, self.d_array, pol, clad)
 
         return (Xs, Ys, chis)
-
-    def _z_to_lind(self, z):
-        """
-        Get a layer index corresponding to a position z. Claddings are included 
-        as first and last layer
-        """
-
-        z_max = self.phc.claddings[0].z_max
-        lind = 0  # Index denoting which layer (including claddings) z is in
-        while z > z_max and lind < self.N_layers:
-            lind += 1
-            z_max = self.phc.layers[lind - 1].z_max
-        if z > z_max and lind == self.N_layers: lind += 1
-
-        return lind
 
     def _compute_guided(self, g_array):
         """
@@ -1577,9 +1561,7 @@ class GuidedModeExp(object):
             the xy plane.
         """
 
-        #Square lattice
-        if (all(self.phc.lattice.a1/bd.sqrt(self.phc.lattice.ec_area) == [1,0]) and \
-             all(self.phc.lattice.a2/bd.sqrt(self.phc.lattice.ec_area) == [0,1])):
+        if self.phc.lattice.type == "square":
             for ang in angles:
                 if (bd.round(ang, 8) in self._square_an) == False:
                     raise ValueError(
@@ -1591,10 +1573,8 @@ class GuidedModeExp(object):
             for ang in set(angles):
                 re_mat = self._construct_sym_mat(ang)
                 refl_mat.update({str(ang): re_mat})
-        #Hexagonal lattice
-        elif (all(self.phc.lattice.a1 == [0.5, bd.sqrt(3) / 2])
-              and all(self.phc.lattice.a2 == [0.5, -bd.sqrt(3) / 2])):
 
+        elif self.phc.lattice.type == "hexagonal":
             for ang in angles:
                 if (bd.round(ang, 8) in self._hex_an) == False:
                     raise ValueError(
@@ -1606,11 +1586,8 @@ class GuidedModeExp(object):
             for ang in set(angles):
                 re_mat = self._construct_sym_mat(ang)
                 refl_mat.update({str(ang): re_mat})
-        #Rectangular lattice
-        elif (bd.dot(self.phc.lattice.a1,self.phc.lattice.a1) != \
-              bd.dot(self.phc.lattice.a2,self.phc.lattice.a2))  and \
-             (( self.phc.lattice.a1[0]==0 and self.phc.lattice.a2[1]==0) or \
-              ( self.phc.lattice.a1[1]==0 and self.phc.lattice.a2[0]==0 )):
+
+        elif self.phc.lattice.type == "rectangular":
             for ang in angles:
                 if (bd.round(ang, 8) in self._rec_an) == False:
                     raise ValueError(
@@ -1939,7 +1916,7 @@ class GuidedModeExp(object):
                 ygrid = ygr
 
         # Layer index where z lies
-        lind = self._z_to_lind(z)
+        lind = z_to_lind(self.phc, z)
 
         if self.truncate_g == "tbt":
             ft_coeffs = np.hstack(
@@ -2006,7 +1983,7 @@ class GuidedModeExp(object):
         qx = py
         qy = -px
 
-        lind = self._z_to_lind(z)
+        lind = z_to_lind(self.phc, z)
 
         if field.lower() == 'h':
             count = 0

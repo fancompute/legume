@@ -1,5 +1,5 @@
 import numpy as np
-from legume.utils import ftinv
+from legume.utils import ftinv, z_to_lind
 from legume.backend import backend as bd
 import scipy.constants as cs
 import sys, time
@@ -52,7 +52,7 @@ class ExcitonSchroedEq(object):
         self.phc = phc
         # Number of layers in the PhC
         self.N_layers = len(phc.layers)
-        layer_index = self._z_to_lind(z)
+        layer_index = z_to_lind(phc, z)
         if layer_index == 0 or layer_index == self.N_layers + 1:
             raise ValueError(
                 f"ExcitonSchroedEq cannot be intilized in a cladding"
@@ -145,22 +145,6 @@ class ExcitonSchroedEq(object):
             else:
                 sys.stdout.write("\r" + text)
                 sys.stdout.flush()
-
-    def _z_to_lind(self, z):
-        """
-        Get a layer index corresponding to a position z. Claddings are included 
-        as first and last layer
-        """
-
-        z_max = self.phc.claddings[0].z_max
-        lind = 0  # Index denoting which layer (including claddings) z is in
-
-        while z > z_max and lind < self.N_layers:
-            lind += 1
-            z_max = self.phc.layers[lind - 1].z_max
-        if z > z_max and lind == self.N_layers: lind += 1
-
-        return lind
 
     def _init_reciprocal_tbt(self):
         """

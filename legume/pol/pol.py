@@ -1,5 +1,5 @@
 import numpy as np
-from legume.utils import ftinv
+from legume.utils import ftinv, z_to_lind
 from legume.backend import backend as bd
 import legume.constants as cs
 import sys
@@ -35,7 +35,7 @@ class HopfieldPol(object):
                 " simulation.")
 
         for qw in phc.qws:  #loop over quantum wells added with add_qw
-            layer_ind = self.gme._z_to_lind(qw.z)
+            layer_ind = z_to_lind(phc, qw.z)
             self.exc_list.append(
                 ExcitonSchroedEq(phc=phc,
                                  z=qw.z,
@@ -127,21 +127,6 @@ class HopfieldPol(object):
             else:
                 sys.stdout.write("\r" + text)
                 sys.stdout.flush()
-
-    def _z_to_lind(self, z):
-        """
-        Get a layer index corresponding to a position z. Claddings are included 
-        as first and last layer.
-        """
-
-        z_max = self.phc.claddings[0].z_max
-        lind = 0  # Index denoting which layer (including claddings) z is in
-        while z > z_max and lind < self.N_layers:
-            lind += 1
-            z_max = self.phc.layers[lind - 1].z_max
-        if z > z_max and lind == self.N_layers: lind += 1
-
-        return lind
 
     def _calculate_fraction(self, eigenvectors):
         """
