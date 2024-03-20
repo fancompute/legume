@@ -7,7 +7,7 @@ import numpy as np
 from scipy.linalg import toeplitz
 from scipy.optimize import brentq
 import legume.constants as cs
-
+import warnings
 
 def ftinv(ft_coeff, gvec, xgrid, ygrid):
     """ 
@@ -272,8 +272,8 @@ def from_freq_to_e(a):
 
     # Maybe we should implement a warning and not a simple print?
     if a < 5e-8 or a > 5e-6:
-        print("The lattice constant is expected to be " +
+        warnings.warn("The lattice constant is expected to be " +
               "in the range of a few hundreds of nanometers." +
-              f" a = {a:.3e} m deviates from the expected range.")
+              f" a = {a:.3e} m deviates from the expected range.",UserWarning, stacklevel=3)
 
     return conv

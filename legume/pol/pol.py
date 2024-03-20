@@ -48,6 +48,15 @@ class HopfieldPol(object):
                                  gmax=gmax,
                                  truncate_g=truncate_g))
 
+        # Check that all excitonic layers have the same lattice constant
+        a_array = np.array([exc_sch.a for exc_sch in self.exc_list])
+        if np.all(np.abs(a_array-a_array[0])<1e-15 ):
+            self.a = a_array[0]
+        else:
+            raise ValueError("All the quantum well layers passed to"
+                            " HopfieldPol should have the same lattice"
+                            " constant a.")
+
     def __repr__(self):
         rep = 'HopfieldPol(\n'
         rep += 'phc = PhotCryst object' + ', \n'
@@ -190,9 +199,9 @@ class HopfieldPol(object):
         """ Construct the generalised Hopfield matrix for given k point 
 
         """
+         
 
         # Conversion factor: from dimensionless frequency to eV
-        self.a = self.exc_list[0].a
         conv_fact = from_freq_to_e(self.a)
 
         #Initialise the list which contains all the C blocks, and the final D block
