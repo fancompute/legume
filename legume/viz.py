@@ -10,63 +10,6 @@ from .exc import ExcitonSchroedEq
 from .pol import HopfieldPol
 
 
-def calculate_x(struc, k_units):
-    """
-    Calculates x-axis coordinates for polaritonic 
-    and photonic bands plotting.
-
-    Parameters
-    ----------
-    struc : GuidedModeExp or HopfieldPol
-    k_units : boolean
-            If True the x-coordinates in the outputs
-            are proportional to wavevector increment.
-            If False x-points in the outputs
-            are simply linearly spaced.
-
-    Returns
-    -------
-    X0 : np.array
-        x cooridnates for light line plotting,
-        its length corresponds to the number of
-        wavevectors in the input simulation.
-
-    X : np.array
-        x cooridnates for band plotting. It
-        has the same shape of gme.freqs or pol.eners.
-    """
-    """
-    if np.all(struc.kpoints[0,:]==0) and not np.all(struc.kpoints[1,:]==0) \
-        or np.all(struc.kpoints[1,:]==0) and not np.all(struc.kpoints[0,:]==0):
-        X0 = np.sqrt(
-            np.square(struc.kpoints[0, :]) +
-            np.square(struc.kpoints[1, :])) / 2 / np.pi
-    else:
-        X0 = np.arange(len(struc.kpoints[0, :]))
-    """
-
-    mod_k = np.sqrt(
-        np.square(struc.kpoints[0, :]) +
-        np.square(struc.kpoints[1, :])) / 2 / np.pi
-
-    delta_k = np.diff(struc.kpoints, axis=-1)
-    mod_delta_k = np.sqrt(np.square(delta_k[0, :]) + np.square(delta_k[1, :]))
-    delta_k_norm = mod_delta_k / np.sum(mod_delta_k)
-
-    # X0 is a normalised ([0,..,1]) array proportional to the wavevectors
-    if k_units:
-        X0 = np.concatenate((np.array([0]), np.cumsum(delta_k_norm)))
-    else:
-        X0 = np.arange(len(struc.kpoints[0, :]))
-
-    if isinstance(struc, GuidedModeExp):
-        X = np.tile(X0.reshape(len(X0), 1), (1, struc.freqs.shape[1]))
-    elif isinstance(struc, HopfieldPol):
-        X = np.tile(X0.reshape(len(X0), 1), (1, struc.eners.shape[1]))
-
-    return (X0, X)
-
-
 def bands(gme,
           Q=False,
           Q_clip=1e10,
@@ -167,8 +110,8 @@ def bands(gme,
         if (vert_symm == None) or (vert_symm.lower() in {"odd", "even"}):
             if len(gme.freqs_im) == 0:
                 gme.run_im()
-            freqs_im = np.array(gme.freqs_im).flatten() + 1e-16
-            Q = gme.freqs.flatten() / 2 / freqs_im
+            Q = calculate_Q(gme.freqs.flatten(),
+                            np.array(gme.freqs_im).flatten())
             Q_max = np.max(Q[Q < Q_clip])
 
             p = ax.scatter(X.flatten(),
@@ -189,8 +132,8 @@ def bands(gme,
             if show_symmetry == True:
                 if len(gme.freqs_im) == 0:
                     gme.run_im()
-                freqs_im = np.array(gme.freqs_im).flatten() + 1e-16
-                Q = gme.freqs.flatten() / 2 / freqs_im
+                Q = calculate_Q(gme.freqs.flatten(),
+                                np.array(gme.freqs_im).flatten())
                 Q_max = np.max(Q[Q < Q_clip])
                 edgecolors = mpl.cm.get_cmap('bwr')(
                     (np.asarray(gme.kz_symms).flatten() + 1) / 2)
@@ -212,8 +155,8 @@ def bands(gme,
             else:
                 if len(gme.freqs_im) == 0:
                     gme.run_im()
-                freqs_im = np.array(gme.freqs_im).flatten() + 1e-16
-                Q = gme.freqs.flatten() / 2 / freqs_im
+                Q = calculate_Q(gme.freqs.flatten(),
+                                np.array(gme.freqs_im).flatten())
                 Q_max = np.max(Q[Q < Q_clip])
 
                 p = ax.scatter(X.flatten(),
@@ -264,13 +207,7 @@ def bands(gme,
                 ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
 
     if cone:
-        eps_clad = [
-            gme.phc.claddings[0].eps_avg, gme.phc.claddings[-1].eps_avg
-        ]
-        vec_LL = conv * (np.sqrt(
-            np.square(gme.kpoints[0, :]) + np.square(gme.kpoints[1, :])) / 2 /
-                         np.pi / np.sqrt(max(eps_clad)))
-
+        vec_LL = calculate_LL(gme.kpoints, gme.phc, conv)
         ax.fill_between(X0,
                         vec_LL,
                         max(100, vec_LL.max(), conv * gme.freqs[:].max()),
@@ -301,7 +238,7 @@ def pol_bands(pol,
               markersize=6,
               markeredgecolor='w',
               markeredgewidth=1.5,
-              k_points=False):
+              k_units=False):
     """Plot polaritonic band structure from a polaritonic simulation
 
     Note
@@ -360,9 +297,7 @@ def pol_bands(pol,
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
     if Q and not (fraction):
-        eners_im = np.array(pol.eners_im).flatten() + 1e-16
-        Q = pol.eners.flatten() / 2 / eners_im
-
+        Q = calculate_Q(pol.eners.flatten(), np.array(pol.eners_im).flatten())
         p = ax.scatter(X.flatten(),
                        pol.eners.flatten(),
                        c=Q,
@@ -395,13 +330,8 @@ def pol_bands(pol,
                 mec=markeredgecolor)
 
     if cone:
-        eps_clad = [
-            pol.gme.phc.claddings[0].eps_avg, pol.gme.phc.claddings[-1].eps_avg
-        ]
-        vec_LL = np.sqrt(
-            np.square(pol.kpoints[0, :]) +
-            np.square(pol.kpoints[1, :])) / 2 / np.pi / np.sqrt(
-                max(eps_clad)) * cs.h * cs.c / cs.e / pol.a
+        conv = cs.h * cs.c / cs.e / pol.a
+        vec_LL = calculate_LL(pol.kpoints, pol.gme.phc, conv)
         ax.fill_between(X0,
                         vec_LL,
                         max(100, vec_LL.max(), pol.eners[:].max()),
@@ -1456,3 +1386,104 @@ def wavef(struct, kind, mind, val="abs2", N1=100, N2=200, cbar=True):
     axs.set_title(title_str)
 
     return f1
+
+
+def calculate_x(struc, k_units):
+    """
+    Calculates x-axis coordinates for polaritonic 
+    and photonic bands plotting.
+
+    Parameters
+    ----------
+    struc : GuidedModeExp or HopfieldPol
+    k_units : boolean
+            If True the x-coordinates in the outputs
+            are proportional to wavevector increment.
+            If False x-points in the outputs
+            are simply linearly spaced.
+
+    Returns
+    -------
+    X0 : np.array
+        x cooridnates for light line plotting,
+        its length corresponds to the number of
+        wavevectors in the input simulation.
+
+    X : np.array
+        x cooridnates for band plotting. It
+        has the same shape of gme.freqs or pol.eners.
+    """
+    """
+    if np.all(struc.kpoints[0,:]==0) and not np.all(struc.kpoints[1,:]==0) \
+        or np.all(struc.kpoints[1,:]==0) and not np.all(struc.kpoints[0,:]==0):
+        X0 = np.sqrt(
+            np.square(struc.kpoints[0, :]) +
+            np.square(struc.kpoints[1, :])) / 2 / np.pi
+    else:
+        X0 = np.arange(len(struc.kpoints[0, :]))
+    """
+
+    mod_k = np.sqrt(
+        np.square(struc.kpoints[0, :]) +
+        np.square(struc.kpoints[1, :])) / 2 / np.pi
+
+    delta_k = np.diff(struc.kpoints, axis=-1)
+    mod_delta_k = np.sqrt(np.square(delta_k[0, :]) + np.square(delta_k[1, :]))
+    delta_k_norm = mod_delta_k / np.sum(mod_delta_k)
+
+    if k_units:
+        # X0 is a normalised ([0,..,1]) with the same shape of mod_k
+        # here, each increment of X0 is proportinal to the increment
+        # of |k|
+        X0 = np.concatenate((np.array([0]), np.cumsum(delta_k_norm)))
+    else:
+        X0 = np.arange(len(struc.kpoints[0, :]))
+
+    if isinstance(struc, GuidedModeExp):
+        X = np.tile(X0.reshape(len(X0), 1), (1, struc.freqs.shape[1]))
+    elif isinstance(struc, HopfieldPol):
+        X = np.tile(X0.reshape(len(X0), 1), (1, struc.eners.shape[1]))
+
+    return (X0, X)
+
+
+def calculate_Q(re_w, im_w):
+    """
+    Calculates the quality factor
+    from the real and imaginary part
+    of frequency. To avoid division by 
+    zero, add 1e-16 to the imaginary part
+    of frequency.
+    """
+    Q = re_w / 2 / (im_w + 1e-16)
+
+    return Q
+
+
+def calculate_LL(kpoints, phc, conv):
+    """
+    Calculates the light line for a
+    given structure. 
+
+    Parameters
+    ----------
+    kpoints : np.array
+            wavevectors for which we calculate
+            the light line
+    phc : PhotCryst
+        Input structure
+    conv : factor that converts dimensionless
+        units to [eV].
+
+    Returns
+    -------
+    vec_LL : array
+        frequencies/energies of light line
+    """
+
+    eps_clad = [phc.claddings[0].eps_avg, phc.claddings[-1].eps_avg]
+    vec_LL = conv * np.sqrt(
+        np.square(kpoints[0, :]) +
+        np.square(kpoints[1, :])) / 2 / np.pi / np.sqrt(max(eps_clad))
+
+    return vec_LL
