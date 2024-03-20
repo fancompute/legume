@@ -40,7 +40,9 @@ class PhotCryst(object):
         rep += '\n' + repr(self.lattice)
         for i, layer in enumerate(self.layers):
             rep += '\n%d: ' % i + repr(layer)
-        rep += '\n)' if len(self.layers) > 0 else ')'
+        for i, qw in enumerate(self.qws):
+            rep += f'\n{i}: ' + repr(qw)
+        rep += '\n)' if len(self.layers) > 0 or len(self.qws) > 0 else ')'
         return rep
 
     def z_grid(self, Nz=100, dist=1):
