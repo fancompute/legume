@@ -6,6 +6,7 @@ NOTE: there should be no autograd functions here, only plain numpy/scipy
 import numpy as np
 from scipy.linalg import toeplitz
 from scipy.optimize import brentq
+import legume.constants as cs
 
 
 def ftinv(ft_coeff, gvec, xgrid, ygrid):
@@ -245,3 +246,34 @@ def z_to_lind(phc, z):
     if z > z_max and lind == N_layers: lind += 1
 
     return lind
+
+
+def from_freq_to_e(a):
+    """
+    Calculate the conversion factor from
+    dimensionless frequency to energy in eV.
+    E[eV] = f[dimensionless] * conv.
+
+    Parameters
+    ----------
+    a : float
+        lattice constant in [m]
+
+    Returns
+    -------
+    conv : float
+        conversion factor
+
+    """
+    conv = cs.h_eV_Hz * cs.c / a
+
+    if a <= 0:
+        raise ValueError("Lattice constant should be strictly positive.")
+
+    # Maybe we should implement a warning and not a simple print?
+    if a < 5e-8 or a > 5e-6:
+        print("The lattice constant is expected to be " +
+              "in the range of a few hundreds of nanometers." +
+              f" a = {a:.3e} m deviates from the expected range.")
+
+    return conv

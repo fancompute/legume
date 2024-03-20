@@ -1,5 +1,5 @@
 import numpy as np
-from legume.utils import ftinv, z_to_lind
+from legume.utils import ftinv, z_to_lind, from_freq_to_e
 from legume.backend import backend as bd
 import legume.constants as cs
 import sys
@@ -193,7 +193,7 @@ class HopfieldPol(object):
 
         # Conversion factor: from dimensionless frequency to eV
         self.a = self.exc_list[0].a
-        conv_fact = cs.h_eV_Hz * cs.c / (self.a)
+        conv_fact = from_freq_to_e(self.a)
 
         #Initialise the list which contains all the C blocks, and the final D block
         C_blocks = [[] for i in range(self.num_QWs)]

@@ -63,7 +63,7 @@ class TestHOP(unittest.TestCase):
         exc_options = {'numeig_ex':8,
                 'verbose_ex':False}
                 
-        pol.run(kpoints=path['kpoints'],gme_options=gme_options,exc_options=exc_options)
+        pol.run(kpoints=path['kpoints'],gme_options=gme_options,exc_options=exc_options,verbose=False)
         
         en = np.load('./tests/data/Polariton_en.npy')
         im = np.load('./tests/data/Polariton_im.npy')

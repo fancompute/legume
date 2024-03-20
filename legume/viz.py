@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
-import legume.constants as cs
+from legume.utils import from_freq_to_e
 import warnings
 from .gme import GuidedModeExp
 from .phc import PhotCryst, Circle
@@ -97,11 +97,11 @@ def bands(gme,
             )
         else:
             # Conversion from dimensionless units to eV
-            conv = cs.h * cs.c / cs.e / a
+            conv = from_freq_to_e(a)
     else:
         conv = 1
 
-    X0, X = calculate_x(gme, k_units)
+    X0, X = _calculate_x(gme, k_units)
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
@@ -110,8 +110,8 @@ def bands(gme,
         if (vert_symm == None) or (vert_symm.lower() in {"odd", "even"}):
             if len(gme.freqs_im) == 0:
                 gme.run_im()
-            Q = calculate_Q(gme.freqs.flatten(),
-                            np.array(gme.freqs_im).flatten())
+            Q = _calculate_Q(gme.freqs.flatten(),
+                             np.array(gme.freqs_im).flatten())
             Q_max = np.max(Q[Q < Q_clip])
 
             p = ax.scatter(X.flatten(),
@@ -132,8 +132,8 @@ def bands(gme,
             if show_symmetry == True:
                 if len(gme.freqs_im) == 0:
                     gme.run_im()
-                Q = calculate_Q(gme.freqs.flatten(),
-                                np.array(gme.freqs_im).flatten())
+                Q = _calculate_Q(gme.freqs.flatten(),
+                                 np.array(gme.freqs_im).flatten())
                 Q_max = np.max(Q[Q < Q_clip])
                 edgecolors = mpl.cm.get_cmap('bwr')(
                     (np.asarray(gme.kz_symms).flatten() + 1) / 2)
@@ -155,8 +155,8 @@ def bands(gme,
             else:
                 if len(gme.freqs_im) == 0:
                     gme.run_im()
-                Q = calculate_Q(gme.freqs.flatten(),
-                                np.array(gme.freqs_im).flatten())
+                Q = _calculate_Q(gme.freqs.flatten(),
+                                 np.array(gme.freqs_im).flatten())
                 Q_max = np.max(Q[Q < Q_clip])
 
                 p = ax.scatter(X.flatten(),
@@ -207,7 +207,7 @@ def bands(gme,
                 ax.set_ylim(bottom=0.0, top=conv * gme.freqs[:].max())
 
     if cone:
-        vec_LL = calculate_LL(gme.kpoints, gme.phc, conv)
+        vec_LL = _calculate_LL(gme.kpoints, gme.phc, conv)
         ax.fill_between(X0,
                         vec_LL,
                         max(100, vec_LL.max(), conv * gme.freqs[:].max()),
@@ -292,12 +292,12 @@ def pol_bands(pol,
         Axis object for the plot.
     """
 
-    X0, X = calculate_x(pol, k_units)
+    X0, X = _calculate_x(pol, k_units)
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
     if Q and not (fraction):
-        Q = calculate_Q(pol.eners.flatten(), np.array(pol.eners_im).flatten())
+        Q = _calculate_Q(pol.eners.flatten(), np.array(pol.eners_im).flatten())
         p = ax.scatter(X.flatten(),
                        pol.eners.flatten(),
                        c=Q,
@@ -330,8 +330,8 @@ def pol_bands(pol,
                 mec=markeredgecolor)
 
     if cone:
-        conv = cs.h * cs.c / cs.e / pol.a
-        vec_LL = calculate_LL(pol.kpoints, pol.gme.phc, conv)
+        conv = from_freq_to_e(pol.a)
+        vec_LL = _calculate_LL(pol.kpoints, pol.gme.phc, conv)
         ax.fill_between(X0,
                         vec_LL,
                         max(100, vec_LL.max(), pol.eners[:].max()),
@@ -1388,7 +1388,7 @@ def wavef(struct, kind, mind, val="abs2", N1=100, N2=200, cbar=True):
     return f1
 
 
-def calculate_x(struc, k_units):
+def _calculate_x(struc, k_units):
     """
     Calculates x-axis coordinates for polaritonic 
     and photonic bands plotting.
@@ -1447,7 +1447,7 @@ def calculate_x(struc, k_units):
     return (X0, X)
 
 
-def calculate_Q(re_w, im_w):
+def _calculate_Q(re_w, im_w):
     """
     Calculates the quality factor
     from the real and imaginary part
@@ -1460,7 +1460,7 @@ def calculate_Q(re_w, im_w):
     return Q
 
 
-def calculate_LL(kpoints, phc, conv):
+def _calculate_LL(kpoints, phc, conv):
     """
     Calculates the light line for a
     given structure. 
