@@ -976,11 +976,6 @@ class GuidedModeExp(object):
         t = time.time()
         self.compute_eps_inv(self.only_gmodes)
 
-        # We keep only the diagonal terms of eps^-1 if we want to plot ony the guided modes
-        #if self.only_gmodes:
-        #    self.eps_inv_mat = [
-        #        np.diagflat(np.diag(a).copy()) for a in self.eps_inv_mat
-        #    ]
         t_eps_inv = time.time() - t
 
         # Loop over all k-points, construct the matrix, diagonalize, and compute
@@ -1000,7 +995,7 @@ class GuidedModeExp(object):
             t_create = time.time()
             mat = self._construct_mat(kind=ik)
 
-            # The guided modes are calculate inside _construct_mat, later we have to subtract the time
+            # The guided modes are calculate inside _construct_mat, later we have to subtract that time
             self.t_creat_mat += time.time() - t_create
 
             if self.numeig > mat.shape[0]:
@@ -1009,8 +1004,6 @@ class GuidedModeExp(object):
                     "larger than total size of basis set. Reduce 'numeig' or "
                     "increase 'gmax'")
 
-            # NB: we shift the matrix by np.eye to avoid problems at the zero-
-            # frequency mode at Gamma
             t_eig = time.time()
 
             if self.eig_solver == 'eigh':
@@ -1031,6 +1024,8 @@ class GuidedModeExp(object):
 
                 # Diagonalise matrix
                 if self.kz_symmetry is None:
+                    # NB: we shift the matrix by np.eye to avoid problems at the zero-
+                    # frequency mode at Gamma
                     (freq2, evecs) = bd.eigh(mat + bd.eye(mat.shape[0]))
                     freq1 = bd.sqrt(
                         bd.abs(freq2 - bd.ones(mat.shape[0]))) / 2 / np.pi

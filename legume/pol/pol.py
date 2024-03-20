@@ -50,12 +50,12 @@ class HopfieldPol(object):
 
         # Check that all excitonic layers have the same lattice constant
         a_array = np.array([exc_sch.a for exc_sch in self.exc_list])
-        if np.all(np.abs(a_array-a_array[0])<1e-15 ):
+        if np.all(np.abs(a_array - a_array[0]) < 1e-15):
             self.a = a_array[0]
         else:
             raise ValueError("All the quantum well layers passed to"
-                            " HopfieldPol should have the same lattice"
-                            " constant a.")
+                             " HopfieldPol should have the same lattice"
+                             " constant a.")
 
     def __repr__(self):
         rep = 'HopfieldPol(\n'
@@ -64,14 +64,16 @@ class HopfieldPol(object):
             'gmax', 'gmode_compute', 'gmode_inds', 'gmode_step', 'gradients',
             'eig_solver', 'eig_sigma', 'eps_eff'
         ]
+        rep += "GME: \n"
         for option in GME_run_options:
             try:
                 val = getattr(self.gme, option)
-                rep += "\tGME: " + option + ' = ' + repr(val) + ', \n'
+                rep += "\t" + option + ' = ' + repr(val) + ', \n'
             except:
                 pass
+        rep += "ESE at:\n"
         for active in self.exc_list:
-            rep += "\tESE at z = " + f"{active.z:.6f}" + ', \n'
+            rep += "\t z = " + f"{active.z:.6f}" + ', \n'
         rep += ')'
         return rep
 
@@ -199,7 +201,6 @@ class HopfieldPol(object):
         """ Construct the generalised Hopfield matrix for given k point 
 
         """
-         
 
         # Conversion factor: from dimensionless frequency to eV
         conv_fact = from_freq_to_e(self.a)
@@ -322,7 +323,6 @@ class HopfieldPol(object):
 
             # NB: we shift the matrix by np.eye to avoid problems at the zero-
             # frequency mode at Gamma
-
             (ener2, evecs) = bd.eig(mat + bd.eye(mat.shape[0]))
             ener1 = ener2 - bd.ones(mat.shape[0])
             #Filter positive energies
@@ -331,8 +331,8 @@ class HopfieldPol(object):
             evecs = evecs[:, filt_pos]
             fractions_ex, fractions_ph = self._calculate_fraction(evecs)
             i_sort = bd.argsort(ener1)[0:int(
-                self.numeig // 2 -
-                1)]  #Only keeps np.shape(mat)[0]//2-1 eigenvalue, all positive
+                self.numeig // 2 - 1
+            )]  # Keep only np.shape(mat)[0]//2-1 eigenvalues, corresponding to positive energies
 
             ener = bd.real(ener1[i_sort])
             ener_im = bd.imag(ener1[i_sort])
@@ -352,44 +352,3 @@ class HopfieldPol(object):
         self._eners_im = bd.array(eners_im)
         self._eigvecs = bd.array(self._eigvecs)
         self.mat = mat
-
-    def get_wavef_xy(self, kind, mind, z=0, Nx=100, Ny=100):
-        """
-        Compute the wavefunction in the xy-plane at 
-        position z.
-        
-        Parameters
-        ----------
-        kind : int
-            The field of the mode at `PlaneWaveExp.kpoints[:, kind]` is 
-            computed.
-        mind : int
-            The field of the `mind` mode at that kpoint is computed.
-        z : float
-            Position of the xy-plane. This doesn't matter for the PWE or EqSchroe, but is 
-            added for consistency with the GME definitions.
-        Nx : int, optional
-            A grid of Nx points in the elementary cell is created.
-        Ny : int, optional
-            A grid of Ny points in the elementary cell is created.
-        
-        Returns
-        -------
-        fi : dict
-            A dictionary with the requested components, 'x', 'y', and/or 'z'.
-        xgrid : np.ndarray
-            The constructed grid in x.
-        ygrid : np.ndarray
-            The constructed grid in y.
-        """
-
-        # Make a grid in the x-y plane
-        (xgrid, ygrid) = self.layer.lattice.xy_grid(Nx=Nx, Ny=Ny)
-
-        # Get the wavefunction Fourier components
-
-        ft = self._eigvecs[kind, :, mind]
-
-        fi = ftinv(ft, self.gvec, xgrid, ygrid)
-
-        return (fi, xgrid, ygrid)
