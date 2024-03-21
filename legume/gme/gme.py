@@ -2,14 +2,14 @@ import numpy as np
 from scipy.linalg import block_diag
 from scipy.sparse import coo_matrix as coo  # Older versions of Scipy have coo_matrix attribute only
 
-import time, sys
+import time
 from itertools import zip_longest
 from typing import Optional
 
 from .slab_modes import guided_modes, rad_modes
 from . import matrix_elements
 from legume.backend import backend as bd
-from legume.utils import get_value, ftinv, find_nearest, z_to_lind
+from legume.utils import get_value, ftinv, find_nearest, z_to_lind, verbose_print
 
 
 class GuidedModeExp(object):
@@ -176,16 +176,6 @@ class GuidedModeExp(object):
         reciprocal lattice vectors over which the simulation is run.
         """
         return self._gvec
-
-    def _print(self, text, flush=False, end='\n'):
-        """Print if verbose==True
-            """
-        if self.verbose == True:
-            if flush == False:
-                print(text, end=end)
-            else:
-                sys.stdout.write("\r" + text)
-                sys.stdout.flush()
 
     def _init_reciprocal_tbt(self):
         """
@@ -990,8 +980,9 @@ class GuidedModeExp(object):
         self.odd_counts = []
         for ik, k in enumerate(kpoints.T):
 
-            self._print(f"Running GME k-point {ik+1} of {kpoints.shape[1]}",
-                        flush=True)
+            verbose_print(f"Running GME k-point {ik+1} of {kpoints.shape[1]}",
+                          self.verbose,
+                          flush=True)
             t_create = time.time()
             mat = self._construct_mat(kind=ik)
 
@@ -1162,42 +1153,40 @@ class GuidedModeExp(object):
         # Guided modes are calculated inside _construct_mat()
         self.t_creat_mat = self.t_creat_mat - self.t_guided
         total_time = time.time() - t_start
-        self._print("", flush=True)
-        self._print(
-            f"{total_time:.3f}s total time for real part of frequencies, of which"
-        )
-        self._print(
+        verbose_print("", self.verbose, flush=True)
+        verbose_print(
+            f"{total_time:.3f}s total time for real part of frequencies, of which",
+            self.verbose)
+        verbose_print(
             f"  {self.t_guided:.3f}s ({self.t_guided/total_time*100:.0f}%) for guided modes computation using"
-            f" the gmode_compute='{self.gmode_compute.lower()}' method")
-        self._print(
+            f" the gmode_compute='{self.gmode_compute.lower()}' method",
+            self.verbose)
+        verbose_print(
             f"  {t_eps_inv:.3f}s ({t_eps_inv/total_time*100:.0f}%) for inverse matrix of Fourier-space "
-            f"permittivity")
-        self._print(
+            f"permittivity", self.verbose)
+        verbose_print(
             f"  {(self.t_eig-self.t_symmetry):.3f}s ({(self.t_eig-self.t_symmetry)/total_time*100:.0f}%) for matrix diagionalization using "
-            f"the '{self.eig_solver.lower()}' solver")
-        self._print(
-            f"  {self.t_creat_mat:.3f}s ({self.t_creat_mat/total_time*100:.0f}%) for creating GME matrix"
-        )
+            f"the '{self.eig_solver.lower()}' solver", self.verbose)
+        verbose_print(
+            f"  {self.t_creat_mat:.3f}s ({self.t_creat_mat/total_time*100:.0f}%) for creating GME matrix",
+            self.verbose)
 
         if self.kz_symmetry:
             if self.use_sparse == True:
                 str_mat_used = "sparse"
             elif self.use_sparse == False:
                 str_mat_used = "dense"
-            self._print(
+            verbose_print(
                 f"  {self.t_symmetry:.3f}s ({self.t_symmetry/total_time*100:.0f}%) for creating change of basis matrix and multiply it"
-                + f" using {str_mat_used} matrices")
+                + f" using {str_mat_used} matrices", self.verbose)
 
         if self.compute_im == True:
-            t = time.time()
             self.run_im()
-            self._print(
-                f"{(time.time()-t):.3f}s for imaginary part computation")
         else:
-            self._print(
+            verbose_print(
                 "Skipping imaginary part computation, use run_im() to"
                 " run it, or compute_rad() to compute the radiative rates"
-                " of selected eigenmodes")
+                " of selected eigenmodes", self.verbose)
 
     def run_im(self):
         """
@@ -1206,7 +1195,7 @@ class GuidedModeExp(object):
         :attr:`GuidedModeExp.freqs_im`, :attr:`GuidedModeExp.rad_coup`, 
         :attr:`GuidedModeExp.rad_gvec` and :attr:`GuidedModeExp.unbalance_sp`.
         """
-
+        t = time.time()
         freqs_i = []  # Imaginary part of frequencies
         freqs_i_te = []  # Imaginary part of frequencies
         freqs_i_tm = []  # Imaginary part of frequencies
@@ -1221,6 +1210,11 @@ class GuidedModeExp(object):
             raise RuntimeError("Run the GME computation first!")
 
         for kind in range(len(self.freqs)):
+            verbose_print(
+                f"Running imaginary part computation k-point {kind+1} of {len(self.freqs)}",
+                self.verbose,
+                flush=True)
+            verbose_print
             (freqs_im, freqs_im_te, freqs_im_tm, rc,
              rv) = self.compute_rad_sp(kind, minds)
             freqs_i.append(freqs_im)
@@ -1243,6 +1237,11 @@ class GuidedModeExp(object):
         self._freqs_im = bd.array(freqs_i)
         self._rad_coup = rad_coup
         self._rad_gvec = rad_gvec
+
+        verbose_print("", self.verbose, flush=True)
+        verbose_print(
+            f"{(time.time()-t):.3f}s  total time for imaginary part"
+            " of frequencies", self.verbose)
 
     def _separate_hamiltonian_dense(self, mat, symm_mat, ik):
         """

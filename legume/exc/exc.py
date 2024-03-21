@@ -1,8 +1,8 @@
 import numpy as np
-from legume.utils import ftinv, z_to_lind
+from legume.utils import ftinv, z_to_lind, verbose_print
 from legume.backend import backend as bd
 import scipy.constants as cs
-import sys, time
+import time
 
 
 class ExcitonSchroedEq(object):
@@ -135,16 +135,6 @@ class ExcitonSchroedEq(object):
         """
         if self._gvec is None: self._gvec = []
         return self._gvec
-
-    def _print(self, text, flush=False, end='\n'):
-        """Print if verbose_ex==True
-            """
-        if self.verbose_ex == True:
-            if flush == False:
-                print(text, end=end)
-            else:
-                sys.stdout.write("\r" + text)
-                sys.stdout.flush()
 
     def _init_reciprocal_tbt(self):
         """
@@ -341,11 +331,11 @@ class ExcitonSchroedEq(object):
 
         eners = []
         self._eigvecs = []
-        #self.verbose_ex = verbose_ex
         for ik, k in enumerate(kpoints.T):
 
-            self._print(
+            verbose_print(
                 f"Running Exciton diagonalisation k-point {ik+1} of {kpoints.shape[1]}",
+                self.verbose_ex,
                 flush=True)
             # Construct the matrix for diagonalization in eV
             diag_vec = np.asarray([[k[0] + self.gvec[0, :]],
@@ -383,12 +373,13 @@ class ExcitonSchroedEq(object):
             eners.append(ener)
             self._eigvecs.append(evec)
 
-        self._print("", flush=True)
-        self._print(
-            f"{time.time()-t_start:.4f}s total time for real and imaginary energies, of which"
-        )
-        self._print(
-            f"  {self.t_eig:.4f}s for diagonalization of the Hamiltonian")
+        verbose_print("", self.verbose_ex, flush=True)
+        verbose_print(
+            f"{time.time()-t_start:.4f}s total time for excitonic energies, of which",
+            self.verbose_ex)
+        verbose_print(
+            f"  {self.t_eig:.4f}s for diagonalization of the Hamiltonian",
+            self.verbose_ex)
 
         # Store the energies, E0 adds free exciton energy, loss are non-radiative losses
         self._eners = bd.array(eners) + self.E0 + 1j * self.loss

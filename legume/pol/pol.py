@@ -1,10 +1,10 @@
 import numpy as np
-from legume.utils import ftinv, z_to_lind, from_freq_to_e
+from legume.utils import ftinv, z_to_lind, from_freq_to_e, verbose_print
 from legume.backend import backend as bd
 import legume.constants as cs
-import sys
 from legume.gme import GuidedModeExp
 from legume.exc import ExcitonSchroedEq
+import time
 
 
 class HopfieldPol(object):
@@ -128,16 +128,6 @@ class HopfieldPol(object):
         """
         if self._gvec is None: self._gvec = []
         return self._gvec
-
-    def _print(self, text, flush=False, end='\n'):
-        """Print if verbose==True
-            """
-        if self.verbose == True:
-            if flush == False:
-                print(text, end=end)
-            else:
-                sys.stdout.write("\r" + text)
-                sys.stdout.flush()
 
     def _calculate_fraction(self, eigenvectors):
         """
@@ -307,14 +297,16 @@ class HopfieldPol(object):
         for exc_sch in self.exc_list:
             exc_sch.run(**exc_options)
 
+        t_start = time.time()
         #Retrieve number of photonic/excitonic eigenvalues
         self.N_max = self.gme.numeig
         self.M_max = self.exc_list[0].numeig_ex
 
         for ik, k in enumerate(self._kpoints.T):
 
-            self._print(
+            verbose_print(
                 f"Running Hopfield diagonalisation k-point {ik+1} of {self.kpoints.shape[1]}",
+                self.verbose,
                 flush=True)
             # Construct the Hopfield matrix for diagonalization in eV
 
@@ -352,3 +344,10 @@ class HopfieldPol(object):
         self._eners_im = bd.array(eners_im)
         self._eigvecs = bd.array(self._eigvecs)
         self.mat = mat
+
+        total_time = time.time() - t_start
+
+        verbose_print("", self.verbose, flush=True)
+        verbose_print(
+            f"{total_time:.3f}s total time for Hopfield matrix calculation" +
+            " and diagonalization.", self.verbose)

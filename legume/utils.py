@@ -8,6 +8,7 @@ from scipy.linalg import toeplitz
 from scipy.optimize import brentq
 import legume.constants as cs
 import warnings
+import sys
 
 
 def ftinv(ft_coeff, gvec, xgrid, ygrid):
@@ -279,3 +280,14 @@ def from_freq_to_e(a):
             f" a = {a:.3e} m deviates from the expected range.", UserWarning)
 
     return conv
+
+
+def verbose_print(text, verbose, flush=False, end='\n'):
+    """Print if verbose_ex==True
+            """
+    if verbose == True:
+        if flush == False:
+            print(text, end=end)
+        else:
+            sys.stdout.write("\r" + text)
+            sys.stdout.flush()
