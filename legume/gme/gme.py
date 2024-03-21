@@ -9,7 +9,8 @@ from typing import Optional
 from .slab_modes import guided_modes, rad_modes
 from . import matrix_elements
 from legume.backend import backend as bd
-from legume.utils import get_value, ftinv, find_nearest, z_to_lind, verbose_print
+from legume.utils import get_value, ftinv, find_nearest, z_to_lind
+from legume.print_utils import verbose_print, print_GME_report, print_GME_im_report
 
 
 class GuidedModeExp(object):
@@ -1152,33 +1153,11 @@ class GuidedModeExp(object):
         self._kz_symms = bd.array(kz_symms)
         # Guided modes are calculated inside _construct_mat()
         self.t_creat_mat = self.t_creat_mat - self.t_guided
-        total_time = time.time() - t_start
-        verbose_print("", self.verbose, flush=True)
-        verbose_print(
-            f"{total_time:.3f}s total time for real part of frequencies, of which",
-            self.verbose)
-        verbose_print(
-            f"  {self.t_guided:.3f}s ({self.t_guided/total_time*100:.0f}%) for guided modes computation using"
-            f" the gmode_compute='{self.gmode_compute.lower()}' method",
-            self.verbose)
-        verbose_print(
-            f"  {t_eps_inv:.3f}s ({t_eps_inv/total_time*100:.0f}%) for inverse matrix of Fourier-space "
-            f"permittivity", self.verbose)
-        verbose_print(
-            f"  {(self.t_eig-self.t_symmetry):.3f}s ({(self.t_eig-self.t_symmetry)/total_time*100:.0f}%) for matrix diagionalization using "
-            f"the '{self.eig_solver.lower()}' solver", self.verbose)
-        verbose_print(
-            f"  {self.t_creat_mat:.3f}s ({self.t_creat_mat/total_time*100:.0f}%) for creating GME matrix",
-            self.verbose)
+        self.t_eps_inv = t_eps_inv
 
-        if self.kz_symmetry:
-            if self.use_sparse == True:
-                str_mat_used = "sparse"
-            elif self.use_sparse == False:
-                str_mat_used = "dense"
-            verbose_print(
-                f"  {self.t_symmetry:.3f}s ({self.t_symmetry/total_time*100:.0f}%) for creating change of basis matrix and multiply it"
-                + f" using {str_mat_used} matrices", self.verbose)
+        total_time = time.time() - t_start
+        self.total_time = total_time
+        print_GME_report(self)
 
         if self.compute_im == True:
             self.run_im()
@@ -1237,11 +1216,9 @@ class GuidedModeExp(object):
         self._freqs_im = bd.array(freqs_i)
         self._rad_coup = rad_coup
         self._rad_gvec = rad_gvec
+        self.t_imag = time.time() - t
 
-        verbose_print("", self.verbose, flush=True)
-        verbose_print(
-            f"{(time.time()-t):.3f}s  total time for imaginary part"
-            " of frequencies", self.verbose)
+        print_GME_im_report(self)
 
     def _separate_hamiltonian_dense(self, mat, symm_mat, ik):
         """

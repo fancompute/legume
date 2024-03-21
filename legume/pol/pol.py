@@ -1,5 +1,6 @@
 import numpy as np
-from legume.utils import ftinv, z_to_lind, from_freq_to_e, verbose_print
+from legume.utils import ftinv, z_to_lind, from_freq_to_e
+from legume.print_utils import verbose_print, print_HOP_report
 from legume.backend import backend as bd
 import legume.constants as cs
 from legume.gme import GuidedModeExp
@@ -345,9 +346,6 @@ class HopfieldPol(object):
         self._eigvecs = bd.array(self._eigvecs)
         self.mat = mat
 
-        total_time = time.time() - t_start
+        self.total_time = time.time() - t_start
 
-        verbose_print("", self.verbose, flush=True)
-        verbose_print(
-            f"{total_time:.3f}s total time for Hopfield matrix calculation" +
-            " and diagonalization.", self.verbose)
+        print_HOP_report(self)

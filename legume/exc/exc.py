@@ -1,5 +1,6 @@
 import numpy as np
-from legume.utils import ftinv, z_to_lind, verbose_print
+from legume.utils import ftinv, z_to_lind
+from legume.print_utils import verbose_print, print_EXC_report
 from legume.backend import backend as bd
 import scipy.constants as cs
 import time
@@ -373,13 +374,8 @@ class ExcitonSchroedEq(object):
             eners.append(ener)
             self._eigvecs.append(evec)
 
-        verbose_print("", self.verbose_ex, flush=True)
-        verbose_print(
-            f"{time.time()-t_start:.4f}s total time for excitonic energies, of which",
-            self.verbose_ex)
-        verbose_print(
-            f"  {self.t_eig:.4f}s for diagonalization of the Hamiltonian",
-            self.verbose_ex)
+        self.total_time = time.time() - t_start
+        print_EXC_report(self)
 
         # Store the energies, E0 adds free exciton energy, loss are non-radiative losses
         self._eners = bd.array(eners) + self.E0 + 1j * self.loss
