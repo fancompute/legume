@@ -10,10 +10,29 @@ try:
     from rich.console import Console
     from rich.table import Table
     from rich import box
+    from rich import print
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
 
+def load_bar(perc, precision=20):
+    box = "\u2588"
+    hor = "\u2500"
+    down_right = "\u250C"
+    down_left = "\u2510"
+    up_right = "\u2514"
+    up_left = "\u2518"
+    pipe = "\u2502"
+
+    filled_blocks = int(perc / 100 * precision)  # Considering 100 characters width for 100%
+    bar = box * filled_blocks + ' ' * (precision - filled_blocks)
+
+    # Creating a box around the loading bar
+    box_top = down_right + hor * precision + down_left
+    box_bottom = up_right + hor * precision + up_left
+    bar_with_box = pipe + bar + pipe
+
+    return bar_with_box
 
 def verbose_print(text, verbose, flush=False, end='\n'):
     """Print if verbose_ex==True
@@ -31,7 +50,8 @@ def print_GME_report(gme):
         verbose_print("", gme.verbose, flush=True)
         if gme.verbose:
             table = Table(title="")
-            table.add_column("Process",
+            table.add_column(f"Process in GuidedModeExp with: {np.shape(gme.gvec)[1]} plane waves"
+                            +f" and {len(gme.gmode_inds)} guided modes",
                              justify="Left",
                              style="cyan",
                              no_wrap=True)
@@ -39,19 +59,19 @@ def print_GME_report(gme):
             table.add_column("% vs total T", justify="right", style="green")
 
             table.add_row(
-                f"Guided modes computation using the gmode_compute='{gme.gmode_compute.lower()}' method",
+                f"Guided modes computation using the gmode_compute='[b]{gme.gmode_compute.lower()}[/b]' method",
                 f"{gme.t_guided:.3f}",
-                f"{gme.t_guided/gme.total_time*100:.0f}%")
+                f"{load_bar(gme.t_guided/gme.total_time*100):<23}{gme.t_guided/gme.total_time*100:>4.0f}%")
             table.add_row("Inverse matrix of Fourier-space permittivity",
                           f"{gme.t_eps_inv:.3f}",
-                          f"{gme.t_eps_inv/gme.total_time*100:.0f}%")
+                          f"{load_bar(gme.t_eps_inv/gme.total_time*100):<23}{gme.t_eps_inv/gme.total_time*100:>4.0f}%")
             table.add_row(
-                f"Matrix diagionalization using the '{gme.eig_solver.lower()}' solver",
+                f"Matrix diagionalization using the '[b]{gme.eig_solver.lower()}[/b]' solver",
                 f"{(gme.t_eig-gme.t_symmetry):.3f}",
-                f"{(gme.t_eig-gme.t_symmetry)/gme.total_time*100:.0f}%")
+                f"{load_bar((gme.t_eig-gme.t_symmetry)/gme.total_time*100):<23}{(gme.t_eig-gme.t_symmetry)/gme.total_time*100:>4.0f}%")
             table.add_row("For creating GME matrix",
                           f"{gme.t_creat_mat:.3f}",
-                          f"{gme.t_creat_mat/gme.total_time*100:.0f}%",
+                          f"{load_bar(gme.t_creat_mat/gme.total_time*100):<23}{gme.t_creat_mat/gme.total_time*100:>4.0f}%",
                           end_section=not gme.kz_symmetry)
             if gme.kz_symmetry:
                 if gme.use_sparse == True:
@@ -59,13 +79,13 @@ def print_GME_report(gme):
                 elif gme.use_sparse == False:
                     str_mat_used = "dense"
                 table.add_row(
-                    f"For creating change of basis matrix and multiply it using {str_mat_used} matrices",
+                    f"For creating change of basis matrix and using [b]{str_mat_used}[/b] matrices",
                     f"{gme.t_symmetry:.3f}",
-                    f"{gme.t_symmetry/gme.total_time*100:.0f}%",
+                    f"{load_bar(gme.t_symmetry/gme.total_time*100):<23}{gme.t_symmetry/gme.total_time*100:>4.0f}%",
                     end_section=True)
-            table.add_row("Total time for real part of frequencies",
-                          f"{gme.total_time:.3f}",
-                          f"{100}%",
+            table.add_row(f"Total time for real part of frequencies for {gme.kpoints.shape[1]} k-points",
+                          f"[u]{gme.total_time:>3.3f}[/u]",
+                          f"{load_bar(100):<23}{100:>4.0f}%",
                           style="bold",
                           end_section=True)
 
@@ -106,13 +126,14 @@ def print_GME_im_report(gme):
         verbose_print("", gme.verbose, flush=True)
         if gme.verbose:
             table = Table(title="")
-            table.add_column("Process",
+            table.add_column(f"Process in GuidedModeExp with {np.shape(gme.gvec)[1]} plane waves"
+                            +f" and {len(gme.gmode_inds)} guided modes",
                              justify="Left",
                              style="cyan",
                              no_wrap=True)
             table.add_column("Time (s)", style="magenta")
-            table.add_row(f"Total time for imaginary part of frequencies",
-                          f"{(gme.t_imag):.3f}",
+            table.add_row(f"Total time for imaginary part of frequencies for {len(gme.freqs.flatten())} eigenmodes",
+                          f"[u]{(gme.t_imag):.3f}[/u]",
                           style="bold")
             console = Console()
             console.print(table)
@@ -129,7 +150,7 @@ def print_EXC_report(exc):
         verbose_print("", exc.verbose_ex, flush=True)
         if exc.verbose_ex:
             table = Table(title="")
-            table.add_column("Process",
+            table.add_column(f"Process in ExcitonSchroedEq with: {np.shape(exc.gvec)[1]} plane waves",
                              justify="Left",
                              style="cyan",
                              no_wrap=True)
@@ -139,8 +160,8 @@ def print_EXC_report(exc):
                           f"{exc.t_eig:.4f}",
                           f"{exc.t_eig/exc.total_time*100:.0f}%",
                           end_section=True)
-            table.add_row(f"Total time for excitonic energies",
-                          f"{exc.total_time:.4f}",
+            table.add_row(f"Total time for excitonic energies for {exc.kpoints.shape[1]} k-points",
+                          f"[u]{exc.total_time:.4f}[/u]",
                           "100%",
                           style="bold")
             console = Console()
@@ -161,14 +182,15 @@ def print_HOP_report(pol):
         verbose_print("", pol.verbose, flush=True)
         if pol.verbose:
             table = Table(title="")
-            table.add_column("Process",
+            table.add_column(f"Process in HopfieldPol with: {pol.gme.numeig} photonic modes, {np.shape(pol.exc_list)[0]}"
+                            +f" active layers with {pol.exc_list[0].numeig_ex} excitonic modes",
                              justify="Left",
                              style="cyan",
                              no_wrap=True)
             table.add_column("Time (s)", style="magenta")
-            table.add_row(f"Total time for Hopfield matrix calculation" +
-                          " and diagonalization.",
-                          f"{pol.total_time:.4f}",
+            table.add_row(f"Total time for matrix calculation" +
+                          f" and diagonalization for {pol.kpoints.shape[1]} k-points",
+                          f"[u]{pol.total_time:.4f}[/u]",
                           style="bold")
             console = Console()
             console.print(table)
@@ -176,5 +198,5 @@ def print_HOP_report(pol):
     else:
         verbose_print("", pol.verbose, flush=True)
         verbose_print(
-            f"{total_time:.3f}s total time for Hopfield matrix calculation" +
+            f"{pol.total_time:.3f}s total time for matrix calculation" +
             " and diagonalization.", pol.verbose)
