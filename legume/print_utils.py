@@ -50,7 +50,7 @@ def print_GME_report(gme):
         verbose_print("", gme.verbose, flush=True)
         if gme.verbose:
             table = Table(title="")
-            table.add_column(f"Process in GuidedModeExp with: {np.shape(gme.gvec)[1]} plane waves"
+            table.add_column(f"Steps in GuidedModeExp with: {np.shape(gme.gvec)[1]} plane waves"
                             +f" and {len(gme.gmode_inds)} guided modes",
                              justify="Left",
                              style="cyan",
@@ -59,7 +59,7 @@ def print_GME_report(gme):
             table.add_column("% vs total T", justify="right", style="green")
 
             table.add_row(
-                f"Guided modes computation using the gmode_compute='[b]{gme.gmode_compute.lower()}[/b]' method",
+                f"Guided modes computation with gmode_compute='[b]{gme.gmode_compute.lower()}[/b]'",
                 f"{gme.t_guided:.3f}",
                 f"{load_bar(gme.t_guided/gme.total_time*100):<23}{gme.t_guided/gme.total_time*100:>4.0f}%")
             table.add_row("Inverse matrix of Fourier-space permittivity",
@@ -69,7 +69,7 @@ def print_GME_report(gme):
                 f"Matrix diagionalization using the '[b]{gme.eig_solver.lower()}[/b]' solver",
                 f"{(gme.t_eig-gme.t_symmetry):.3f}",
                 f"{load_bar((gme.t_eig-gme.t_symmetry)/gme.total_time*100):<23}{(gme.t_eig-gme.t_symmetry)/gme.total_time*100:>4.0f}%")
-            table.add_row("For creating GME matrix",
+            table.add_row("Creating GME matrix",
                           f"{gme.t_creat_mat:.3f}",
                           f"{load_bar(gme.t_creat_mat/gme.total_time*100):<23}{gme.t_creat_mat/gme.total_time*100:>4.0f}%",
                           end_section=not gme.kz_symmetry)
@@ -79,7 +79,7 @@ def print_GME_report(gme):
                 elif gme.use_sparse == False:
                     str_mat_used = "dense"
                 table.add_row(
-                    f"For creating change of basis matrix and using [b]{str_mat_used}[/b] matrices",
+                    f"Creating change of basis matrix using [b]{str_mat_used}[/b] matrices",
                     f"{gme.t_symmetry:.3f}",
                     f"{load_bar(gme.t_symmetry/gme.total_time*100):<23}{gme.t_symmetry/gme.total_time*100:>4.0f}%",
                     end_section=True)
@@ -126,7 +126,7 @@ def print_GME_im_report(gme):
         verbose_print("", gme.verbose, flush=True)
         if gme.verbose:
             table = Table(title="")
-            table.add_column(f"Process in GuidedModeExp with {np.shape(gme.gvec)[1]} plane waves"
+            table.add_column(f"Steps in GuidedModeExp with {np.shape(gme.gvec)[1]} plane waves"
                             +f" and {len(gme.gmode_inds)} guided modes",
                              justify="Left",
                              style="cyan",
@@ -150,7 +150,7 @@ def print_EXC_report(exc):
         verbose_print("", exc.verbose_ex, flush=True)
         if exc.verbose_ex:
             table = Table(title="")
-            table.add_column(f"Process in ExcitonSchroedEq with: {np.shape(exc.gvec)[1]} plane waves",
+            table.add_column(f"Steps in ExcitonSchroedEq with: {np.shape(exc.gvec)[1]} plane waves",
                              justify="Left",
                              style="cyan",
                              no_wrap=True)
@@ -182,7 +182,7 @@ def print_HOP_report(pol):
         verbose_print("", pol.verbose, flush=True)
         if pol.verbose:
             table = Table(title="")
-            table.add_column(f"Process in HopfieldPol with: {pol.gme.numeig} photonic modes, {np.shape(pol.exc_list)[0]}"
+            table.add_column(f"Steps in HopfieldPol with: {pol.gme.numeig} photonic modes, {np.shape(pol.exc_list)[0]}"
                             +f" active layers with {pol.exc_list[0].numeig_ex} excitonic modes",
                              justify="Left",
                              style="cyan",

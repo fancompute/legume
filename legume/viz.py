@@ -1076,19 +1076,16 @@ def pot_ft(struct,
             "Parameters gridspec and fig should be both specified "
             "or both unspecified")
 
-    #(eps_min, eps_max) = (all_layers[0].eps_b, all_layers[0].eps_b)
     ims = []
     ax = []
-
+    eps_min = 0
+    eps_max = np.abs(struct.V_shapes)
     for (indl, layer) in enumerate(
             all_layers):  # Actually there is only one layer in the exc
         ax.append(fig.add_subplot(gs[indl, :]))
         # We use the same plotting function of the permettivity, but we calculate the FT of the potential
         (eps_r, xgrid, ygrid) = struct.get_pot_xy(Nx=Nx, Ny=Ny)
-        #plt.imshow(np.real(eps_r))
-        #plt.show()
-        eps_min = 0
-        eps_max = 1
+        
         extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
         cax = None if cbar == False else fig.add_subplot(gs[indl, 1])
         im = _plot_eps(np.real(eps_r),
