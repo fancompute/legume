@@ -9,8 +9,9 @@ from typing import Optional
 from .slab_modes import guided_modes, rad_modes
 from . import matrix_elements
 from legume.backend import backend as bd
+from legume.print_backend import print_backend as prbd
 from legume.utils import get_value, ftinv, find_nearest, z_to_lind
-from legume.print_utils import verbose_print, print_GME_report, print_GME_im_report
+from legume.print_utils import verbose_print, load_bar
 
 
 class GuidedModeExp(object):
@@ -981,9 +982,11 @@ class GuidedModeExp(object):
         self.odd_counts = []
         for ik, k in enumerate(kpoints.T):
 
-            verbose_print(f"Running GME k-point {ik+1} of {kpoints.shape[1]}",
-                          self.verbose,
-                          flush=True)
+            verbose_print(
+                f"Running GME k-point: {load_bar((ik+1)/kpoints.shape[1]*100,precision=30)}"
+                + f" {ik+1} of {kpoints.shape[1]} ",
+                self.verbose,
+                flush=True)
             t_create = time.time()
             mat = self._construct_mat(kind=ik)
 
@@ -1157,7 +1160,7 @@ class GuidedModeExp(object):
 
         total_time = time.time() - t_start
         self.total_time = total_time
-        print_GME_report(self)
+        prbd.GME_report(self)
 
         if self.compute_im == True:
             self.run_im()
@@ -1218,7 +1221,7 @@ class GuidedModeExp(object):
         self._rad_gvec = rad_gvec
         self.t_imag = time.time() - t
 
-        print_GME_im_report(self)
+        prbd.GME_im_report(self)
 
     def _separate_hamiltonian_dense(self, mat, symm_mat, ik):
         """

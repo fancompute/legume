@@ -1,6 +1,7 @@
 import numpy as np
 from legume.utils import ftinv, z_to_lind, from_freq_to_e
-from legume.print_utils import verbose_print, print_HOP_report
+from legume.print_utils import verbose_print
+from legume.print_backend import print_backend as prbd
 from legume.backend import backend as bd
 import legume.constants as cs
 from legume.gme import GuidedModeExp
@@ -348,4 +349,4 @@ class HopfieldPol(object):
 
         self.total_time = time.time() - t_start
 
-        print_HOP_report(self)
+        prbd.HP_report(self)

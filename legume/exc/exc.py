@@ -1,7 +1,9 @@
 import numpy as np
 from legume.utils import ftinv, z_to_lind
-from legume.print_utils import verbose_print, print_EXC_report
+from legume.print_utils import verbose_print
+from legume.print_backend import print_backend as prbd
 from legume.backend import backend as bd
+from legume.print_backend import print_backend as prbd
 import scipy.constants as cs
 import time
 
@@ -375,7 +377,7 @@ class ExcitonSchroedEq(object):
             self._eigvecs.append(evec)
 
         self.total_time = time.time() - t_start
-        print_EXC_report(self)
+        prbd.ESE_report(self)
 
         # Store the energies, E0 adds free exciton energy, loss are non-radiative losses
         self._eners = bd.array(eners) + self.E0 + 1j * self.loss

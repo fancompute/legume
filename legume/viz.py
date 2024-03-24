@@ -1085,7 +1085,7 @@ def pot_ft(struct,
         ax.append(fig.add_subplot(gs[indl, :]))
         # We use the same plotting function of the permettivity, but we calculate the FT of the potential
         (eps_r, xgrid, ygrid) = struct.get_pot_xy(Nx=Nx, Ny=Ny)
-        
+
         extent = [xgrid[0], xgrid[-1], ygrid[0], ygrid[-1]]
         cax = None if cbar == False else fig.add_subplot(gs[indl, 1])
         im = _plot_eps(np.real(eps_r),
