@@ -303,15 +303,12 @@ class HopfieldPol(object):
         #Retrieve number of photonic/excitonic eigenvalues
         self.N_max = self.gme.numeig
         self.M_max = self.exc_list[0].numeig_ex
+        num_k = kpoints.shape[1]  # Number of wavevectors
+        
+        for ik, k in enumerate(self.kpoints.T):
+            prbd.update_prog(ik,num_k,self.verbose,"Running HP k-points:")
 
-        for ik, k in enumerate(self._kpoints.T):
-
-            verbose_print(
-                f"Running Hopfield diagonalisation k-point {ik+1} of {self.kpoints.shape[1]}",
-                self.verbose,
-                flush=True)
             # Construct the Hopfield matrix for diagonalization in eV
-
             mat = self._construct_Hopfield(kind=ik)
             self.numeig = np.shape(mat)[0]
 

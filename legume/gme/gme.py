@@ -980,13 +980,13 @@ class GuidedModeExp(object):
         self._eigvecs = []
         self.even_counts = []
         self.odd_counts = []
+        
+        
+        num_k = kpoints.shape[1]  # Number of wavevectors
+        t_loop_k = time.time() # Fro printing in progress
         for ik, k in enumerate(kpoints.T):
 
-            verbose_print(
-                f"Running GME k-point: {load_bar((ik+1)/kpoints.shape[1]*100,precision=30)}"
-                + f" {ik+1} of {kpoints.shape[1]} ",
-                self.verbose,
-                flush=True)
+            prbd.update_prog(ik,num_k,self.verbose,"Running gme k-points:")
             t_create = time.time()
             mat = self._construct_mat(kind=ik)
 
@@ -1190,13 +1190,10 @@ class GuidedModeExp(object):
 
         if len(self.freqs) == 0:
             raise RuntimeError("Run the GME computation first!")
-
+        num_k = np.shape(self.freqs)[0]
         for kind in range(len(self.freqs)):
-            verbose_print(
-                f"Running imaginary part computation k-point {kind+1} of {len(self.freqs)}",
-                self.verbose,
-                flush=True)
-            verbose_print
+            prbd.update_prog(kind,num_k,self.verbose,
+                             "Running GME losses k-point:")
             (freqs_im, freqs_im_te, freqs_im_tm, rc,
              rv) = self.compute_rad_sp(kind, minds)
             freqs_i.append(freqs_im)

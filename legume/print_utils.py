@@ -9,7 +9,8 @@ try:
     from rich.console import Console
     from rich.table import Table
     from rich import box
-    from rich import print
+    from rich import print  # This is an upgraded version of standard print
+    from rich.progress import Progress
     RICH_AVAILABLE = True
 except ImportError:
     RICH_AVAILABLE = False
@@ -47,6 +48,14 @@ def verbose_print(text, verbose, flush=False, end='\n'):
             sys.stdout.flush()
 
 
+def update_prog(ik,num_k,verbose,text):
+    verbose_print(
+                f"{text} {load_bar((ik+1)/num_k*100,precision=30)}"
+                + f" {ik+1} of {num_k}",
+                verbose,
+                flush=True)
+
+    
 def print_GME_report_rich(gme):
     t_tot = gme.total_time
     t_guided, t_guided_perc = gme.t_guided, gme.t_guided / t_tot * 100

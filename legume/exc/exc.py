@@ -334,12 +334,11 @@ class ExcitonSchroedEq(object):
 
         eners = []
         self._eigvecs = []
+        num_k = kpoints.shape[1]  # Number of wavevectors
         for ik, k in enumerate(kpoints.T):
+            prbd.update_prog(ik,num_k,self.verbose_ex,
+                             "Running ESE k-point:")
 
-            verbose_print(
-                f"Running Exciton diagonalisation k-point {ik+1} of {kpoints.shape[1]}",
-                self.verbose_ex,
-                flush=True)
             # Construct the matrix for diagonalization in eV
             diag_vec = np.asarray([[k[0] + self.gvec[0, :]],
                                    [k[1] + self.gvec[1, :]]]) / self.a

@@ -42,6 +42,7 @@ if RICH_AVAILABLE:
         GME_im_report = staticmethod(print_GME_im_report_rich)
         ESE_report = staticmethod(print_ESE_report_rich)
         HP_report = staticmethod(print_HP_report_rich)
+        update_prog = staticmethod(update_prog)
 
 
 class BasePrintBackend(PrintBackend):
@@ -51,7 +52,7 @@ class BasePrintBackend(PrintBackend):
     GME_im_report = staticmethod(print_GME_im_report)
     ESE_report = staticmethod(print_ESE_report)
     HP_report = staticmethod(print_HP_report)
-
+    update_prog = staticmethod(update_prog)
 
 if RICH_AVAILABLE:
     print_backend = RichPrintBackend()
