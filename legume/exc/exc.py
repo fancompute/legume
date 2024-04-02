@@ -336,7 +336,7 @@ class ExcitonSchroedEq(object):
         self._eigvecs = []
         num_k = kpoints.shape[1]  # Number of wavevectors
         for ik, k in enumerate(kpoints.T):
-            prbd.update_prog(ik,num_k,self.verbose_ex,
+            prbd.update_prog(ik, num_k, self.verbose_ex,
                              "Running ESE k-point:")
 
             # Construct the matrix for diagonalization in eV

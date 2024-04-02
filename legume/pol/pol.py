@@ -304,9 +304,9 @@ class HopfieldPol(object):
         self.N_max = self.gme.numeig
         self.M_max = self.exc_list[0].numeig_ex
         num_k = kpoints.shape[1]  # Number of wavevectors
-        
+
         for ik, k in enumerate(self.kpoints.T):
-            prbd.update_prog(ik,num_k,self.verbose,"Running HP k-points:")
+            prbd.update_prog(ik, num_k, self.verbose, "Running HP k-points:")
 
             # Construct the Hopfield matrix for diagonalization in eV
             mat = self._construct_Hopfield(kind=ik)

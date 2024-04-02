@@ -54,6 +54,7 @@ class BasePrintBackend(PrintBackend):
     HP_report = staticmethod(print_HP_report)
     update_prog = staticmethod(update_prog)
 
+
 if RICH_AVAILABLE:
     print_backend = RichPrintBackend()
 else:

@@ -101,7 +101,6 @@ class GuidedModeExp(object):
     def kz_symms(self):
         """Symmetry of the eigenmodes computed by the 
         guided-mode expansion  w.r.t. the vertical kz plane.
-        Calculated if symmetry = 'both'.
         """
         return self._kz_symms
 
@@ -980,13 +979,12 @@ class GuidedModeExp(object):
         self._eigvecs = []
         self.even_counts = []
         self.odd_counts = []
-        
-        
+
         num_k = kpoints.shape[1]  # Number of wavevectors
-        t_loop_k = time.time() # Fro printing in progress
+        t_loop_k = time.time()  # Fro printing in progress
         for ik, k in enumerate(kpoints.T):
 
-            prbd.update_prog(ik,num_k,self.verbose,"Running gme k-points:")
+            prbd.update_prog(ik, num_k, self.verbose, "Running gme k-points:")
             t_create = time.time()
             mat = self._construct_mat(kind=ik)
 
@@ -1192,7 +1190,7 @@ class GuidedModeExp(object):
             raise RuntimeError("Run the GME computation first!")
         num_k = np.shape(self.freqs)[0]
         for kind in range(len(self.freqs)):
-            prbd.update_prog(kind,num_k,self.verbose,
+            prbd.update_prog(kind, num_k, self.verbose,
                              "Running GME losses k-point:")
             (freqs_im, freqs_im_te, freqs_im_tm, rc,
              rv) = self.compute_rad_sp(kind, minds)
