@@ -76,7 +76,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - When `truncate_abs=abs` we check if `gmax` is equal to one of the `|G|` in the reciprocal lattice.
-  If that is the case, we increase `gmax+=1e-4` to avoid rounding problems.
+  If that is the case, we increase `gmax+=1e-10` to avoid rounding problems.
 - When `truncate_abs=abs` we calculate only the unique and not-redundant Fourier components of the 
   permittivity profile in each layer. 
 - When `truncate_abs=abs` we calculate the Fourier transform of the permittivity only if the layer
