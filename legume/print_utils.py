@@ -68,8 +68,8 @@ def print_GME_report_rich(gme):
     if gme.verbose:
         table = Table(title="")
         table.add_column(
-            f"Steps in GuidedModeExp with: {np.shape(gme.gvec)[1]} plane waves"
-            + f" and {len(gme.gmode_inds)} guided modes",
+            f"Steps in GuidedModeExp: {np.shape(gme.gvec)[1]} plane waves" +
+            f" and {len(gme.gmode_inds)} guided modes",
             justify="Left",
             style="cyan",
             no_wrap=True)
@@ -154,7 +154,7 @@ def print_GME_im_report_rich(gme):
     if gme.verbose:
         table = Table(title="")
         table.add_column(
-            f"Steps in GuidedModeExp with {np.shape(gme.gvec)[1]} plane waves"
+            f"Steps in GuidedModeExp: {np.shape(gme.gvec)[1]} plane waves"
             + f" and {len(gme.gmode_inds)} guided modes",
             justify="Left",
             style="cyan",
@@ -180,7 +180,7 @@ def print_ESE_report_rich(exc):
     if exc.verbose_ex:
         table = Table(title="")
         table.add_column(
-            f"Steps in ExcitonSchroedEq with: {np.shape(exc.gvec)[1]} plane waves",
+            f"Steps in ExcitonSchroedEq: {np.shape(exc.gvec)[1]} plane waves",
             justify="Left",
             style="cyan",
             no_wrap=True)
@@ -213,7 +213,7 @@ def print_HP_report_rich(pol):
     if pol.verbose:
         table = Table(title="")
         table.add_column(
-            f"Steps in HopfieldPol with: {pol.gme.numeig} photonic modes, {np.shape(pol.exc_list)[0]}"
+            f"Steps in HopfieldPol: {pol.gme.numeig} photonic modes, {np.shape(pol.exc_list)[0]}"
             +
             f" active layers with {pol.exc_list[0].numeig_ex} excitonic modes",
             justify="Left",

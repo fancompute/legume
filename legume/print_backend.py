@@ -2,7 +2,7 @@
 Backend for printing options. Available backends:
  - rich [default if rich is installed]
  - base
-A backend can be set with the 'set_backend'
+A backend can be set with the 'set_print_backend'
     import legume
     legume.set_print_backend("base")
 
@@ -36,7 +36,6 @@ if RICH_AVAILABLE:
 
     class RichPrintBackend(PrintBackend):
         """ rich Backend """
-
         # methods
         GME_report = staticmethod(print_GME_report_rich)
         GME_im_report = staticmethod(print_GME_im_report_rich)

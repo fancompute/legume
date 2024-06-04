@@ -299,7 +299,7 @@ How can I learn more about the method?
 The `2020 paper <https://pubs.acs.org/doi/full/10.1021/acsphotonics.0c00327#>`_ 
 gives the fundamentals on the guided-mode expansion method and on our differentiable implementation.
 
-The 2024 manuscript submitted to Computer Physics Communications gives basic
+The 2024 manuscript to be published in Computer Physics Communications gives basic
 theory and details on symmetrization with respect to a vertical mirror plane,
 and on the interaction of photonic modes with excitons leading to 
 photonic crystal polaritons.

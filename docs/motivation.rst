@@ -36,8 +36,8 @@ Dive into the :ref:`examples` to see how this all works in practice!
 
 .. _Examples 0\.1-0\.8 : examples.html#examples-01-08
 
-New features (CPC paper)
-========================
+New features
+============
 
 The new **legume** 1.0, submitted to Computer Physics Communications (CPC)
 introduces the following new features:
@@ -46,5 +46,16 @@ introduces the following new features:
 - interaction between photonic modes and excitons, leading to photonic crystal polaritons
 
 .. IMPORTANT:: `Examples 1\.1-1\.6`_ are all related to the CPC paper. 
+.. _Examples 1\.1-1\.6 : examples.html#examples-for-cpc-paper-1-1-1-6
 
-.. _Examples 1\.1-1\.6 : examples.html#examples-for-cpc-paper-11-16
+
+We implemented a new verbose output built on top of `rich <https://rich.readthedocs.io/en/stable/introduction.html>`_.
+Here's an example: 
+
+.. image:: _static/Rich_screen.png
+  :width: 800
+  :alt: Rich verbose output
+
+If you installed `rich <https://rich.readthedocs.io/en/stable/introduction.html>`_, but you prefer 
+the classic verbose output just use the command ``legume.set_print_backend('base')`` at the beginnig
+of your script.

@@ -13,7 +13,7 @@ legume
       :toctree: generated/
 
       set_backend
-
+      set_print_backend
 
 GuidedModeExp
 =============
@@ -207,6 +207,7 @@ Visualization
    viz.reciprocal
    viz.field
    viz.wavef
+   viz.calculate_x
 
 GDS
 ===

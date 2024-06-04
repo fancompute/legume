@@ -74,8 +74,11 @@ def bands(gme,
         Default is None
     k_units : bool, optional
         Whether x-coordinates are calculated from
-        wavevector increments and have physical meaning or
-        they are simply linearly spaced points. 
+        wavevector increments and have physical meaning (if True),
+        or they are simply linearly spaced points (if False). 
+        Use True in order to plot photonic bands with wavevectors
+        that represent actual paths in the Brillouin zone.
+        Default is False, for backwards compataibility.
 
     Returns
     -------
@@ -101,7 +104,7 @@ def bands(gme,
     else:
         conv = 1
 
-    X0, X = _calculate_x(gme, k_units)
+    X0, X = calculate_x(gme.kpoints, gme.freqs.shape[1], k_units)
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
@@ -282,8 +285,11 @@ def pol_bands(pol,
         Band marker edge border width. Default is 1.5.
     k_units : bool, optional
         Whether x-coordinates are calculated from
-        wavevector increments and have physical meaning or
-        they are simply linearly spaced points. 
+        wavevector increments and have physical meaning (if True),
+        or they are simply linearly spaced points (if False). 
+        Use True in order to plot photonic bands with wavevectors
+        that represent actual paths in the Brillouin zone.
+        Default is False, for backwards compataibility.
 
 
     Returns
@@ -292,7 +298,7 @@ def pol_bands(pol,
         Axis object for the plot.
     """
 
-    X0, X = _calculate_x(pol, k_units)
+    X0, X = calculate_x(pol.kpoints, pol.eners.shape[1], k_units)
 
     if ax is None:
         fig, ax = plt.subplots(1, 1, constrained_layout=True, figsize=figsize)
@@ -1385,14 +1391,19 @@ def wavef(struct, kind, mind, val="abs2", N1=100, N2=200, cbar=True):
     return f1
 
 
-def _calculate_x(struc, k_units):
+def calculate_x(kpoints, num_eig, k_units):
     """
-    Calculates x-axis coordinates for polaritonic 
-    and photonic bands plotting.
+    Calculates x-axis coordinates (wavevector axis) 
+    for photonic and polaritonic bands plotting.
 
     Parameters
     ----------
-    struc : GuidedModeExp or HopfieldPol
+    kpoints : np.ndarray
+            2D array with k points coordinates as provided in path["kpoints"]
+    num_eig: int 
+            Numeber of repetition of the output array,
+            in the case of GuidedModeExp or HopfieldPol it is 
+            the number of eigenvalues.
     k_units : boolean
             If True the x-coordinates in the outputs
             are proportional to wavevector increment.
@@ -1404,11 +1415,12 @@ def _calculate_x(struc, k_units):
     X0 : np.array
         x cooridnates for light line plotting,
         its length corresponds to the number of
-        wavevectors in the input simulation.
+        wavevectors in kpoints.
 
     X : np.array
         x cooridnates for band plotting. It
-        has the same shape of gme.freqs or pol.eners.
+        has the same shape of [np.shape(kpoints)[1], num_eig].
+        It is a num_eig repetition of X0.
     """
     """
     if np.all(struc.kpoints[0,:]==0) and not np.all(struc.kpoints[1,:]==0) \
@@ -1420,11 +1432,10 @@ def _calculate_x(struc, k_units):
         X0 = np.arange(len(struc.kpoints[0, :]))
     """
 
-    mod_k = np.sqrt(
-        np.square(struc.kpoints[0, :]) +
-        np.square(struc.kpoints[1, :])) / 2 / np.pi
+    mod_k = np.sqrt(np.square(kpoints[0, :]) +
+                    np.square(kpoints[1, :])) / 2 / np.pi
 
-    delta_k = np.diff(struc.kpoints, axis=-1)
+    delta_k = np.diff(kpoints, axis=-1)
     mod_delta_k = np.sqrt(np.square(delta_k[0, :]) + np.square(delta_k[1, :]))
     delta_k_norm = mod_delta_k / np.sum(mod_delta_k)
 
@@ -1434,12 +1445,10 @@ def _calculate_x(struc, k_units):
         # of |k|
         X0 = np.concatenate((np.array([0]), np.cumsum(delta_k_norm)))
     else:
-        X0 = np.arange(len(struc.kpoints[0, :]))
+        X0 = np.arange(len(kpoints[0, :]))
 
-    if isinstance(struc, GuidedModeExp):
-        X = np.tile(X0.reshape(len(X0), 1), (1, struc.freqs.shape[1]))
-    elif isinstance(struc, HopfieldPol):
-        X = np.tile(X0.reshape(len(X0), 1), (1, struc.eners.shape[1]))
+    #X = np.tile(X0.reshape(len(X0), 1), (1, struct.freqs.shape[1]))
+    X = np.tile(X0.reshape(len(X0), 1), (1, num_eig))
 
     return (X0, X)
 

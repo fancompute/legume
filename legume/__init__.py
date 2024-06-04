@@ -16,6 +16,7 @@ from .pwe import PlaneWaveExp
 from .gme import GuidedModeExp
 from .gme.slab_modes import guided_modes, rad_modes
 from .backend import backend, set_backend
+from .print_backend import print_backend, set_print_backend
 
 __all__ = [
     'GuidedModeExp', 'PlaneWaveExp', 'ExcitonSchroedEq', 'HopfieldPol',
@@ -23,4 +24,4 @@ __all__ = [
     'Poly', 'Square', 'Hexagon', 'Ellipse'
 ]
 
-__version__ = '1.0.1'
+__version__ = '1.0.0'

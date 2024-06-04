@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
-## [1.0.1] - 2024-04-19
+## [1.0.0] - 2024-06-04
 
 ### Added
 #### GuidedModeExp
@@ -34,14 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `_ind_g` method to  `GuidedModeExp` to calculate the index of a vector in an array.
 - `_separate_hamiltonian_dense` and `_separate_hamiltonian_sparse` methods to `GuidedModeExp` to separate the Hamiltonian into 
   even and odd blocks w.r.t. the kz symmetry plane.
-- `_calculate_refl_mat` method to  `GuidedModeExp` to calculate all the reflection matrix neeed by
+- `_calculate_refl_mat` method to  `GuidedModeExp` to calculate all the reflection matrices neeed by
   `_separate_hamiltonian_dense` and `_separate_hamiltonian_sparse`.
 
 
 #### ExcitonSchroedEq
 - `ExcitonSchroedEq` class for solving 2D Schroedinger equation of excitons in a periodic potential.
 #### HopfieldPol
-- `HopfieldPol` class to calculate exciton-photon coupling givin rise to polariton eigenstates.
+- `HopfieldPol` class to calculate exciton-photon coupling giving rise to polariton eigenstates.
 
 #### Photonic Crystal
 -  `QuantumWellLayer` to `layer` module.
@@ -61,11 +61,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `eV` and `a` arguments to `viz.bands` to plot photonic bands in [eV] unit.
 - `k_units` argument to `viz.bands` to plot x-axis in normalized unit proportional
   to the wavevector.
-- `_calculate_x` and `_calculate_LL` methods to `viz` module to calculate x-coordinate
+- `calculate_x` and `_calculate_LL` methods to `viz` module to calculate x-coordinate
   and light line of bands to plot.
 
 #### Miscellaneous
-- `contants` module with physical constants.
+- `constants` module with physical constants.
 - `CHANGELOG` file.
 - `PrintBackend` class and `print_utils` for printing options. The `PrintBackend` can be set to `base` or `rich` with `set_print_backend`. The backend can be set to `rich` only if the package [rich](https://rich.readthedocs.io/en/stable/index.html)
   is installed. 

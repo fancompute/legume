@@ -36,7 +36,7 @@ One exciting feature of `legume` is the `autograd` backend that can be used to a
 
 ## Citing
 
-If you find legume useful for your research, we would apprecite you citing our [paper](https://arxiv.org/abs/2003.00379). For your convenience, you can use the following BibTex entry:
+If you find legume useful for your research, we would apprecite you citing our [paper](https://pubs.acs.org/doi/10.1021/acsphotonics.0c00327). For your convenience, you can use the following BibTex entry:
 
 ```
 @article{minkov2020inverse,

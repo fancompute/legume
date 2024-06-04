@@ -15,6 +15,7 @@ Optional dependencies
 - `autograd <https://github.com/HIPS/autograd>`__ (>= 1.2): For computing gradients
 - `gdspy <https://gdspy.readthedocs.io/>`__ (>= 1.5): For GDS structure export
 - `scikit-image <https://scikit-image.org/>`__ (>= 0.15): For GDS structure export via rasterization
+- `rich <https://rich.readthedocs.io/en/latest/introduction.html>`__ (>= 12.5): For displaying more readable verbose output
 
 Instructions
 ------------
