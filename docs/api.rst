@@ -13,7 +13,7 @@ legume
       :toctree: generated/
 
       set_backend
-
+      set_print_backend
 
 GuidedModeExp
 =============
@@ -39,6 +39,7 @@ Attributes
    GuidedModeExp.gvec
    GuidedModeExp.rad_coup
    GuidedModeExp.rad_gvec
+   GuidedModeExp.unbalance_sp
 
 
 Methods
@@ -50,6 +51,7 @@ Methods
    GuidedModeExp.run
    GuidedModeExp.run_im
    GuidedModeExp.compute_rad
+   GuidedModeExp.compute_rad_sp
    GuidedModeExp.get_eps_xy
    GuidedModeExp.ft_field_xy
    GuidedModeExp.get_field_xy
@@ -91,6 +93,72 @@ Methods
    PlaneWaveExp.ft_field_xy
    PlaneWaveExp.get_field_xy
 
+ExcitonSchroedEq
+================
+
+Creating a simulation
+---------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   ExcitonSchroedEq
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree: generated/
+
+   ExcitonSchroedEq.eners
+   ExcitonSchroedEq.eigvecs
+   ExcitonSchroedEq.kpoints
+   ExcitonSchroedEq.gvec
+
+Methods
+-------
+
+.. autosummary::
+   :toctree: generated/
+
+   ExcitonSchroedEq.run
+   ExcitonSchroedEq.get_pot_xy
+   ExcitonSchroedEq.ft_wavef_xy
+   ExcitonSchroedEq.get_wavef_xy
+
+HopfieldPol
+===========
+
+Creating a simulation
+---------------------
+
+.. autosummary::
+   :toctree: generated/
+
+   HopfieldPol
+
+Attributes
+----------
+
+.. autosummary::
+   :toctree: generated/
+
+   HopfieldPol.eners
+   HopfieldPol.eners_im
+   HopfieldPol.eigvecs
+   HopfieldPol.fractions_ex
+   HopfieldPol.fractions_ph
+   HopfieldPol.kpoints
+   HopfieldPol.gvec
+
+Methods
+-------
+
+.. autosummary::
+   :toctree: generated/
+
+   HopfieldPol.run
+
 
 Photonic crystal
 ================
@@ -101,6 +169,8 @@ Photonic crystal
    Lattice
    Lattice.bz_path
    PhotCryst
+   PhotCryst.add_layer
+   PhotCryst.add_qw
    Layer
    ShapesLayer
 
@@ -112,6 +182,7 @@ Geometry
    :toctree: generated/
 
    Circle
+   Ellipse
    Poly
    Square
    Hexagon
@@ -125,14 +196,18 @@ Visualization
    :toctree: generated/
 
    viz.bands
+   viz.pol_bands
    viz.structure
    viz.shapes
    viz.eps_xz
    viz.eps_xy
    viz.eps_yz
    viz.eps_ft
+   viz.pot_ft
    viz.reciprocal
    viz.field
+   viz.wavef
+   viz.calculate_x
 
 GDS
 ===

@@ -1,6 +1,7 @@
 import numpy as np
 from legume.backend import backend as bd
 from legume.utils import get_value
+from time import time
 """===========HELPER FUNCTIONS FOR Z-INTEGRATION============"""
 
 
@@ -56,6 +57,7 @@ def guided_modes(g_array: np.ndarray,
         eps_val = get_value(eps_array)
         om_lb = g_val / np.sqrt(eps_val[1:-1]).max()
         om_ub = g_val / np.sqrt(max(eps_val[0], eps_val[-1]))
+
         if ig > 0:
             if len(omegas) == n_modes:
                 # Dispersion cannot be faster than speed of light;
@@ -84,6 +86,7 @@ def guided_modes(g_array: np.ndarray,
 
         om_guided.append(omegas)
         coeffs_guided.append(coeffs)
+
     return (om_guided, coeffs_guided)
 
 
@@ -138,7 +141,9 @@ def guided_mode_given_g(g,
         # Compute guided mode frequency
         omega = bd.fsolve_D22(D22real, lb, ub, g, eps_array, d_array)
         omega_solutions.append(omega)
+
         chi_array = chi(omega, g, eps_array)
+
         if pol.lower() == 'te' or pol.lower() == 'tm':
             # Compute A-B coefficients
             AB = AB_matrices(omega, g, eps_array, d_array, chi_array, pol)
@@ -235,7 +240,7 @@ def S_T_matrices_TE(omega, g, eps_array, d_array):
 
 def D22(omega, g, eps_array, d_array, pol='TM'):
     """
-    Function to get TE guided modes by solving D22=0
+    Function to get TE and TM guided modes by solving D22=0
     Input
         omega           : frequency * 2π , in units of light speed/unit length
         g               : wave vector along propagation direction
@@ -324,11 +329,11 @@ def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
         T11 = np.exp(1j * chis1 * d)
         T22 = np.exp(-1j * chis1 * d)
 
-        T_dot_mats = np.zeros(mats.shape, dtype=np.complex128)
+        T_dot_mats = np.zeros(mats.shape, dtype=bd.complex)
         T_dot_mats[0::2, :] = mats[0::2, :] * T11[:, np.newaxis]
         T_dot_mats[1::2, :] = mats[1::2, :] * T22[:, np.newaxis]
 
-        S_dot_T = np.zeros(mats.shape, dtype=np.complex128)
+        S_dot_T = np.zeros(mats.shape, dtype=bd.complex)
         S_dot_T[0::2,
                 0] = S11 * T_dot_mats[0::2, 0] + S12 * T_dot_mats[1::2, 0]
         S_dot_T[0::2,
@@ -366,7 +371,7 @@ def D22s_vec(omegas, g, eps_array, d_array, pol='TM'):
         elif pol.lower() == 'tm':
             (S11, S12, S21, S22) = S_TM(eps1, eps2, chis1, chis2)
 
-        mats = np.zeros((2 * N_oms, 2), dtype=np.complex128)
+        mats = np.zeros((2 * N_oms, 2), dtype=bd.complex)
         mats[0::2, 0] = S11
         mats[1::2, 0] = S21
         mats[0::2, 1] = S12
@@ -399,6 +404,7 @@ def AB_matrices(omega, g, eps_array, d_array, chi_array=None, pol='TE'):
                 S_T_matrices_TM(omega, g, eps_array, d_array)
     else:
         raise Exception("Polarization should be 'TE' or 'TM'.")
+
     A0 = 0
     B0 = 1
     AB0 = bd.array([A0, B0]).reshape(-1, 1)
@@ -407,10 +413,12 @@ def AB_matrices(omega, g, eps_array, d_array, chi_array=None, pol='TE'):
     ABs = [AB0, bd.dot(T_matrices[0], bd.dot(S_matrices[0], AB0))]
     for i, S in enumerate(S_matrices[1:]):
         term = bd.dot(S_matrices[i + 1], bd.dot(T_matrices[i], ABs[-1]))
+
         if i < len(S_matrices) - 2:
             term = bd.dot(T_matrices[i + 1], term)
+
         ABs.append(term)
-    return bd.array(ABs)
+    return bd.array(ABs, dtype=bd.complex)
 
 
 def normalization_coeff(omega,

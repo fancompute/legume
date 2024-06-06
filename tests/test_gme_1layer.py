@@ -25,7 +25,7 @@ class TestGME(unittest.TestCase):
         phc.add_shape(poly)
 
         # Find the modes of the structure and compare to the saved .mat file
-        gme = GuidedModeExp(phc, gmax=4)
+        gme = GuidedModeExp(phc, gmax=4, truncate_g="tbt")
         options = {
             'gmode_inds': [0, 1, 2, 3],
             'numeig': 10,
@@ -53,7 +53,7 @@ class TestGME(unittest.TestCase):
         phc.add_layer(d=0.5, eps_b=12.)
         phc.add_shape(Circle(eps=1, r=0.2, x_cent=0, y_cent=0))
 
-        gme = GuidedModeExp(phc, gmax=3)
+        gme = GuidedModeExp(phc, gmax=3, truncate_g="tbt")
         options = {'gmode_inds': [0, 1, 2, 3], 'numeig': 10, 'verbose': False}
         gme.run(kpoints=np.array([[0., 0.1], [0., 0.2]]), **options)
 
@@ -76,7 +76,7 @@ class TestGME(unittest.TestCase):
         phc.add_layer(d=0.5, eps_b=12.)
         phc.add_shape(Circle(r=0.2, x_cent=0.1, y_cent=0.2))
 
-        gme = GuidedModeExp(phc, gmax=6)
+        gme = GuidedModeExp(phc, gmax=6, truncate_g="tbt")
         # gme.plot_overview_ft(cladding=True)
         options = {
             'gmode_inds': [1, 2, 3],

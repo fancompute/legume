@@ -6,6 +6,8 @@ NOTE: there should be no autograd functions here, only plain numpy/scipy
 import numpy as np
 from scipy.linalg import toeplitz
 from scipy.optimize import brentq
+import legume.constants as cs
+import warnings
 
 
 def ftinv(ft_coeff, gvec, xgrid, ygrid):
@@ -173,6 +175,17 @@ def fsolve(f, lb, ub, *args):
     Solve for scalar f(x, *args) = 0 w.r.t. scalar x within lb < x < ub
     """
     args_value = tuple([get_value(arg) for arg in args])
+    """"
+    # to have finer convergence we multiply the function by a number
+    #, we finde the root, and divide back, but this is not the problem ...
+    N = 1e100
+    def f_opt(x,*args):
+        return f(x,*args)*N
+    root,r = brentq(f_opt, lb, ub,args=args_value,full_output = True)
+    if r.converged == False:
+        raise ValueError(" Not converged")
+    """
+
     return brentq(f, lb, ub, args=args_value)
 
 
@@ -218,3 +231,51 @@ def extend(vals, inds, shape):
     z = np.zeros(shape, dtype=vals.dtype)
     z[inds] = vals
     return z
+
+
+def z_to_lind(phc, z):
+    """
+        Get a layer index corresponding to a position z. Claddings are included 
+        as first and last layer
+        """
+    N_layers = len(phc.layers)
+    z_max = phc.claddings[0].z_max
+    lind = 0  # Index denoting which layer (including claddings) z is in
+    while z > z_max and lind < N_layers:
+        lind += 1
+        z_max = phc.layers[lind - 1].z_max
+    if z > z_max and lind == N_layers: lind += 1
+
+    return lind
+
+
+def from_freq_to_e(a):
+    """
+    Calculate the conversion factor from
+    dimensionless frequency to energy in eV.
+    E[eV] = f[dimensionless] * conv.
+
+    Parameters
+    ----------
+    a : float
+        lattice constant in [m]
+
+    Returns
+    -------
+    conv : float
+        conversion factor
+
+    """
+    conv = cs.h_eV_Hz * cs.c / a
+
+    if a <= 0:
+        raise ValueError("Lattice constant should be strictly positive.")
+
+    # Maybe we should implement a warning and not a simple print?
+    if a < 5e-8 or a > 5e-6:
+        warnings.warn(
+            "The lattice constant is expected to be " +
+            "in the range of a few hundreds of nanometers." +
+            f" a = {a:.3e} m deviates from the expected range.", UserWarning)
+
+    return conv

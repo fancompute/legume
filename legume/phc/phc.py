@@ -2,7 +2,7 @@ import numpy as np
 
 from legume.backend import backend as bd
 import legume.utils as utils
-from . import ShapesLayer, FreeformLayer, Lattice
+from . import ShapesLayer, FreeformLayer, Lattice, QuantumWellLayer
 
 
 class PhotCryst(object):
@@ -32,13 +32,17 @@ class PhotCryst(object):
 
         # Initialize an empty list of layers
         self.layers = []
+        # Initialize an empty list of quantum wells
+        self.qws = []
 
     def __repr__(self):
         rep = 'PhotonicCrystal('
         rep += '\n' + repr(self.lattice)
         for i, layer in enumerate(self.layers):
             rep += '\n%d: ' % i + repr(layer)
-        rep += '\n)' if len(self.layers) > 0 else ')'
+        for i, qw in enumerate(self.qws):
+            rep += f'\n{i}: ' + repr(qw)
+        rep += '\n)' if len(self.layers) > 0 or len(self.qws) > 0 else ')'
         return rep
 
     def z_grid(self, Nz=100, dist=1):
@@ -82,6 +86,39 @@ class PhotCryst(object):
 
         self.claddings[1].z_min = z_min + d
         self.layers.append(layer)
+
+    def add_qw(self, z: float, V_shapes: float, a: float, M: float, E0: float,
+               loss: float, osc_str):
+        """
+        Add an active layer to in the photonic crystal.
+
+        Parameters
+        ----------
+        z: float
+            Positions of the QWs.
+        V_shapes : float
+            Potential felt by excitons in Shapes in [eV].
+            The background is assumed to be at 0 eV.
+
+        a : float
+            dimensional lattice constant in [m].
+        M : float
+            Exciton mass in [kg]
+        E0 : float
+            Free exciton energy in [eV]
+        loss : float
+            Exciton non-radiative losses in [eV]
+        osc_str: list or np.ndarray
+            exciton oscillator strength per unit area in [m^-2],
+            it has three component in the [x,y,z] frame of reference.
+            
+        """
+
+        if z <= self.claddings[0].z_max or z >= self.claddings[1].z_min:
+            raise ValueError(
+                f"QuantumWellLayer cannot be in the claddings at z = {z}.")
+        qw = QuantumWellLayer(z, V_shapes, a, M, E0, loss, osc_str)
+        self.qws.append(qw)
 
     def add_shape(self, shapes, layer=-1, cladding=None):
         """

@@ -332,3 +332,49 @@ def vjp_maker_fmap(ans, fns, params):
 
 
 defvjp(fmap, None, vjp_maker_fmap)
+"""=========== NUMPY.LINALG.EIG =========== """
+
+eig_ag = primitive(np.linalg.eig)
+
+
+def vjp_maker_eig(ans, x):
+    """Gradient of a general square (complex valued) matrix"""
+    e, u = ans  # eigenvalues as 1d array, eigenvectors in columns
+    n = e.shape[-1]
+
+    def vjp(g):
+        ge, gu = g
+        ge = _matrix_diag(ge)
+        f = 1 / (e[..., np.newaxis, :] - e[..., :, np.newaxis] + 1.e-20)
+        f -= _diag(f)
+        ut = np.swapaxes(u, -1, -2)
+        r1 = f * _dot(ut, gu)
+        r2 = -f * (_dot(_dot(ut, np.conj(u)),
+                        np.real(_dot(ut, gu)) * np.eye(n)))
+        r = _dot(_dot(inv(ut), ge + r1 + r2), ut)
+        if not np.iscomplexobj(x):
+            r = np.real(r)
+            # the derivative is still complex for real input (imaginary delta is allowed), real output
+            # but the derivative should be real in real input case when imaginary delta is forbidden
+        return r
+
+    return vjp
+
+
+defvjp(eig_ag, vjp_maker_eig)
+"""=========== SCIPY.SPARSE.DOT =========== """
+# Dot product between a scipy sparse matrix and a numpy array.
+# Differentiable w.r.t. the numpy array."
+
+spdot_ag = primitive(lambda spmat, mat: spmat.dot(mat))
+
+
+def vjp_maker_spdot(ans, spmat, mat):
+    """vjp for the gradient w.r.t. mat"""
+    def vjp(g):
+        return spmat.T.dot(g)
+
+    return vjp
+
+
+defvjp(spdot_ag, None, vjp_maker_spdot)

@@ -6,6 +6,9 @@
 
 legume (le GUided Mode Expansion) is a python implementation of the GME method for photonic crystal slabs, including multi-layer structures. Plane-wave expansion for purely 2D structures is also included. Also, we have an `autograd` backend that allows gradients of all output values with respect to all input parameters to be computed efficiently!
 
+## New major release!
+With the update to version 1.0.0, we introduced new exciting features including symmetry spearation of photonic modes with respect to a vertical (kz) plane of symmetry, and photon-exciton interaction. These features are fully documented and explained in a new set of examples.
+
 ## Install
 
 Easiest way:
@@ -36,8 +39,7 @@ One exciting feature of `legume` is the `autograd` backend that can be used to a
 
 ## Citing
 
-If you find legume useful for your research, we would apprecite you citing our [paper](https://arxiv.org/abs/2003.00379). For your convenience, you can use the following BibTex entry:
-
+If you find legume useful for your research, we would apprecite you citing our [paper](https://pubs.acs.org/doi/10.1021/acsphotonics.0c00327). For your convenience, you can use the following BibTex entry: 
 ```
 @article{minkov2020inverse,
   title={Inverse design of photonic crystals through automatic differentiation},
@@ -48,6 +50,17 @@ If you find legume useful for your research, we would apprecite you citing our [
   pages={1729--1741},
   year={2020},
   publisher={American Chemical Society}
+}
+```
+The paper describing the symmetry separation and plolariton theory is soon to be published on CPC. For now, you can cite the [preprint](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4773128) with the following BibTex entry:
+```
+@article{Zanotti2024,
+  title = {Legume: A Free Implementation of the Guided-Mode Expansion Method for Photonic Crystal Slabs},
+  url = {http://dx.doi.org/10.2139/ssrn.4773128},
+  DOI = {10.2139/ssrn.4773128},
+  publisher = {Elsevier BV},
+  author = {Zanotti,  Simone and Minkov,  Momchil and Nigro,  Davide and Gerace,  Dario and Fan,  Shanhui and Andreani,  Lucio  Claudio},
+  year = {2024}
 }
 ```
 

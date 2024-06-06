@@ -1,7 +1,7 @@
 import numpy as np
 from legume.backend import backend as bd
 import legume.utils as utils
-from .shapes import Shape, Circle, Poly, Square
+from .shapes import Shape, Circle, Poly, Square, Ellipse
 
 
 class Layer(object):
@@ -19,10 +19,12 @@ class Layer(object):
             z-coordinate of the bottom of the layer.
         z_max : float, optional
             z-coordinate of the top of the layer.
+
         """
-        # Define beginning and end in z-direction
+        # Define beginning, end and middle in z-direction
         self.z_min = z_min
         self.z_max = z_max
+        self.z_mid = (z_max + z_min) / 2
 
         # Slab thickness
         self.d = z_max - z_min
@@ -53,6 +55,13 @@ class Layer(object):
         Compute the 2D Fourier transform of the layer permittivity.
         """
         raise NotImplementedError("compute_ft() needs to be implemented by"
+                                  "Layer subclasses")
+
+    def compute_exc_ft(self, gvec):
+        """
+        Compute the 2D Fourier transform of the layer permittivity.
+        """
+        raise NotImplementedError("compute_exc_ft() needs to be implemented by"
                                   "Layer subclasses")
 
     def get_eps(self, points):
@@ -143,6 +152,27 @@ class ShapesLayer(Layer):
 
         return FT
 
+    def compute_exc_ft(self, gvec, Vmax):
+        """
+        Compute the 2D Fourier transform of the layer potential.
+        """
+        FT = bd.zeros(gvec.shape[1])
+        for shape in self.shapes:
+            # Note: compute_ft() returns the FT of a function that is one
+            # inside the shape and zero outside
+            FT = FT + Vmax * shape.compute_ft(gvec)
+
+            FT = FT / self.lattice.ec_area
+            # If the potential is negative we must shift all energies
+
+            ind0 = bd.abs(gvec[0, :]) + bd.abs(gvec[1, :]) < 1e-10
+            # If the first element corresponding to V(0) is negative we shift the energies by Vmax
+            if FT[ind0][0] < 0:
+                FT[ind0] += bd.abs(Vmax)
+        ### k near zero could be explicitly set to the potential average value, to be done!
+
+        return FT
+
     def get_eps(self, points):
         """
         Compute the permittivity of the layer over a 'points' tuple containing
@@ -211,3 +241,23 @@ class FreeformLayer(Layer):
         """
         raise NotImplementedError("get_eps() is not yet imlemented for"
                                   "the Freeform layer")
+
+
+class QuantumWellLayer():
+    """Quantum well layers,
+     """
+    def __init__(self, z, V_shapes, a, M, E0, loss, osc_str):
+
+        self.z = z
+        self.V_shapes = V_shapes
+        self.a = a
+        self.M = M
+        self.E0 = E0
+        self.loss = loss
+        self.osc_str = bd.array(osc_str)
+
+    def __repr__(self):
+        rep = f'QuantumWellLayer(z = {self.z:.4f}, V_shapes = {self.V_shapes} eV, a = {self.a*10**9:.1f} nm, \n \
+         M = {self.M:.2e} kg, E0 = {self.E0:.4f} eV, loss = {self.loss:.1e} eV )'
+
+        return rep

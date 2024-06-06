@@ -28,6 +28,56 @@ produces strange results, it might just be that the method is not that
 well-suited for the structure you are simulating. We're hoping to improve that 
 in future version of **legume**! 
 
+How do I choose truncation of reciprocal lattice vectors?
+---------------------------------------------------------
+
+The Fourier expansion of electromagnetic fields relies on an infinite vector set `G`
+as its basis. However, for practical numerical computations, it becomes necessary 
+to truncate this infinite basis. The choice of the truncation rule becomes crucial,
+as the results may vary for a finite number (N\ :sub:`G`) of plane waves.
+It is expected that all reasonable truncation choices converge to the same result
+as N\ :sub:`G` approaches infinity. In **legume**, two distinct truncation rules are
+implemented:
+
+- ``abs``: This rule defines a circular boundary in reciprocal space
+  with the condition ``|G| < 2 π gmax``;
+- ``tbt``: This creates a parallelogram in reciprocal space, which is suitable 
+  to put the dielectric matrices in Toeplitz-block-Toeplitz form.
+
+
+In both case, the number (N\ :sub:`G`) of plane waves (sometimes called `npw` in the code)
+grows like the square of `gmax`.
+
+An illustrative example of these truncation rules applied to the reciprocal
+triangular lattice is shown here, where the darker points corresponds to vectors 
+G included in the basis:
+
+.. image:: _static/Gmax.gif
+  :width: 700
+  :alt: Increasing gmax truncation
+
+.. caution:: For given ``gmax``, ``abs`` and ``tbt`` may give a different number of
+          plane waves N\ :sub:`G` in the basis. 
+
+So, should I use ``abs`` or ``tbt``? ``abs`` is, in general, a safer choice since it
+always preserves the underlying symmetry of any lattice. In particular,  ``abs`` should
+be chosen when using symmetrization with respect to a vertical mirror plane in the hexagonal (also called triangular) lattice.
+From the plot above, we can see that ``tbt`` breaks the rotational symmetry of the hexagonal lattice,
+and is therefore not compatible with symmetrization. Also, ``tbt`` may give
+unexpected results when the symmetry of the modes is a crucial point of the simulation.
+On the other hand, the calculation of the Fourier components of the in-plane dielectric
+profile is highly optimized for the ``tbt`` truncation. For this reason, when
+we need to run a calculation with a large number of plane waves, 
+``tbt`` is currently the best option in terms of computing time and memory usage.
+Inverse design optimizations are often done with a rectangular supercell, and for
+such structures  ``tbt`` is compatible with symmetrization.
+
+.. note:: Based on these guidelines, the user should choose the truncation scheme that is most
+        suited to the specific application. The choice of truncation scheme depends on the
+        keyword argument ``truncate_g`` in ``GuidedModeExp``, and has the default value ``abs``.
+
+
+
 Why am I running out of memory?
 -------------------------------
 
@@ -125,29 +175,77 @@ How do I incorporate symmetry?
 ------------------------------
 
 The TE/TM classification of the guided modes of the homogeneous structure is 
-often broekn by the photonic crystal permittivity. Here is how you can still
+often broken by the photonic crystal permittivity. Here is how you can still
 incorporate some structural symmetries.
 
 For gratings_ (permittivity is periodic in one direction and homogeneous in the 
 other), the TE/TM classification holds. You can selectively compute the modes
 by supplying `gmode_inds` with either only even or only odd numbers.
+Please see example 0.2 for other hints.
 
-For `photonic crystals with a mirror plane`_, like a single slab with symmetric 
-claddings, the correct classification of modes is with respect to reflection in 
-that plane. The positive-symmetry guided modes are 
-``gmode_inds = [0, 3, 4, 7, 8, ...]``, while the negative-symmetry modes are 
-``gmode_inds = [1, 2, 5, 6, 9, 10, ...]``. Low-frequency positive-symmetry 
-modes that are mostly fromed by the ``gmode_inds = 0`` guided band are 
-sometimes referred to as quasi-TE, and low-frequency negative-symmetry 
-modes that are mostly formed by the ``gmode_inds = 1`` guided band are 
-sometimes referred to as quasi-TM. 
+For 2D structures, it is most important to distinguish between horizontal (xy) 
+and vertical (kz) mirror planes, that latter may arise only if the `k`-vector points 
+along specific high-symmetry directions.
 
-Without any mirror planes, all the guided modes are generally mixed. There 
-can still be symmetry if the `k`-vector points in a high-symmetry direction,
-but there is currently no way to take advantage of that in **legume**. 
+For photonic crystals with a horizontal (xy) mirror plane, like a single slab 
+with symmetric claddings, the correct classification of modes is with respect 
+to reflection in that plane:
+
+- the positive-symmetry, or :math:`\sigma_{xy}=+1` photonic modes are obtained by choosing a basis of guided modes such as ``gmode_inds = [0, 3, 4, 7, 8, 11 ...]``;
+
+- the negative-symmetry, or :math:`\sigma_{xy}=-1` photonic modes are obtained by choosing a basis of guided modes such as ``gmode_inds = [1, 2, 5, 6, 9, 10, ...]``.
+
+Low-frequency positive-symmetry modes that are mostly formed by the ``gmode_inds = [0]`` 
+guided band are sometimes referred to as quasi-TE, and low-frequency negative-symmetry 
+modes that are mostly formed by the ``gmode_inds = [1]`` guided band are 
+sometimes referred to as quasi-TM. Please see `example 1\.1`_ for full analysis.
+
+
+Without any horizontal mirror planes, all the guided modes are generally mixed. 
+There can still be symmetry if the `k`-vector points in a high-symmetry direction.
+The new version of **legume** (2024 version, related to the CPC paper)
+allows implementing symmetry with respect to a vertical mirror plane, which 
+we call a kz-plane. This is controlled by the keyword argument ``kz_symmetry``,
+which can have four possible values:
+
+- ``kz_symmetry=None``: kz-symmetry is not used;
+- ``kz_symmetry='even'``: only kz-even modes are calculated ;
+- ``kz_symmetry='odd'``: only kz-odd modes are calculated ;
+- ``kz_symmetry='both'``: all modes are calculated, and can be separated using
+  the variable `kz_symmetry=kz_symms`.
+
+Please see `example 1\.2`_ for full analysis, `example 1\.6`_ for inverse design
+using kz-symmetry, and the CPC paper for theoretical discussion.
+
 
 .. _gratings: examples/03_Guided_mode_expansion_multi_layer_grating.html#Compute-quasi-guided-bands
 .. _photonic crystals with a mirror plane: examples/06_Guided_mode_expansion_with_autograd.html#PhC-cavity-simulation
+.. _example 1\.1: examples/11_GME_horizontal_xy_symmetry_plane.html
+.. _example 1\.2: examples/12_GME_vertical_kz_symmetry_plane.html
+.. _example 1\.6: examples/16_GME_W1_waveguide_optimization_with_autograd.html
+
+
+How do I use the polariton module?
+----------------------------------
+
+Polaritons are the mixed modes that result from the interaction of light
+with material excitation, in this case we consider 2D excitons.
+To model exciton-polaritons in PhC slabs we need to calculate the
+exciton eigenmodes, and photonic eigenmodes, and their mutual interaction.
+
+Exciton eigenmodes are obtained by solving the effective-mass equation
+in a confining potential, using the same plane-wave basis that is employed
+for the photonic eigenmodes. The exciton-photon interaction is treated
+by the Hopfield method, which leads to a non-hermitian eigenvalue problem.
+
+The polariton class HopfieldPol is organized in a way that is similar to GuidedModeExp,
+but it employs SI units and sometimes electronvolts (eV), as the exciton resonances are characterized
+by real parameters like resonance energy, loss, and oscillator strength per unit area.
+
+Please refer to `example 1\.5`_ for details on usage.
+
+.. _example 1\.5: examples/15_excitons_and_polaritons.html
+
 
 When should I use approximate gradients?
 ----------------------------------------
@@ -198,23 +296,39 @@ relative phase between the two should be physical.
 How can I learn more about the method?
 --------------------------------------
 
-Our `paper <https://arxiv.org/abs/2003.00379>`_ gives a lot of detail both on the guided-mode expansion method and 
-on our differentiable implementation.
+The `2020 paper <https://pubs.acs.org/doi/full/10.1021/acsphotonics.0c00327#>`_ 
+gives the fundamentals on the guided-mode expansion method and on our differentiable implementation.
+
+The 2024 manuscript to be published in Computer Physics Communications gives basic
+theory and details on symmetrization with respect to a vertical mirror plane,
+and on the interaction of photonic modes with excitons leading to 
+photonic crystal polaritons.
+
 
 
 How should I cite legume?
 -------------------------
 
-If you find **legume** useful for your research, we would apprecite you citing our `paper <https://arxiv.org/abs/2003.00379>`_. For your convenience, you can use the following BibTex entry:
+If you find **legume** useful for your research, we would apprecite you citing our 
+`paper <https://pubs.acs.org/doi/full/10.1021/acsphotonics.0c00327#>`_. For your convenience,
+you can use the following BibTex entry:
 
 .. code-block:: latex
 
-    @article{Minkov2020,
-    title = {Inverse design of photonic crystals through automatic differentiation},
-    author = {Minkov, Momchil and Williamson, Ian A. D. and Gerace, Dario and Andreani, Lucio C. and Lou, Beicheng and Song, Alex Y. and Hughes, Tyler W. and Fan, Shanhui},
+  @article{Minkov2020,
+    title = {Inverse Design of Photonic Crystals through Automatic Differentiation},
+    volume = {7},
+    ISSN = {2330-4022},
+    url = {http://dx.doi.org/10.1021/acsphotonics.0c00327},
+    DOI = {10.1021/acsphotonics.0c00327},
+    number = {7},
+    journal = {ACS Photonics},
+    publisher = {American Chemical Society (ACS)},
+    author = {Minkov,  Momchil and Williamson,  Ian A. D. and Andreani,  Lucio C. and Gerace,  Dario and Lou,  Beicheng and Song,  Alex Y. and Hughes,  Tyler W. and Fan,  Shanhui},
     year = {2020},
-    journal = {arXiv:2003.00379},
-    }
+    month = jun,
+    pages = {1729–1741}
+  }
 
 
 Who made that awesome legume logo?

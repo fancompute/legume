@@ -102,6 +102,67 @@ class Circle(Shape):
                 np.square(self.r))
 
 
+class Ellipse(Shape):
+    """Ellipse shape
+    """
+    def __init__(self, eps=1., x_cent=0., y_cent=0., rx=0., ry=0, phi=0):
+        """Create an ellipse shape
+        
+        Note
+        ----
+        If ``rx`` = ``ry`` the ellipse is equivalent to a
+        `Circle` with radius ``r`` = ``rx`` = ``ry``. For
+        ``rx`` > ``ry`` the ellipse is elongated in the x direction.
+        
+        Parameters
+        ----------
+        eps : float
+            Permittivity value
+        x_cent : float
+            x-coordinate of ellipse center
+        y_cent : float
+            y-coordinate of ellipse center
+        rx : float
+            x-axis length
+        ry : float
+            y-axis length
+        phi : float
+            rotation of the ellipse
+        """
+        self.x_cent = x_cent
+        self.y_cent = y_cent
+        self.rx = rx
+        self.ry = ry
+        self.phi = phi
+
+        super().__init__(eps=eps)
+
+    def __repr__(self):
+        return f"Ellipse(eps = {eps:.2f}, x = {x:.4f}, y = {y:.4f}, rx = {rx:.4f},ry = {ry:.4f}, phi = {phi:.4f}, )"
+
+    def compute_ft(self, gvec):
+        (gx, gy) = self._parse_ft_gvec(gvec)
+
+        # Change of coordinates
+        g1x = gx * bd.cos(self.phi) + gy * bd.sin(self.phi)
+        g1y = -gx * bd.sin(self.phi) + gy * bd.cos(self.phi)
+        gabs = np.sqrt(
+            np.abs(np.square(g1x * self.rx)) +
+            np.abs(np.square(g1y * self.ry)))
+        gabs += 1e-10  # To avoid numerical instability at zero
+
+        ft = bd.exp(-1j*g1x*self.x_cent - 1j*g1y*self.y_cent)*self.rx*self.ry* \
+                            2*np.pi/gabs*bd.bessel1(gabs)
+
+        return ft
+
+    def is_inside(self, x, y):
+        x1 = x * bd.cos(self.phi) + y * bd.sin(self.phi)
+        y1 = -x * bd.sin(self.phi) + y * bd.cos(self.phi)
+        return (np.square((x1 - self.x_cent) / self.rx) + np.square(
+            (y1 - self.y_cent) / self.ry) <= 1)
+
+
 class Poly(Shape):
     """Polygon shape
     """
@@ -351,8 +412,8 @@ class FourierShape(Poly):
             raise ValueError("Coefficients of FourierShape should be such "
                              "that R(phi) is non-negative for all phi.")
 
-        x_edges = R_phi * bd.cos(phis)
-        y_edges = R_phi * bd.sin(phis)
+        x_edges = R_phi * bd.cos(phis) + x_cent
+        y_edges = R_phi * bd.sin(phis) + y_cent
 
         super().__init__(eps, x_edges, y_edges)
 
