@@ -37,7 +37,6 @@ class Backend(object):
     # types
     int = np.int64
     float = np.float64
-    complex256 = np.complex256
     complex = np.complex128
 
     def __repr__(self):
