@@ -236,12 +236,10 @@ def vjp_maker_interp(ans, x, xp, yp):
     """
     def vjp(g):
         dydyp = np.zeros((x.size, xp.size))
-        for ix in range(x.size):
-            indx = np.searchsorted(xp, x[ix]) - 1
-            dydyp[ix,
-                  indx] = 1 - (x[ix] - xp[indx]) / (xp[indx + 1] - xp[indx])
-            dydyp[ix,
-                  indx + 1] = (x[ix] - xp[indx]) / (xp[indx + 1] - xp[indx])
+        ix = np.arange(x.size)
+        indx = np.searchsorted(xp, x[ix]) - 1
+        dydyp[ix, indx] = 1 - (x[ix] - xp[indx]) / (xp[indx + 1] - xp[indx])
+        dydyp[ix, indx + 1] = (x[ix] - xp[indx]) / (xp[indx + 1] - xp[indx])
         return np.dot(g, dydyp)
 
     return vjp
