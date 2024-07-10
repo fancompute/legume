@@ -9,6 +9,7 @@ class PhotCryst(object):
     """
     Class for a photonic crystal which can contain a number of layers.
     """
+
     def __init__(self, lattice, eps_l: float = 1, eps_u: float = 1):
         """Initialize a photonic crystal.
         

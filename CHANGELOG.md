@@ -4,7 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2024-07-11
 
+### Added
+- BibTex entry for the [CPC paper](https://www.sciencedirect.com/science/article/pii/S0010465524002091?dgcid=rss_sd_all)
+
+### Fixed
+- Bug introduced with with numpy 2.0 when calculating the unique reciprocal lattice vector
+  `delta_G` for the permittivity Fourier transform. 
+- Bug introduced with with numpy 2.0 when creating the array with the effective permittivity 
+  of each layer.
 
 ## [1.0.0] - 2024-06-04
 
@@ -17,7 +26,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `use_sparse` argument in `GuidedModeExp.set_run_options` to use sparse matrices instead of dense when changing the basis
   to separate the Hamiltonian into even/odd blocks with respect to the kz symmetry plane.  
 - `delta_gx` argument in `GuidedModeExp.set_run_options`, a small component added to the x-component of g-vectors to avoid
-  problems at `g=k+G=0`
+  problems at `g=k+G=0`.
 - `delta_gx` argument in `GuidedModeExp.set_run_options`, small shift of the absolute value of `g=k+G` to avoid
   problems at `g=0`.
 - `only_gmodes` argument in `GuidedModeExp.set_run_options` to calculate the guided modes of the effective slabs.

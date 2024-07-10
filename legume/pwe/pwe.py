@@ -7,6 +7,7 @@ class PlaneWaveExp(object):
     """
     Main simulation class of the plane-wave expansion.
     """
+
     def __init__(self, layer, gmax: float = 3., eps_eff: float = None):
         """Initialize the plane-wave expansion.
         
