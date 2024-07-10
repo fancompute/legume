@@ -18,6 +18,7 @@ class GuidedModeExp(object):
     """
     Main simulation class of the guided-mode expansion.
     """
+
     def __init__(self, phc, gmax=3., truncate_g='abs'):
         """Initialize the guided-mode expansion.
         
@@ -286,6 +287,7 @@ class GuidedModeExp(object):
         Variable 'indmode' stores the indexes of 'gk' over which a guided
         mode solution was found
         """
+
         def interp_coeff(coeffs, il, ic, indmode, gs):
             """
             Interpolate the A/B coefficient (ic = 0/1) in layer number il
@@ -464,6 +466,13 @@ class GuidedModeExp(object):
         # an analytical expression for the unique elements to speedup
         indgrid = bd.array([indgridx, indgridy])
         unique, ind_unique = bd.unique(indgrid, axis=1, return_inverse=True)
+        """
+        From numpy 2.0, 'ind_unique' is returned as a two-dimensional array, with older
+        numpy it was just a one-dimensional array containing the indexes to reconstruct
+        the original array. We use squeeze() to remove the dimension of length 1 in case
+        of numpy =>1.
+        """
+        ind_unique = ind_unique.squeeze()
         num_unique = np.shape(unique)[1]
 
         # Unique g-vectors for calculting f-transform
@@ -502,6 +511,7 @@ class GuidedModeExp(object):
             """
             eps_ft_pos = layer.compute_ft(
                 (gvec_unique[:, 0:(num_unique - 1) // 2 + 1]))
+            # The FT at -delta_G is the complex conjugate of FT at delta_G
             eps_ft_uniq = bd.concatenate(
                 (eps_ft_pos, bd.conj(eps_ft_pos[-2::-1])))
 
@@ -881,10 +891,10 @@ class GuidedModeExp(object):
                 "'kz_symmetry' can be None, 'odd', 'even' or 'both' ")
 
         if self.kz_symmetry:
-        #     if self.truncate_g == 'tbt':
-        #         raise ValueError(
-        #             "'truncate_g' must be 'abs' to separate odd and even modes"
-        #             " w.r.t. a vertical plane of symmetry.")
+            #     if self.truncate_g == 'tbt':
+            #         raise ValueError(
+            #             "'truncate_g' must be 'abs' to separate odd and even modes"
+            #             " w.r.t. a vertical plane of symmetry.")
             refl_mat = self._calculate_refl_mat(angles)
 
         if self.truncate_g == 'tbt':
@@ -906,18 +916,17 @@ class GuidedModeExp(object):
         # Store an array of the effective permittivity for every layer
         #(including claddings)
         eps_array = bd.array(list(
-            getattr(layer, layer_eps) for layer in [self.phc.claddings[0]] +
-            self.phc.layers + [self.phc.claddings[1]]),
-                             dtype=object).ravel()
-        eps_array = bd.array(eps_array, dtype=float)
+            float(getattr(layer, layer_eps))
+            for layer in [self.phc.claddings[0]] + self.phc.layers +
+            [self.phc.claddings[1]]),
+                             dtype=float).ravel()
         # A separate array where the values are converted from ArrayBox to numpy
         # array, if using the 'autograd' backend.
         eps_array_val = np.array(list(
-            get_value(getattr(layer, layer_eps))
+            float(get_value(getattr(layer, layer_eps)))
             for layer in [self.phc.claddings[0]] + self.phc.layers +
             [self.phc.claddings[1]]),
-                                 dtype=object).ravel()
-        eps_array_val = bd.array(eps_array_val, dtype=bd.float)
+                                 dtype=float).ravel()
         # Store an array of thickness of every layer (not including claddings)
         d_array = bd.array(list(layer.d for layer in \
             self.phc.layers), dtype=object).ravel()

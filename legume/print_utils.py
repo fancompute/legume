@@ -154,8 +154,8 @@ def print_GME_im_report_rich(gme):
     if gme.verbose:
         table = Table(title="")
         table.add_column(
-            f"Steps in GuidedModeExp: {np.shape(gme.gvec)[1]} plane waves"
-            + f" and {len(gme.gmode_inds)} guided modes",
+            f"Steps in GuidedModeExp: {np.shape(gme.gvec)[1]} plane waves" +
+            f" and {len(gme.gmode_inds)} guided modes",
             justify="Left",
             style="cyan",
             no_wrap=True)
