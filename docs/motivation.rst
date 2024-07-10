@@ -39,7 +39,8 @@ Dive into the :ref:`examples` to see how this all works in practice!
 New features
 ============
 
-The new **legume** 1.0, submitted to Computer Physics Communications (CPC)
+The new **legume** 1.0, linked to the `Computer Physics Communications (CPC) paper 
+<https://www.sciencedirect.com/science/article/pii/S0010465524002091?dgcid=rss_sd_all>`_, 
 introduces the following new features:
 
 - symmetrization with respect to a vertical (kz) mirror plane 

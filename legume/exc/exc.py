@@ -11,6 +11,7 @@ import time
 class ExcitonSchroedEq(object):
     """Main simulation class of the excitonic Schroedinger equation.
     """
+
     def __init__(self,
                  phc,
                  z,

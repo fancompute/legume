@@ -5,7 +5,7 @@ Required dependencies
 ---------------------
 
 - Python (>= 3.6)
-- `numpy <http://www.numpy.org/>`__ (>= 1.16)
+- `numpy <http://www.numpy.org/>`__ (>= 1.16,<2.0.0)
 - `scipy <http://www.scipy.org/>`__ (>= 1.2.1)
 - `matplotlib <http://www.matplotlib.org/>`__ (>= 3.0.3)
 
