@@ -8,6 +8,7 @@ import time
 class Minimize(object):
     """Wrapping up custom and SciPy optimizers in a common class
     """
+
     def __init__(self, objective):
 
         self.objective = objective

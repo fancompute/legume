@@ -52,15 +52,18 @@ If you find legume useful for your research, we would apprecite you citing our [
   publisher={American Chemical Society}
 }
 ```
-The paper describing the symmetry separation and plolariton theory is soon to be published on CPC. For now, you can cite the [preprint](https://papers.ssrn.com/sol3/papers.cfm?abstract_id=4773128) with the following BibTex entry:
+The paper describing the symmetry separation and polariton theory has been published in [CPC](https://www.sciencedirect.com/science/article/pii/S0010465524002091?dgcid=rss_sd_all). If you find the new features useful, please cite our paper using the following the BibTex entry:
 ```
-@article{Zanotti2024,
-  title = {Legume: A Free Implementation of the Guided-Mode Expansion Method for Photonic Crystal Slabs},
-  url = {http://dx.doi.org/10.2139/ssrn.4773128},
-  DOI = {10.2139/ssrn.4773128},
-  publisher = {Elsevier BV},
-  author = {Zanotti,  Simone and Minkov,  Momchil and Nigro,  Davide and Gerace,  Dario and Fan,  Shanhui and Andreani,  Lucio  Claudio},
-  year = {2024}
+@article{Zanotti2024legume,
+title = {Legume: A free implementation of the guided-mode expansion method for photonic crystal slabs},
+journal = {Computer Physics Communications},
+volume = {304},
+pages = {109286},
+year = {2024},
+issn = {0010-4655},
+doi = {https://doi.org/10.1016/j.cpc.2024.109286},
+url = {https://www.sciencedirect.com/science/article/pii/S0010465524002091},
+author = {Simone Zanotti and Momchil Minkov and Davide Nigro and Dario Gerace and Shanhui Fan and Lucio Claudio Andreani},
 }
 ```
 

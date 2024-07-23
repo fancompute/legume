@@ -299,8 +299,8 @@ How can I learn more about the method?
 The `2020 paper <https://pubs.acs.org/doi/full/10.1021/acsphotonics.0c00327#>`_ 
 gives the fundamentals on the guided-mode expansion method and on our differentiable implementation.
 
-The 2024 manuscript to be published in Computer Physics Communications gives basic
-theory and details on symmetrization with respect to a vertical mirror plane,
+The `2024 paper <https://www.sciencedirect.com/science/article/pii/S0010465524002091?dgcid=rss_sd_all>`_
+gives basic theory and details on symmetrization with respect to a vertical mirror plane,
 and on the interaction of photonic modes with excitons leading to 
 photonic crystal polaritons.
 
@@ -328,6 +328,24 @@ you can use the following BibTex entry:
     year = {2020},
     month = jun,
     pages = {1729–1741}
+  }
+
+The paper describing the symmetry separation and polariton theory has been published in
+`CPC <https://www.sciencedirect.com/science/article/pii/S0010465524002091?dgcid=rss_sd_all>`_. 
+If you find the new features useful, please cite our paper using the following BibTex entry:
+
+.. code-block:: latex
+
+  @article{Zanotti2024legume,
+  title = {Legume: A free implementation of the guided-mode expansion method for photonic crystal slabs},
+  journal = {Computer Physics Communications},
+  volume = {304},
+  pages = {109286},
+  year = {2024},
+  issn = {0010-4655},
+  doi = {https://doi.org/10.1016/j.cpc.2024.109286},
+  url = {https://www.sciencedirect.com/science/article/pii/S0010465524002091},
+  author = {Simone Zanotti and Momchil Minkov and Davide Nigro and Dario Gerace and Shanhui Fan and Lucio Claudio Andreani},
   }
 
 

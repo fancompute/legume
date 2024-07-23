@@ -8,6 +8,7 @@ class Layer(object):
     """
     Class for a single layer in the potentially multi-layer PhC.
     """
+
     def __init__(self, lattice, z_min: float = 0, z_max: float = 0):
         """Initialize a Layer.
         
@@ -77,6 +78,7 @@ class ShapesLayer(Layer):
     """
     Layer with permittivity defined by Shape objects
     """
+
     def __init__(self,
                  lattice,
                  z_min: float = 0,
@@ -125,8 +127,10 @@ class ShapesLayer(Layer):
         for shape in shapes:
             if isinstance(shape, Shape):
                 self.shapes.append(shape)
-                self.eps_avg = self.eps_avg + (shape.eps - self.eps_b) * \
-                                shape.area/self.lattice.ec_area
+                # We squeeze to have a zero-dimensional array, which is consistent
+                # with eps_avg in layers without shapes
+                self.eps_avg = (self.eps_avg + (shape.eps - self.eps_b) * \
+                                shape.area/self.lattice.ec_area).squeeze()
             else:
                 raise ValueError(
                     "Argument to add_shape must only contain "
@@ -208,6 +212,7 @@ class FreeformLayer(Layer):
     """
     Layer with permittivity defined by a freeform distribution on a grid
     """
+
     def __init__(self, lattice, z_min=0, z_max=0, eps_init=1, res=10):
         super().__init__(lattice, z_min, z_max, eps_b)
 
@@ -246,6 +251,7 @@ class FreeformLayer(Layer):
 class QuantumWellLayer():
     """Quantum well layers,
      """
+
     def __init__(self, z, V_shapes, a, M, E0, loss, osc_str):
 
         self.z = z

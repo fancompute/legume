@@ -12,6 +12,7 @@ import time
 class HopfieldPol(object):
     """Main simulation class of the generalized Hopfield matrix method.
     """
+
     def __init__(self, phc, gmax, truncate_g='abs'):
         """Initialize the Schroedinger equation expansion.
         

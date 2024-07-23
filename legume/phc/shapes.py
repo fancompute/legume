@@ -7,6 +7,7 @@ from legume.backend import backend as bd
 class Shape(object):
     """Geometric shape base class
     """
+
     def __init__(self, eps=1.):
         """Create a shape
         """
@@ -63,6 +64,7 @@ class Shape(object):
 class Circle(Shape):
     """Circle shape
     """
+
     def __init__(self, eps=1., x_cent=0., y_cent=0., r=0.):
         """Create a circle shape
 
@@ -98,13 +100,14 @@ class Circle(Shape):
         return ft
 
     def is_inside(self, x, y):
-        return (np.square(x - self.x_cent) + np.square(y - self.y_cent) <=
-                np.square(self.r))
+        return (np.square(x - self.x_cent) + np.square(y - self.y_cent)
+                <= np.square(self.r))
 
 
 class Ellipse(Shape):
     """Ellipse shape
     """
+
     def __init__(self, eps=1., x_cent=0., y_cent=0., rx=0., ry=0, phi=0):
         """Create an ellipse shape
         
@@ -166,6 +169,7 @@ class Ellipse(Shape):
 class Poly(Shape):
     """Polygon shape
     """
+
     def __init__(self, eps=1., x_edges=[0.], y_edges=[0.]):
         """Create a polygon shape
 
@@ -296,6 +300,7 @@ class Poly(Shape):
 class Square(Poly):
     """Square shape
     """
+
     def __init__(self, eps=1, x_cent=0, y_cent=0, a=0):
         """Create a square shape
 
@@ -325,6 +330,7 @@ class Square(Poly):
 class Hexagon(Poly):
     """Hexagon shape
     """
+
     def __init__(self, eps=1, x_cent=0, y_cent=0, a=0):
         """Create a hexagon shape
 
@@ -355,6 +361,7 @@ class Hexagon(Poly):
 class FourierShape(Poly):
     """Fourier coefficinets of the polar coordinates
     """
+
     def __init__(self,
                  eps=1,
                  x_cent=0,
