@@ -166,13 +166,13 @@ class ShapesLayer(Layer):
             # inside the shape and zero outside
             FT = FT + Vmax * shape.compute_ft(gvec)
 
-            FT = FT / self.lattice.ec_area
-            # If the potential is negative we must shift all energies
-
-            ind0 = bd.abs(gvec[0, :]) + bd.abs(gvec[1, :]) < 1e-10
-            # If the first element corresponding to V(0) is negative we shift the energies by Vmax
-            if FT[ind0][0] < 0:
-                FT[ind0] += bd.abs(Vmax)
+        # Apply some final coefficients
+        FT = FT / self.lattice.ec_area
+        # If the potential is negative we must shift all energies
+        ind0 = bd.abs(gvec[0, :]) + bd.abs(gvec[1, :]) < 1e-10
+        # If the first element corresponding to V(0) is negative we shift the energies by Vmax
+        if FT[ind0][0] < 0:
+            FT[ind0] += bd.abs(Vmax)
         ### k near zero could be explicitly set to the potential average value, to be done!
 
         return FT

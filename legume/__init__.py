@@ -3,7 +3,7 @@ Photonic crystal PWE/GME simulator with autograd support
 Monkey-patching numpy/autograd backend inspired by Floris Laporte's FDTD
 package at github.com/flaport/fdtd
 '''
-from .phc import Shape, Circle, Ellipse, Poly, Square, Hexagon, FourierShape
+from .phc import Shape, Circle, Ellipse, Ring, Poly, Square, Hexagon, FourierShape
 from .phc import PhotCryst, Layer, ShapesLayer, FreeformLayer, Lattice
 
 from . import gds
@@ -21,7 +21,7 @@ from .print_backend import print_backend, set_print_backend
 __all__ = [
     'GuidedModeExp', 'PlaneWaveExp', 'ExcitonSchroedEq', 'HopfieldPol',
     'PhotCryst', 'ShapesLayer', 'FreeformLayer', 'Lattice', 'Shape', 'Circle',
-    'Poly', 'Square', 'Hexagon', 'Ellipse'
+    'Poly', 'Square', 'Hexagon', 'Ellipse', 'Ring'
 ]
 
-__version__ = '1.0.1'
+__version__ = '1.0.2'

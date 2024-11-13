@@ -183,6 +183,7 @@ Geometry
 
    Circle
    Ellipse
+   Ring
    Poly
    Square
    Hexagon
