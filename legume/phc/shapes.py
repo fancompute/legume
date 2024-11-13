@@ -141,7 +141,8 @@ class Ellipse(Shape):
         super().__init__(eps=eps)
 
     def __repr__(self):
-        return f"Ellipse(eps = {eps:.2f}, x = {x:.4f}, y = {y:.4f}, rx = {rx:.4f},ry = {ry:.4f}, phi = {phi:.4f}, )"
+        return f"Ellipse(eps = {self.eps:.2f}, x = {self.x_cent:.4f}, y = {self.y:.4f}" +\
+               f", rx = {self.rx:.4f},ry = {self.ry:.4f}, phi = {self.phi:.4f})"
 
     def compute_ft(self, gvec):
         (gx, gy) = self._parse_ft_gvec(gvec)
@@ -164,6 +165,59 @@ class Ellipse(Shape):
         y1 = -x * bd.sin(self.phi) + y * bd.cos(self.phi)
         return (np.square((x1 - self.x_cent) / self.rx) + np.square(
             (y1 - self.y_cent) / self.ry) <= 1)
+
+
+class Ring(Shape):
+    """Ring shape
+    """
+
+    def __init__(self, eps=1., x_cent=0., y_cent=0., r_i=0., r_o=0.):
+        """Create a ring shape
+
+        Parameters
+        ----------
+        eps : float
+            Permittivity value
+        x_cent : float
+            x-coordinate of ring center
+        y_cent : float
+            y-coordinate of ring center
+        r_i : float
+            inner radius of ring
+        r_o : float
+            outer radius of ring
+        """
+        if r_i > r_o:
+            raise ValueError("Inner radius 'r_i' must be smaller than"
+                             " the outer radius r_o.")
+
+        self.x_cent = x_cent
+        self.y_cent = y_cent
+        self.r_i = r_i
+        self.r_o = r_o
+        super().__init__(eps=eps)
+
+    def __repr__(self):
+        return f"Ring(eps = {self.eps:.2f}, x = {self.x_cent:.4f}, y = {self.y_cent:.4f}"\
+             + f", ri = {self.r_i:.4f},ro = {self.r_o:.4f})"
+
+    def compute_ft(self, gvec):
+        (gx, gy) = self._parse_ft_gvec(gvec)
+
+        gabs = np.sqrt(np.abs(np.square(gx)) + np.abs(np.square(gy)))
+        gabs += 1e-10  # To avoid numerical instability at zero
+
+        ft = bd.exp(-1j * gx * self.x_cent - 1j * gy * self.y_cent) * (
+            self.r_o * 2 * np.pi / gabs * bd.bessel1(gabs * self.r_o) -
+            self.r_i * 2 * np.pi / gabs * bd.bessel1(gabs * self.r_i))
+        return ft
+
+    def is_inside(self, x, y):
+
+        return (np.square(x - self.x_cent) + np.square(y - self.y_cent)
+                <= np.square(self.r_o)) & (np.square(x - self.x_cent) +
+                                           np.square(y - self.y_cent)
+                                           >= np.square(self.r_i))
 
 
 class Poly(Shape):
