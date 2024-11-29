@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.com/fancompute/legume.svg?token=ZCPktA3Ki2eYVXYnfbrz&branch=master)](https://travis-ci.com/fancompute/legume.svg?branch=master) [![Documentation Status](https://readthedocs.org/projects/legume/badge/?version=latest)](https://legume.readthedocs.io/en/latest/?badge=latest)
+[![Documentation Status](https://readthedocs.org/projects/legume/badge/?version=latest)](https://legume.readthedocs.io/en/latest/?badge=latest)
 [![Code style: yapf pep8](https://img.shields.io/badge/code%20style-yapf-000000.svg)](https://github.com/google/yapf)
 
 
