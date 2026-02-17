@@ -14,7 +14,7 @@ class TestGMEgrad(unittest.TestCase):
             from autograd import grad
             legume.set_backend('autograd')
         except:
-            return 0
+            return
 
         def obj(mat):
             # We make a Hermitian matrix using the upper triangular part of mat
@@ -42,7 +42,7 @@ class TestGMEgrad(unittest.TestCase):
             from autograd import grad
             legume.set_backend('autograd')
         except:
-            return 0
+            return
 
         def obj(mat, k=3):
             # We make a Hermitian matrix using the upper triangular part of mat

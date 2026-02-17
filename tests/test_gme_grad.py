@@ -23,7 +23,7 @@ class TestGMEgrad(unittest.TestCase):
             import autograd.numpy as npa
             from autograd import grad
         except:
-            return 0
+            return
 
         lattice = Lattice([1., 0], [0., .5])
 
