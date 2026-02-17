@@ -18,5 +18,8 @@ sphinx:
 
 python:
   install:
-    - path: .
-    - requirements: docs/requirements.txt
+    - method: pip
+      path: .
+      extra_requirements:
+        - autodiff
+        - docs
