@@ -1,0 +1,58 @@
+name: tests
+
+on:
+  push:
+    branches:
+      - master
+  pull_request_review:
+    types:
+      - submitted
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pytest:
+    if: github.event_name == 'push' || github.event.review.state == 'approved'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+
+    env:
+      MPLBACKEND: Agg
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+
+    steps:
+      - name: Check out branch on push
+        if: github.event_name == 'push'
+        uses: actions/checkout@v4
+
+      - name: Check out pull request merge ref on approval
+        if: github.event_name == 'pull_request_review'
+        uses: actions/checkout@v4
+        with:
+          ref: refs/pull/${{ github.event.pull_request.number }}/merge
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then
+            python -m pip install -r requirements.txt
+          fi
+          python -m pip install autograd pytest
+          python -m pip install -e .
+
+      - name: Run test suite
+        run: python -m pytest tests
