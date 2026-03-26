@@ -185,7 +185,7 @@ def fsolve(f, lb, ub, *args):
     if r.converged == False:
         raise ValueError(" Not converged")
     """
-    _f = lambda x, *args_value: f(x, *args_value).item()
+    _f = lambda x, *args_value: np.asarray(f(x, *args)).item()
 
     return brentq(_f, lb, ub, args=args_value)
 
