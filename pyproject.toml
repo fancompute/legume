@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "legume-gme"
-version = "1.0.2"
+version = "1.0.3"
 description = "Differentiable plane-wave and guided-mode expansion for photonic crystals"
 readme = "README.md"
 license = {text = "MIT"}
