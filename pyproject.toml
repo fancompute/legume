@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legume-gme"
+version = "1.0.2"
+description = "Differentiable plane-wave and guided-mode expansion for photonic crystals"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Momchil Minkov", email = "momchilmm@gmail.com"}
+]
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "matplotlib>=3.0.3",
+    "numpy>=1.16.2",
+    "scipy>=1.2.1",
+]
+
+[project.optional-dependencies]
+test = ["pytest"]
+autodiff = ["autograd"]
+docs = ["sphinx_rtd_theme", "nbsphinx", "ipython"]
+
+
+[project.urls]
+Homepage = "https://github.com/fancompute/legume"
+
+[tool.setuptools]
+packages = ["legume", "legume.exc", "legume.gme", "legume.phc", "legume.pol", "legume.pwe"]
+
+[tool.setuptools.package-data]
+legume = ["py.typed"]

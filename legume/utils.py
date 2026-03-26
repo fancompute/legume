@@ -157,7 +157,6 @@ def toeplitz_block(n, T1, T2):
 
     return np.triu(Tmat) + np.conj(np.transpose(np.triu(Tmat, 1)))
 
-    return np.triu(Tmat) + np.conj(np.transpose(np.triu(Tmat, 1)))
 
 
 def get_value(x):
@@ -178,7 +177,7 @@ def fsolve(f, lb, ub, *args):
     args_value = tuple([get_value(arg) for arg in args])
     """"
     # to have finer convergence we multiply the function by a number
-    #, we finde the root, and divide back, but this is not the problem ...
+    #, we find the root, and divide back, but this is not the problem ...
     N = 1e100
     def f_opt(x,*args):
         return f(x,*args)*N
@@ -186,8 +185,9 @@ def fsolve(f, lb, ub, *args):
     if r.converged == False:
         raise ValueError(" Not converged")
     """
+    _f = lambda x, *args_value: np.asarray(f(x, *args)).item()
 
-    return brentq(f, lb, ub, args=args_value)
+    return brentq(_f, lb, ub, args=args_value)
 
 
 def find_nearest(array, value, N):
