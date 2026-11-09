@@ -1717,7 +1717,7 @@ class GuidedModeExp(object):
                     # TE and TM waves with E field that is in-phase
                     # (See equations in legume paper where the TE fields are
                     # proportional to i, we're just getting rid of that here)
-                    rad_c['te'][clad_ind] += -1j * bd.sum(rad, axis=0)
+                    rad_c['te'][clad_ind] = rad_c['te'][clad_ind] - 1j * bd.sum(rad, axis=0)
 
                     # Radiation to TM-polarized states
                     if mode1 % 2 == 0:
@@ -1740,7 +1740,7 @@ class GuidedModeExp(object):
                         evec[count:count +
                              self.modes_numg[kind][im1]][:, np.newaxis])
                     # Add everything up
-                    rad_c['tm'][clad_ind] += bd.sum(rad, axis=0)
+                    rad_c['tm'][clad_ind] = rad_c['tm'][clad_ind] + bd.sum(rad, axis=0)
                 count += self.modes_numg[kind][im1]
 
             # Density of states of leaky modes
