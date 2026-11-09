@@ -341,6 +341,22 @@ defvjp(fmap, None, vjp_maker_fmap)
 eig_ag = primitive(np.linalg.eig)
 
 
+# Helpers used by the eig VJP below, copied from autograd's linalg module.
+_dot = partial(npa.einsum, "...ij,...jk->...ik")
+
+
+def _diag(a):
+    return npa.eye(a.shape[-1]) * a
+
+
+def _matrix_diag(a):
+    reps = npa.array(a.shape)
+    reps[:-1] = 1
+    reps[-1] = a.shape[-1]
+    newshape = list(a.shape) + [a.shape[-1]]
+    return _diag(npa.tile(a, reps).reshape(newshape))
+
+
 def vjp_maker_eig(ans, x):
     """Gradient of a general square (complex valued) matrix"""
     e, u = ans  # eigenvalues as 1d array, eigenvectors in columns
@@ -355,7 +371,7 @@ def vjp_maker_eig(ans, x):
         r1 = f * _dot(ut, gu)
         r2 = -f * (_dot(_dot(ut, np.conj(u)),
                         np.real(_dot(ut, gu)) * np.eye(n)))
-        r = _dot(_dot(inv(ut), ge + r1 + r2), ut)
+        r = _dot(_dot(npa.linalg.inv(ut), ge + r1 + r2), ut)
         if not np.iscomplexobj(x):
             r = np.real(r)
             # the derivative is still complex for real input (imaginary delta is allowed), real output

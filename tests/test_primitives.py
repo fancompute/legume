@@ -37,6 +37,22 @@ class TestGMEgrad(unittest.TestCase):
         diff = np.sum(np.abs(gr_num - gr_ag)**2) / np.linalg.norm(gr_num)
         self.assertLessEqual(diff, 1e-4)
 
+    def test_eig(self):
+        try:
+            from autograd import grad
+            legume.set_backend('autograd')
+        except:
+            return
+
+        def obj(mat):
+            eigvals, _ = bd.eig(mat)
+            return bd.real(bd.sum(eigvals))
+
+        mat = np.array([[2.0, 1.0], [0.5, 3.0]])
+        gr_ag = grad(obj)(mat)
+
+        np.testing.assert_allclose(gr_ag, np.eye(2))
+
     def test_eigsh(self):
         try:
             from autograd import grad
